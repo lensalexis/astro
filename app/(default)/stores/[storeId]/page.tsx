@@ -7,7 +7,6 @@ import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import Image from 'next/image'
 import AIProductSearch from '@/components/AIProductSearch'
-import CategoryGrid from '@/components/CategoryGrid'
 import FAQCard from '@/components/FAQCard'
 import { stores, type Store } from '@/lib/stores'
 
@@ -80,10 +79,6 @@ export default function StoreDetailPage() {
         <div className="w-full">
           <AIProductSearch />
         </div>
-
-        <section className="w-full">
-          <CategoryGrid />
-        </section>
 
         <section className="w-full">
           <div className="max-w-6xl mx-auto">

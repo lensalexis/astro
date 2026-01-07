@@ -174,9 +174,9 @@ class CartService {
   }
 }
 
-function getCartFromStore() {
+function getCartFromStore(): CartWithItemProducts | undefined {
   const queryClient = queryClientUtils.getQueryClient()
-  return queryClient.getQueryData<CartWithItemProducts>(QueryClientKey.CART)
+  return queryClient.getQueryData<CartWithItemProducts>(QueryClientKey.CART) || undefined
 }
 
 function setCartCookie(

@@ -234,7 +234,7 @@ export default function SiteChrome() {
             >
               <button
                 type="button"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-800"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-800"
                 onClick={() => {
                   if (!user) {
                     router.push('/login')

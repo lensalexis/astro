@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo, ReactNode, type ReactElement } fr
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { MapPinIcon, ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { MapPinIcon, ChevronDownIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
 import productService from '@/lib/productService'
 import ProductCard from '@/components/ui/ProductCard'
@@ -13,7 +13,7 @@ import { ProductType } from '@/components/ui/ProductCard'
 import FilterNav from '@/components/ui/FilterNav'
 import { stores, about } from '@/lib/stores'
 import { useParams } from 'next/navigation'
-import { routeIntent, type Intent, type ExtractedFilters } from '@/lib/intentRouter'
+import { routeIntent, type Intent, type ExtractedFilters, EFFECT_KEYWORDS } from '@/lib/intentRouter'
 
 // ============================================================================
 // ALPINE IQ SCHEMA FIELD ACCESSORS
@@ -757,6 +757,8 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     if (messageIdsRef.current.has(msgKey)) return
     // Mark immediately to avoid race if called twice before setState runs
     messageIdsRef.current.add(msgKey)
+    // Hide pre-prompts when user message is added
+    setShowPrePrompts(false)
     setChatMessages(prev => {
       if (prev.some(m => m.requestId === requestId && m.role === 'user')) return prev
       const userMessage: ChatMessage = { role: 'user', content, timestamp: new Date(), requestId }
@@ -770,6 +772,8 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     if (messageIdsRef.current.has(msgKey)) return
     // Mark immediately to avoid race
     messageIdsRef.current.add(msgKey)
+    // Hide pre-prompts when assistant message is added
+    setShowPrePrompts(false)
     setChatMessages(prev => {
       if (prev.some(m => m.requestId === requestId && m.role === 'assistant')) return prev
       const assistantMessage: ChatMessage = { role: 'assistant', content, timestamp: new Date(), requestId }
@@ -1136,6 +1140,8 @@ If asked about specific products, you can mention that the customer can search f
     setShowResults(true)
     setSelectedPreset(null)
     setSearchDescription('')
+    // Hide pre-prompts when search starts
+    setShowPrePrompts(false)
 
     try {
       // Build search params (server-side filtering where possible)
@@ -1178,13 +1184,30 @@ If asked about specific products, you can mention that the customer can search f
       if (filters.query) params.q = filters.query
 
       // Fetch products
-      const res = await productService.list(params)
-      let allProducts = res.data || []
+      // If effectIntent is detected, fetch ALL products via pagination to ensure comprehensive results
+      let allProducts: Product[] = []
+      if (filters.effectIntent) {
+        try {
+          allProducts = await fetchAllProducts(params)
+        } catch (err) {
+          console.warn('Pagination failed for effect intent, trying single request:', err)
+          const res = await productService.list(params)
+          allProducts = res.data || []
+        }
+      } else {
+        const res = await productService.list(params)
+        allProducts = res.data || []
+      }
 
       // Apply client-side filters
+      // Priority 1: Strain type filtering (primary filter when effectIntent is detected)
+      // BUT: If effectIntent is present, be more lenient - don't exclude products without strain data
       if (filters.strainType) {
         const targetStrain = filters.strainType.toLowerCase()
-        allProducts = allProducts.filter((p: Product) => {
+        const hasEffectIntent = !!filters.effectIntent
+        
+        // First, try strict filtering
+        let filteredByStrain = allProducts.filter((p: Product) => {
           const strainType = getStrainType(p)
           if (!strainType) return false
           const strainLower = strainType.toLowerCase()
@@ -1200,6 +1223,108 @@ If asked about specific products, you can mention that the customer can search f
           }
           return false
         })
+        
+        // If we have effectIntent and strict filtering returned few/no results, be more lenient
+        if (hasEffectIntent && filteredByStrain.length < 10) {
+          log('strain-filter-lenient', { 
+            requestId: rid, 
+            strictCount: filteredByStrain.length, 
+            totalCount: allProducts.length,
+            effectIntent: filters.effectIntent 
+          })
+          // Include products that match strain type OR products without strain data (they might still match effects)
+          filteredByStrain = allProducts.filter((p: Product) => {
+            const strainType = getStrainType(p)
+            // If no strain type data, include it (will be filtered by effects if available)
+            if (!strainType) return true
+            const strainLower = strainType.toLowerCase()
+            // Match exact or leaning variants
+            if (targetStrain === 'sativa') {
+              return strainLower === 'sativa' || strainLower === 'sativa-leaning'
+            }
+            if (targetStrain === 'indica') {
+              return strainLower === 'indica' || strainLower === 'indica-leaning'
+            }
+            if (targetStrain === 'hybrid') {
+              return strainLower === 'hybrid'
+            }
+            return false
+          })
+        } else {
+          log('strain-filter-strict', { 
+            requestId: rid, 
+            filteredCount: filteredByStrain.length, 
+            totalCount: allProducts.length,
+            hasEffectIntent 
+          })
+        }
+        
+        allProducts = filteredByStrain
+      }
+
+      // Priority 2: Effect intent filtering (optional - only if products have effects data)
+      // This is a secondary filter that enhances results but doesn't exclude products without effects
+      if (filters.effectIntent) {
+        const effectIntent = filters.effectIntent.toLowerCase()
+        const effectKeywords = EFFECT_KEYWORDS[effectIntent as keyof typeof EFFECT_KEYWORDS]
+        
+        if (effectKeywords && effectKeywords.preferredEffects) {
+          const preferredEffects = effectKeywords.preferredEffects.map((e: string) => e.toLowerCase())
+          
+          // Separate products with effects data from those without
+          const productsWithEffects: Product[] = []
+          const productsWithoutEffects: Product[] = []
+          
+          allProducts.forEach((p: Product) => {
+            const productEffects = getTags(p) // Returns lowercase effects array
+            if (productEffects.length > 0) {
+              // Product has effects data - check if it matches
+              const matches = preferredEffects.some((effect: string) => 
+                productEffects.some((pe: string) => pe.includes(effect) || effect.includes(pe))
+              )
+              if (matches) {
+                productsWithEffects.push(p)
+              }
+            } else {
+              // Product doesn't have effects data - include it if it matches strain type
+              // OR if we don't have strain type data (be lenient for effect-based searches)
+              const strainType = getStrainType(p)
+              if (!strainType || (filters.strainType && getStrainType(p)?.toLowerCase().includes(filters.strainType.toLowerCase()))) {
+                productsWithoutEffects.push(p)
+              }
+            }
+          })
+          
+          // Prioritize products with matching effects, but also include products without effects data
+          // that match the strain type (since effect detection already set the correct strain type)
+          // If we have products with effects, use those; otherwise fall back to all products
+          if (productsWithEffects.length > 0) {
+            allProducts = [...productsWithEffects, ...productsWithoutEffects]
+            log('effect-filter-with-effects', { 
+              requestId: rid, 
+              withEffects: productsWithEffects.length, 
+              withoutEffects: productsWithoutEffects.length,
+              total: allProducts.length 
+            })
+          } else if (productsWithoutEffects.length > 0) {
+            // No products with effects, but we have products without effects data - include them
+            allProducts = productsWithoutEffects
+            log('effect-filter-no-effects', { 
+              requestId: rid, 
+              withoutEffects: productsWithoutEffects.length,
+              total: allProducts.length 
+            })
+          } else {
+            // If both are empty, but we have effectIntent, show all products that passed strain filter
+            // (fallback - better to show something than nothing)
+            log('effect-filter-empty-fallback', { 
+              requestId: rid, 
+              originalCount: allProducts.length,
+              effectIntent: filters.effectIntent 
+            })
+            // allProducts already contains strain-filtered products, so keep them
+          }
+        }
       }
 
       // Filter by terpenes if specified
@@ -1235,6 +1360,34 @@ If asked about specific products, you can mention that the customer can search f
           const thcVal = getThcTotal(p, true)
           return thcVal === null || thcVal <= filters.maxThc!
         })
+      }
+
+      // Final safeguard: If we have effectIntent but 0 products, log and try fallback
+      if (filters.effectIntent && allProducts.length === 0) {
+        log('effect-filter-zero-results', { 
+          requestId: rid, 
+          effectIntent: filters.effectIntent,
+          strainType: filters.strainType,
+          originalParams: params,
+          totalFetched: allProducts.length
+        })
+        // Try fetching again without strict filters to see if products exist
+        try {
+          const fallbackParams = { ...params }
+          delete fallbackParams.categoryId // Remove category filter
+          const fallbackRes = await productService.list(fallbackParams)
+          const fallbackProducts = fallbackRes.data || []
+          log('effect-filter-fallback-fetch', { 
+            requestId: rid, 
+            fallbackCount: fallbackProducts.length 
+          })
+          // If we got products, use them (user will see something rather than nothing)
+          if (fallbackProducts.length > 0) {
+            allProducts = fallbackProducts
+          }
+        } catch (err) {
+          console.warn('Fallback fetch failed:', err)
+        }
       }
 
       // Filter by price
@@ -1334,6 +1487,8 @@ If asked about specific products, you can mention that the customer can search f
       setProducts(sliced)
       setBaseProducts(sliced)
       setIsChatMode(false)
+      // Hide pre-prompts when products are displayed
+      setShowPrePrompts(false)
 
       // Generate descriptive summary
       const parts: string[] = []
@@ -1625,6 +1780,7 @@ License: ${license}`
 
   const handleQuickPrompt = (prompt: string) => {
     setHasInteracted(true)
+    setShowPrePrompts(false)
     // Map text prompts to presets
     const promptMap: Record<string, PresetId> = {
       'relax and unwind': 'relax-unwind',
@@ -1654,6 +1810,25 @@ License: ${license}`
     searchProducts(prompt)
   }
 
+  // Clear/reset chat function
+  const handleClearChat = () => {
+    setChatMessages([])
+    setProducts([])
+    setBaseProducts([])
+    setShowResults(false)
+    setIsChatMode(false)
+    setShowPrePrompts(true)
+    setQuery('')
+    setSelectedPreset(null)
+    setSearchDescription('')
+    setActiveFilters({})
+    setLoading(false)
+    setShowDropdown(false)
+    setStoreInfoPrompt({ active: false, requestId: null })
+    setGuidedPrompt({ active: false, requestId: null, feel: null, modality: null })
+    setHasInteracted(false)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!query.trim() || isSubmitting) return
@@ -1680,6 +1855,9 @@ License: ${license}`
     
     // Append user once per submit (all intents)
     appendUserMessage(trimmedQuery, requestId)
+    
+    // Hide pre-prompts when user submits a query
+    setShowPrePrompts(false)
 
     try {
       switch (intentResult.intent) {
@@ -1968,10 +2146,9 @@ License: ${license}`
       f.saleOnly
     )
 
-    // Categories-only: fetch via API (full category inventory, paged) to ensure completeness.
-    // Categories + anything else: use the same in-memory filtering path as other facets,
-    // otherwise we can "miss" matches due to API page/window differences.
-    if (f.categories && f.categories.length > 0 && !hasOtherFacetFilters) {
+    // When categories are selected (with or without other filters), always fetch category products first
+    // Then apply other filters client-side to ensure we don't miss matches
+    if (f.categories && f.categories.length > 0) {
       const selectedCategories = CATEGORY_DEFS.filter((c) => f.categories.includes(c.name))
       if (selectedCategories.length > 0) {
         setLoading(true)
@@ -1995,18 +2172,48 @@ License: ${license}`
           combined.forEach((p: any) => {
             if (p?.id) byId.set(p.id, p)
           })
-          let filtered: Product[] = Array.from(byId.values())
+          let categoryProducts: Product[] = Array.from(byId.values())
           
-          // Apply other filters client-side
-          // (none, by definition)
+          // If there are other filters (strains, brands, etc.), apply them to category products
+          // IMPORTANT: Don't check categories again since we already fetched by categoryId
+          if (hasOtherFacetFilters) {
+            // Create filters without categories to avoid double-filtering
+            // Explicitly set categories to empty array so applyFilters skips category check
+            const filtersWithoutCategories = {
+              categories: [],
+              brands: f.brands || [],
+              strains: f.strains || [],
+              terpenes: f.terpenes || [],
+              weights: f.weights || [],
+              thcRanges: f.thcRanges || [],
+              saleOnly: f.saleOnly || false
+            }
+            console.log('Applying filters to category products:', {
+              categoryProductsCount: categoryProducts.length,
+              filters: filtersWithoutCategories,
+              selectedCategories: selectedCategories.map(c => c.name)
+            })
+            const beforeCount = categoryProducts.length
+            categoryProducts = applyFilters(categoryProducts, filtersWithoutCategories)
+            console.log('After applying filters:', {
+              beforeCount,
+              afterCount: categoryProducts.length,
+              sampleProduct: categoryProducts[0] ? {
+                name: categoryProducts[0].name,
+                strain: categoryProducts[0].strain,
+                cannabisType: categoryProducts[0].cannabisType,
+                categoryLabel: getCategoryLabel(categoryProducts[0])
+              } : null
+            })
+          }
           
-          setProducts(filtered)
-          setBaseProducts(filtered)
+          setProducts(categoryProducts)
+          setBaseProducts(categoryProducts)
           setShowResults(true)
           setActiveFilters(f)
           setSearchDescription(
-            filtered.length
-              ? `${selectedCategories.length === 1 ? selectedCategories[0].name : 'Selected categories'} - Found ${filtered.length} product${filtered.length !== 1 ? 's' : ''}`
+            categoryProducts.length
+              ? `${selectedCategories.length === 1 ? selectedCategories[0].name : 'Selected categories'}${hasOtherFacetFilters ? ' with filters' : ''} - Found ${categoryProducts.length} product${categoryProducts.length !== 1 ? 's' : ''}`
               : `No products available for these category + filter selections.`
           )
         } catch (err) {
@@ -2070,166 +2277,171 @@ License: ${license}`
           </div>
         </div>
 
-        <div className="mx-auto max-w-6xl w-full">
-          <div className="border border-purple-200 bg-white rounded-[20px] shadow-[0_10px_25px_rgba(0,0,0,0.06)] px-3 py-3">
-            {/* Title above composer */}
-            <div className="pb-2">
-              <div className="flex items-center gap-2 text-left text-[20px] sm:text-[26px] font-semibold">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="h-6 w-6"
-                  aria-hidden="true"
+        {/* Title - separated above chat input */}
+        <div className="mx-auto max-w-6xl w-full mb-4">
+          <div className="flex items-center gap-2 text-left text-[20px] sm:text-[26px] font-semibold">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              className="h-6 w-6"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="titleSparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#f472b6" />
+                  <stop offset="50%" stopColor="#a855f7" />
+                  <stop offset="100%" stopColor="#34d399" />
+                </linearGradient>
+              </defs>
+              <path
+                fill="url(#titleSparkGradient)"
+                d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+              />
+            </svg>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-green-400 bg-clip-text text-transparent">
+                Find your next favorite
+              </span>
+              <span className="relative h-[32px] overflow-hidden inline-flex items-center">
+                <span
+                  key={phrases[phraseIndex]}
+                  className="animate-vertical-scroll inline-block text-[18px] sm:text-[22px] text-purple-700 font-semibold"
                 >
-                  <defs>
-                    <linearGradient id="titleSparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f472b6" />
-                      <stop offset="50%" stopColor="#a855f7" />
-                      <stop offset="100%" stopColor="#34d399" />
-                    </linearGradient>
-                  </defs>
-                  <path
-                    fill="url(#titleSparkGradient)"
-                    d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                  {phrases[phraseIndex]}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Standalone chat input container with FilterNav integrated */}
+        <div className="mx-auto max-w-6xl w-full">
+          <div className="border border-purple-200 bg-white rounded-[20px] shadow-[0_10px_25px_rgba(0,0,0,0.06)] px-4 py-4">
+            <form onSubmit={handleSubmit}>
+              <div className="relative">
+                <button
+                  type="submit"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-600 hover:text-purple-700 transition"
+                  aria-label="Submit search"
+                >
+                  <MagnifyingGlassIcon className="h-5 w-5" />
+                </button>
+                <input
+                  id="ai-search-input"
+                  ref={inputRef}
+                  type="text"
+                  value={query}
+                  onFocus={() => {
+                    if (enablePresetDropdown) setShowDropdown(true)
+                  }}
+                  onClick={() => {
+                    if (enablePresetDropdown) setShowDropdown(true)
+                  }}
+                  placeholder="Search by mood, product, brands, or preference"
+                  className="w-full pl-10 pr-16 py-4 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-[16px] focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+                  onChange={(e) => {
+                    setHasInteracted(true)
+                    setQuery(e.target.value)
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (recognitionRef.current) {
+                      try {
+                        setIsListening(true)
+                        recognitionRef.current.start()
+                      } catch {
+                        setIsListening(false)
+                      }
+                    }
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-purple-600 transition"
+                  aria-label="Start voice input"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
+                    <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2z"/>
+                    <path d="M13 19.95a7.001 7.001 0 0 0 5.995-5.992L19 13h-2a5 5 0 0 1-9.995.217L7 13H5l.005.958A7.001 7.001 0 0 0 11 19.95V22h2v-2.05z"/>
+                  </svg>
+                </button>
+              </div>
+            </form>
+
+            {/* FilterNav integrated inside search box */}
+            <div className="mt-3 pt-3 border-t border-purple-100">
+              <div className="overflow-x-auto overflow-y-visible scrollbar-hide">
+                <div className="min-w-max overflow-visible">
+                  <FilterNav
+                    categories={categoryOptions}
+                    brands={facets.brands}
+                    strains={facets.strains}
+                    terpenes={facets.terpenes}
+                    weights={facets.weights}
+                    counts={finalFacetCounts}
+                    onChange={handleFiltersChange}
+                    initialFilters={activeFilters}
                   />
-                </svg>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-green-400 bg-clip-text text-transparent">
-                    Find your next favorite
-                  </span>
-                  <span className="relative h-[32px] overflow-hidden inline-flex items-center">
-                    <span
-                      key={phrases[phraseIndex]}
-                      className="animate-vertical-scroll inline-block text-[18px] sm:text-[22px] text-purple-700 font-semibold"
-                    >
-                      {phrases[phraseIndex]}
-                    </span>
-                  </span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Composer + filter nav in same box */}
-            <div className="border-t border-purple-100 bg-transparent py-3">
-              <div className="px-3 pt-3 pb-0">
-                <form onSubmit={handleSubmit}>
-                  <div className="relative">
+        {/* Store info and guided prompts - moved outside chat container */}
+        <div className="mx-auto max-w-6xl w-full mt-4">
+          <div className="px-4">
+
+            {storeInfoPrompt.active && (
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-gray-700">Select a location</div>
+                <div className="flex flex-wrap gap-2">
+                  {stores.map((s) => (
                     <button
-                      type="submit"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-600 hover:text-purple-700 transition"
-                      aria-label="Submit search"
+                      key={s.id}
+                      onClick={() => handleStoreInfoPrompt(storeInfoPrompt.requestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, s.id)}
+                      className="px-3 py-2 rounded-full border text-sm bg-white text-gray-800 hover:bg-purple-50"
                     >
-                      <MagnifyingGlassIcon className="h-5 w-5" />
+                      {s.name}
                     </button>
-                    <input
-                      id="ai-search-input"
-              ref={inputRef}
-              type="text"
-              value={query}
-                      onFocus={() => {
-                      if (enablePresetDropdown) setShowDropdown(true)
-                    }}
-                      onClick={() => {
-                        if (enablePresetDropdown) setShowDropdown(true)
-                      }}
-                      placeholder="Search by mood, product, brands, or preference"
-                      className="w-full pl-10 pr-16 py-4 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-[16px] focus:outline-none focus-visible:outline-none focus-visible:ring-0"
-                      onChange={(e) => {
-                        setHasInteracted(true)
-                        setQuery(e.target.value)
-                      }}
-                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {guidedPrompt.active && (
+              <div className="space-y-3">
+                <div className="text-sm font-semibold text-gray-700">How do you want to feel?</div>
+                <div className="flex flex-wrap gap-2">
+                  {['Calm', 'Uplifted', 'Focused', 'Balanced'].map((mood) => (
                     <button
+                      key={mood}
                       type="button"
-                      onClick={() => {
-                        if (recognitionRef.current) {
-                          try {
-                            setIsListening(true)
-                            recognitionRef.current.start()
-                          } catch {
-                            setIsListening(false)
-                          }
-                        }
-                      }}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-purple-600 transition"
-                      aria-label="Start voice input"
+                      onClick={() => handleGuidedSelection('feel', mood)}
+                      className={`px-3 py-2 rounded-full border text-sm ${
+                        guidedPrompt.feel === mood ? 'bg-purple-600 text-white' : 'bg-white text-gray-800'
+                      }`}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
-                        <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2z"/>
-                        <path d="M13 19.95a7.001 7.001 0 0 0 5.995-5.992L19 13h-2a5 5 0 0 1-9.995.217L7 13H5l.005.958A7.001 7.001 0 0 0 11 19.95V22h2v-2.05z"/>
-                      </svg>
+                      {mood}
                     </button>
-                  </div>
-                </form>
-
-                <div className="mt-1 overflow-x-auto overflow-y-visible scrollbar-hide mx-0 px-0 sm:-mx-2 sm:px-2 pt-1 pb-0">
-                  <div className="min-w-max overflow-visible">
-                    <FilterNav
-                      categories={categoryOptions}
-                      brands={facets.brands}
-                      strains={facets.strains}
-                      terpenes={facets.terpenes}
-                      weights={facets.weights}
-                      counts={finalFacetCounts}
-                      onChange={handleFiltersChange}
-                      initialFilters={activeFilters}
-                    />
-                  </div>
+                  ))}
                 </div>
-
-                {storeInfoPrompt.active && (
-                  <div className="mt-4 space-y-2 px-1">
-                    <div className="text-sm font-semibold text-gray-700">Select a location</div>
-                    <div className="flex flex-wrap gap-2">
-                      {stores.map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => handleStoreInfoPrompt(storeInfoPrompt.requestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, s.id)}
-                          className="px-3 py-2 rounded-full border text-sm bg-white text-gray-800 hover:bg-purple-50"
-                        >
-                          {s.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {guidedPrompt.active && (
-                  <div className="mt-4 space-y-3 px-1">
-                    <div className="text-sm font-semibold text-gray-700">How do you want to feel?</div>
-                    <div className="flex flex-wrap gap-2">
-                      {['Calm', 'Uplifted', 'Focused', 'Balanced'].map((mood) => (
-                        <button
-                          key={mood}
-                          type="button"
-                          onClick={() => handleGuidedSelection('feel', mood)}
-                          className={`px-3 py-2 rounded-full border text-sm ${
-                            guidedPrompt.feel === mood ? 'bg-purple-600 text-white' : 'bg-white text-gray-800'
-                          }`}
-                        >
-                          {mood}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="text-sm font-semibold text-gray-700">Smoke-free or inhalable?</div>
-                    <div className="flex flex-wrap gap-2">
-                      {['Smoke-free', 'Inhalable', 'Either'].map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => handleGuidedSelection('modality', opt)}
-                          className={`px-3 py-2 rounded-full border text-sm ${
-                            guidedPrompt.modality === opt ? 'bg-purple-600 text-white' : 'bg-white text-gray-800'
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="text-sm font-semibold text-gray-700">Smoke-free or inhalable?</div>
+                <div className="flex flex-wrap gap-2">
+                  {['Smoke-free', 'Inhalable', 'Either'].map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => handleGuidedSelection('modality', opt)}
+                      className={`px-3 py-2 rounded-full border text-sm ${
+                        guidedPrompt.modality === opt ? 'bg-purple-600 text-white' : 'bg-white text-gray-800'
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
         {/* Pre-prompts below search, bubble style */}
@@ -2242,7 +2454,7 @@ License: ${license}`
                 className="inline-flex items-center gap-3 rounded-2xl bg-blue-500 px-4 py-3 text-white text-sm font-medium shadow-sm hover:brightness-95 cursor-pointer"
               >
                 <span>{pp.label}</span>
-                <span className="text-white text-lg leading-none">↩</span>
+                <ArrowUturnLeftIcon className="h-4 w-4 text-white" />
               </button>
             ))}
           </div>
@@ -2250,6 +2462,20 @@ License: ${license}`
 
         {/* Results and chat stream below the search box */}
         <div className="mx-auto max-w-6xl w-full px-0 sm:px-0 mt-6 space-y-4">
+          {/* Clear button - show when there are messages or results */}
+          {(chatMessages.length > 0 || showResults || products.length > 0) && (
+            <div className="flex justify-end px-4 sm:px-0">
+              <button
+                onClick={handleClearChat}
+                className="inline-flex items-center gap-2 rounded-full bg-gray-100 hover:bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors"
+                aria-label="Clear chat and reset"
+              >
+                <XMarkIcon className="h-4 w-4" />
+                <span>Clear</span>
+              </button>
+            </div>
+          )}
+          
           {chatMessages.length > 0 && (
             <div className="w-full space-y-3 px-4 sm:px-0">
               {chatMessages.map((msg, idx) => (

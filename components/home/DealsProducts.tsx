@@ -27,7 +27,7 @@ export default async function DealsProducts() {
       </h2>
 
       <div className="flex gap-3 sm:gap-4 overflow-x-auto scroll-smooth px-2 scrollbar-hide">
-        {products.map((product) => (
+        {products.map((product: any) => (
           <div
             key={product.id}
             className="min-w-[220px] sm:min-w-[250px] max-w-[250px] flex-shrink-0"

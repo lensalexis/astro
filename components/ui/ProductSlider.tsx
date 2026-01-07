@@ -1,6 +1,6 @@
 import ProductCard from '@/components/ui/ProductCard'
 
-export default function ProductSlider({ products }) {
+export default function ProductSlider({ products }: { products: any[] }) {
   if (!products.length) return null
 
   return (

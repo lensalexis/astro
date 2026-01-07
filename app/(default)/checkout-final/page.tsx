@@ -116,7 +116,6 @@ export default function CheckoutFinal() {
             <div key={product.id} className="relative">
               <ProductCard
                 product={product}
-                categorySlug={FLOWER_CATEGORY.slug}
               />
               <button
                 onClick={() => handleUpsell(product.id)}

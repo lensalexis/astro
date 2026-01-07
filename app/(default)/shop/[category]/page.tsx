@@ -84,7 +84,7 @@ export default function CategoryPage() {
 
   // Apply filters client-side
   const filteredProducts = products.filter((p) => {
-    if (filters.categories.length && !filters.categories.includes(selectedCategory.name)) {
+    if (filters.categories.length && selectedCategory && !filters.categories.includes(selectedCategory.name)) {
       return false
     }
     if (filters.brands.length && !filters.brands.includes(p.brand?.name)) {

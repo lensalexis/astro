@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import productService from '@/api/productService'
+import productService from '@/lib/productService'
 import { Product } from '@/types/product'
 import Image from 'next/image'
 
@@ -47,9 +47,9 @@ export default function DealsSection() {
               />
             )}
             <h3 className="text-white font-medium">{product.name}</h3>
-            <p className="text-sm text-indigo-300">${product.price / 100}</p>
+            <p className="text-sm text-indigo-300">${(product.price || 0) / 100}</p>
             <a
-              href={`https://www.kinebudsdispensary.com/menu/${product.category?.slug}/${product.id}`}
+              href={`https://www.kinebudsdispensary.com/menu/${(product.category as any)?.slug || product.category || ''}/${product.id}`}
               className="text-sm text-indigo-400 hover:underline block mt-2"
               target="_blank"
               rel="noopener noreferrer"

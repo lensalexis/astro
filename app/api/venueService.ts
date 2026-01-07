@@ -1,7 +1,6 @@
 import { Venue } from '@/types/venue'
 import { RequestOptions, request } from './dispenseApiClient'
 import { queryClientUtils, QueryClientKey } from '@/utils/queryClient'
-import { AppConfig } from 'next/dist/build/utils'
 
 class VenueService {
   getById = async (id: string, options?: RequestOptions) => {

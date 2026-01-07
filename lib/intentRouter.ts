@@ -14,6 +14,7 @@ export type ExtractedFilters = {
   query?: string
   maxThc?: number
   thcRange?: string // e.g., '0-10%', '10-20%', '20-30%', '30-40%', '40%+'
+  effectIntent?: string // e.g., 'sleep', 'energy', 'focus', 'pain', etc.
 }
 
 export type IntentResult = {
@@ -33,6 +34,11 @@ const categoryMap: Record<string, string> = {
   'buds': 'Flower',
   'weed': 'Flower',
   'cannabis': 'Flower',
+  'herb': 'Flower',
+  'herbs': 'Flower',
+  'green': 'Flower',
+  'nugs': 'Flower',
+  'nug': 'Flower',
   // Vaporizers
   'vape': 'Vaporizers',
   'vapes': 'Vaporizers',
@@ -46,6 +52,11 @@ const categoryMap: Record<string, string> = {
   'pens': 'Vaporizers',
   'vape pen': 'Vaporizers',
   'vape pens': 'Vaporizers',
+  'oil': 'Vaporizers',
+  'oils': 'Vaporizers',
+  'vape oil': 'Vaporizers',
+  'vape cartridge': 'Vaporizers',
+  '510': 'Vaporizers', // Common vape thread size
   // Pre Rolls
   'pre roll': 'Pre Rolls',
   'pre-roll': 'Pre Rolls',
@@ -57,6 +68,10 @@ const categoryMap: Record<string, string> = {
   'joint': 'Pre Rolls',
   'joints': 'Pre Rolls',
   'pre-rolled': 'Pre Rolls',
+  'roll': 'Pre Rolls',
+  'rolled': 'Pre Rolls',
+  'blunt': 'Pre Rolls',
+  'blunts': 'Pre Rolls',
   // Concentrates
   'concentrate': 'Concentrates',
   'concentrates': 'Concentrates',
@@ -72,6 +87,11 @@ const categoryMap: Record<string, string> = {
   'crumble': 'Concentrates',
   'dabs': 'Concentrates',
   'dab': 'Concentrates',
+  'extract': 'Concentrates',
+  'extracts': 'Concentrates',
+  'hash': 'Concentrates',
+  'kief': 'Concentrates',
+  'keef': 'Concentrates',
   // Edibles
   'edible': 'Edibles',
   'edibles': 'Edibles',
@@ -81,21 +101,42 @@ const categoryMap: Record<string, string> = {
   'chocolates': 'Edibles',
   'candy': 'Edibles',
   'candies': 'Edibles',
+  'cookie': 'Edibles',
+  'cookies': 'Edibles',
+  'brownie': 'Edibles',
+  'brownies': 'Edibles',
+  'gummy bear': 'Edibles',
+  'gummy bears': 'Edibles',
   // Beverages
   'beverage': 'Beverages',
   'beverages': 'Beverages',
   'drink': 'Beverages',
   'drinks': 'Beverages',
+  'soda': 'Beverages',
+  'sodas': 'Beverages',
+  'juice': 'Beverages',
+  'tea': 'Beverages',
+  'coffee': 'Beverages',
+  'energy drink': 'Beverages',
+  'energy drinks': 'Beverages',
   // Tinctures
   'tincture': 'Tinctures',
   'tinctures': 'Tinctures',
   'drops': 'Tinctures',
   'drop': 'Tinctures',
+  'oil': 'Tinctures', // Can also refer to tinctures
+  'sublingual': 'Tinctures',
+  'sublinguals': 'Tinctures',
+  'oral': 'Tinctures',
   // Topicals
   'topical': 'Topicals',
   'topicals': 'Topicals',
   'cream': 'Topicals',
   'lotion': 'Topicals',
+  'balm': 'Topicals',
+  'salve': 'Topicals',
+  'patch': 'Topicals',
+  'patches': 'Topicals',
 }
 
 // Terpene names
@@ -114,6 +155,276 @@ const storeKeywords: Record<string, string> = {
   'queens plaza': 'queens-plaza',
   'fishkill': 'fishkill',
   'kew gardens': 'kew-gardens',
+}
+
+// Effect-based keyword mapping for intent detection
+// Comprehensive mapping of natural language effects, moods, and symptoms to cannabis strain types
+export const EFFECT_KEYWORDS = {
+  // ============================================================================
+  // INDICA-RELATED EFFECTS (Body-focused, relaxing, sedating)
+  // ============================================================================
+  sleep: {
+    keywords: [
+      'sleep', 'sleeping', 'insomnia', 'rest', 'bedtime', 'knock me out', 'sleepy', 'tired', 
+      'exhausted', 'can\'t sleep', 'help me sleep', 'help with sleep', 'for sleep',
+      'sleep aid', 'bed time', 'nighttime', 'evening', 'want to sleep', 'need sleep'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['sedating', 'relaxing', 'sleep-inducing', 'sleepy', 'calming'],
+    thcRange: { min: 18, max: 100 }
+  },
+  relaxation: {
+    keywords: [
+      'relax', 'relaxation', 'chill', 'unwind', 'calm', 'peaceful', 'mellow', 
+      'laid back', 'take it easy', 'chill out', 'wind down', 'decompress'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['relaxing', 'calming', 'body-focused', 'peaceful', 'mellow'],
+    thcRange: { min: 15, max: 100 }
+  },
+  sedative: {
+    keywords: ['sedative', 'sedating', 'couch lock', 'couchlock', 'locked', 'stuck'],
+    strainType: 'Indica' as const,
+    preferredEffects: ['sedating', 'couch lock', 'body-focused', 'heavy'],
+    thcRange: { min: 18, max: 100 }
+  },
+  pain: {
+    keywords: [
+      'pain', 'pain relief', 'ache', 'sore', 'arthritis', 'inflammation', 
+      'muscle', 'relief', 'chronic pain', 'body pain', 'discomfort', 'help with pain',
+      'pain management', 'muscle pain', 'joint pain', 'body ache'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['pain-relieving', 'anti-inflammatory', 'body-focused', 'relaxing'],
+    thcRange: { min: 15, max: 100 },
+    cbdPreferred: true
+  },
+  anxiety: {
+    keywords: [
+      'anxiety', 'anxious', 'worried', 'stress', 'panic', 'overwhelmed', 
+      'nervous', 'tense', 'stress relief', 'anxiety relief', 'help with anxiety',
+      'calm down', 'reduce stress', 'stress management'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['calming', 'anxiolytic', 'relaxing', 'stress-relieving'],
+    thcRange: { min: 10, max: 30 },
+    cbdPreferred: true
+  },
+  bodyHigh: {
+    keywords: [
+      'body high', 'body effects', 'physical', 'body feeling', 'body buzz',
+      'full body', 'body relaxation'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['body-focused', 'relaxing', 'physical', 'body high'],
+    thcRange: { min: 15, max: 100 }
+  },
+  appetite: {
+    keywords: [
+      'appetite', 'munchies', 'hungry', 'increase appetite', 'appetite stimulation',
+      'food', 'eating', 'hunger'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['appetite-stimulating', 'hunger-inducing'],
+    thcRange: { min: 15, max: 100 }
+  },
+  nausea: {
+    keywords: [
+      'nausea', 'nauseous', 'queasy', 'sick', 'upset stomach', 'help with nausea',
+      'anti-nausea', 'nausea relief'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['anti-nausea', 'stomach-soothing'],
+    thcRange: { min: 10, max: 100 },
+    cbdPreferred: true
+  },
+  muscleRelaxation: {
+    keywords: [
+      'muscle relaxation', 'muscle relief', 'muscle tension', 'tight muscles',
+      'muscle spasms', 'muscle pain', 'sore muscles'
+    ],
+    strainType: 'Indica' as const,
+    preferredEffects: ['muscle-relaxing', 'body-focused', 'pain-relieving'],
+    thcRange: { min: 15, max: 100 }
+  },
+  
+  // ============================================================================
+  // SATIVA-RELATED EFFECTS (Mind-focused, energizing, uplifting)
+  // ============================================================================
+  energy: {
+    keywords: [
+      'energy', 'energetic', 'wake up', 'morning', 'get going', 'productive', 
+      'boost', 'pick me up', 'alert', 'awake', 'energize', 'energizing',
+      'wake me up', 'get energized', 'boost energy'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['energetic', 'uplifting', 'invigorating', 'awakening'],
+    thcRange: { min: 12, max: 100 }
+  },
+  focus: {
+    keywords: [
+      'focus', 'concentrate', 'attention', 'clarity', 'mental', 'sharp', 
+      'clear headed', 'mental clarity', 'focused', 'concentration',
+      'help focus', 'improve focus', 'stay focused'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['focus-enhancing', 'mental', 'clarity', 'alert'],
+    thcRange: { min: 12, max: 100 }
+  },
+  creative: {
+    keywords: [
+      'creative', 'creativity', 'artistic', 'inspiration', 'inspired', 
+      'artistic flow', 'creative flow', 'brainstorm', 'ideas'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['creative', 'uplifting', 'inspiring', 'mental'],
+    thcRange: { min: 12, max: 100 }
+  },
+  motivate: {
+    keywords: [
+      'motivate', 'motivation', 'motivated', 'get motivated', 'drive', 
+      'ambition', 'get things done', 'productive'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['motivating', 'energetic', 'uplifting', 'productive'],
+    thcRange: { min: 12, max: 100 }
+  },
+  uplift: {
+    keywords: [
+      'uplift', 'uplifted', 'uplifting', 'elevate', 'elevated', 'lift',
+      'pick me up', 'boost mood', 'feel good'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['uplifting', 'euphoric', 'mood-boosting'],
+    thcRange: { min: 12, max: 100 }
+  },
+  euphoria: {
+    keywords: [
+      'euphoria', 'euphoric', 'euphoric feeling', 'bliss', 'blissful',
+      'ecstatic', 'high spirits'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['euphoric', 'uplifting', 'mood-boosting'],
+    thcRange: { min: 15, max: 100 }
+  },
+  happiness: {
+    keywords: [
+      'happy', 'happiness', 'mood', 'upbeat', 'fun', 'laugh', 'joy', 
+      'cheerful', 'good vibes', 'positive', 'feel happy', 'make me happy',
+      'mood boost', 'boost mood', 'improve mood'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['uplifting', 'euphoric', 'mood-boosting', 'happy'],
+    thcRange: { min: 15, max: 100 }
+  },
+  social: {
+    keywords: [
+      'social', 'talkative', 'conversation', 'chatty', 'sociable', 
+      'party', 'party time', 'socializing', 'hang out', 'friends'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['social', 'talkative', 'uplifting', 'euphoric'],
+    thcRange: { min: 15, max: 100 }
+  },
+  giggly: {
+    keywords: [
+      'giggly', 'giggle', 'laugh', 'laughing', 'funny', 'humor', 
+      'make me laugh', 'hilarious'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['giggly', 'euphoric', 'uplifting', 'happy'],
+    thcRange: { min: 15, max: 100 }
+  },
+  depression: {
+    keywords: [
+      'depression', 'depressed', 'sad', 'down', 'low mood', 'depression relief',
+      'help with depression', 'feel better', 'mood lift'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['mood-boosting', 'uplifting', 'euphoric', 'antidepressant'],
+    thcRange: { min: 15, max: 100 }
+  },
+  daytime: {
+    keywords: [
+      'daytime', 'day time', 'morning', 'afternoon', 'day use', 
+      'day strain', 'daytime use', 'active', 'daytime activity'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['energetic', 'uplifting', 'daytime', 'alert'],
+    thcRange: { min: 12, max: 100 }
+  },
+  cerebral: {
+    keywords: [
+      'cerebral', 'head high', 'mental high', 'mind', 'thinking', 
+      'thoughtful', 'intellectual', 'brain'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['cerebral', 'mental', 'uplifting', 'focus-enhancing'],
+    thcRange: { min: 12, max: 100 }
+  },
+  invigorating: {
+    keywords: [
+      'invigorating', 'invigorate', 'refreshing', 'revitalizing', 
+      'rejuvenating', 'renewed energy'
+    ],
+    strainType: 'Sativa' as const,
+    preferredEffects: ['invigorating', 'energetic', 'uplifting'],
+    thcRange: { min: 12, max: 100 }
+  },
+  
+  // ============================================================================
+  // HYBRID-RELATED EFFECTS (Balanced, versatile)
+  // ============================================================================
+  balance: {
+    keywords: [
+      'balance', 'balanced', 'well rounded', 'even', 'equilibrium',
+      'best of both', 'balanced effects'
+    ],
+    strainType: 'Hybrid' as const,
+    preferredEffects: ['balanced', 'well-rounded', 'versatile'],
+    thcRange: { min: 12, max: 100 }
+  },
+  versatile: {
+    keywords: [
+      'versatile', 'all purpose', 'multi purpose', 'flexible', 
+      'adaptable', 'works for anything'
+    ],
+    strainType: 'Hybrid' as const,
+    preferredEffects: ['versatile', 'balanced', 'well-rounded'],
+    thcRange: { min: 12, max: 100 }
+  },
+  allDay: {
+    keywords: [
+      'all day', 'all-day', 'all day use', 'anytime', 'any time',
+      'whenever', 'flexible timing'
+    ],
+    strainType: 'Hybrid' as const,
+    preferredEffects: ['balanced', 'versatile', 'all-day'],
+    thcRange: { min: 12, max: 30 }
+  },
+  mild: {
+    keywords: [
+      'mild', 'light', 'subtle', 'gentle', 'easy', 'beginner', 
+      'soft', 'weak', 'low key', 'not too strong', 'mild effects'
+    ],
+    strainType: 'Hybrid' as const,
+    preferredEffects: ['mild', 'gentle', 'balanced'],
+    thcRange: { min: 0, max: 15 }
+  },
+  
+  // ============================================================================
+  // POTENCY-RELATED (Any strain type)
+  // ============================================================================
+  strong: {
+    keywords: [
+      'strong', 'potent', 'heavy', 'powerful', 'knockout', 'hit hard', 
+      'no joke', 'intense', 'heavy hitter', 'very strong', 'super strong',
+      'maximum potency', 'high potency'
+    ],
+    strainType: undefined, // Can be any strain type
+    preferredEffects: ['sedating', 'intense', 'powerful'],
+    thcRange: { min: 25, max: 100 }
+  }
 }
 
 /**
@@ -166,6 +477,7 @@ function hasShoppingIntent(message: string): boolean {
  */
 function hasShoppableFilters(filters: ExtractedFilters): boolean {
   return !!(
+    filters.effectIntent || // Effect intent (e.g., "sleep", "energy") is shoppable
     filters.strainType ||
     filters.category ||
     (filters.terpenes && filters.terpenes.length > 0) ||
@@ -184,14 +496,68 @@ function extractFilters(message: string): ExtractedFilters {
   const lower = message.toLowerCase()
   const filters: ExtractedFilters = {}
 
-  // Extract strain type FIRST (including from educational questions like "what is sativa")
+  // Extract effect-based intent FIRST (before explicit strain type)
+  // This allows queries like "help me sleep" to automatically map to Indica
+  // Check effect keywords and set strain type + filters based on detected effect
+  for (const [effectKey, effectData] of Object.entries(EFFECT_KEYWORDS)) {
+    const foundKeywords = effectData.keywords.filter(kw => {
+      // Use word boundaries for better matching, but also allow partial matches for common variations
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      // Try word boundary first (exact match)
+      const wordBoundaryRegex = new RegExp(`\\b${escaped}\\b`, 'i')
+      if (wordBoundaryRegex.test(lower)) return true
+      // Also check if the keyword is contained in the message (for variations like "sleeping" containing "sleep")
+      // But only for single words to avoid false positives
+      if (kw.split(/\s+/).length === 1 && lower.includes(kw.toLowerCase())) {
+        return true
+      }
+      return false
+    })
+    
+    if (foundKeywords.length > 0) {
+      filters.effectIntent = effectKey
+      
+      // Set strain type if not already set and effect has a preferred strain type
+      if (!filters.strainType && effectData.strainType) {
+        filters.strainType = effectData.strainType
+      }
+      
+      // Set THC range based on effect (if not already set)
+      if (!filters.thcRange && effectData.thcRange) {
+        const avg = (effectData.thcRange.min + effectData.thcRange.max) / 2
+        if (avg < 10) {
+          filters.thcRange = '0-10%'
+        } else if (avg < 20) {
+          filters.thcRange = '10-20%'
+        } else if (avg < 30) {
+          filters.thcRange = '20-30%'
+        } else if (avg < 40) {
+          filters.thcRange = '30-40%'
+        } else {
+          filters.thcRange = '40%+'
+        }
+      }
+      
+      // Set maxTHC for mild/beginner effects
+      if (effectKey === 'mild' && !filters.maxThc) {
+        filters.maxThc = 15
+      }
+      
+      // Break after first match (prioritize first effect found)
+      break
+    }
+  }
+
+  // Extract explicit strain type (if not already set by effect detection)
   // This allows combined queries like "sativa prerolls" to extract both
-  if (lower.includes('sativa')) {
-    filters.strainType = 'Sativa'
-  } else if (lower.includes('indica')) {
-    filters.strainType = 'Indica'
-  } else if (lower.includes('hybrid')) {
-    filters.strainType = 'Hybrid'
+  if (!filters.strainType) {
+    if (lower.includes('sativa')) {
+      filters.strainType = 'Sativa'
+    } else if (lower.includes('indica')) {
+      filters.strainType = 'Indica'
+    } else if (lower.includes('hybrid')) {
+      filters.strainType = 'Hybrid'
+    }
   }
 
   // Extract category (including from educational questions like "what are tinctures")

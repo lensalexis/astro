@@ -1,14 +1,14 @@
-import { getBlogPosts } from "@/components/mdx/utils";
-import PostItem from "../app/(default)/blog/post-item";
+import { getBlogPosts } from "@/lib/blog";
+// import PostItem from "../app/(default)/blog/post-item";
 
 export default function News() {
   const allBlogs = getBlogPosts();
 
-  // Sort posts by date
+  // Sort posts by date (if publishedAt exists)
   allBlogs.sort((a, b) => {
-    return new Date(a.metadata.publishedAt) > new Date(b.metadata.publishedAt)
-      ? -1
-      : 1;
+    const dateA = (a.metadata as any).publishedAt || a.metadata.title || '';
+    const dateB = (b.metadata as any).publishedAt || b.metadata.title || '';
+    return dateA > dateB ? -1 : 1;
   });
 
   const posts = allBlogs.slice(0, 3);
@@ -28,7 +28,10 @@ export default function News() {
           <div className="mx-auto max-w-sm md:max-w-none">
             <div className="grid items-start gap-12 md:grid-cols-3 md:gap-x-6 md:gap-y-8">
               {posts.map((post, postIndex) => (
-                <PostItem key={postIndex} {...post} />
+                <div key={postIndex} className="flex flex-col">
+                  <h3 className="text-xl font-semibold mb-2">{post.metadata.title}</h3>
+                  <p className="text-gray-400">{post.metadata.summary}</p>
+                </div>
               ))}
             </div>
           </div>

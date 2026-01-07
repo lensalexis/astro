@@ -4,13 +4,17 @@ import { useEffect } from 'react'
 
 export default function ProductCarouselDeals() {
   useEffect(() => {
-    const interval = setInterval(() => {
+    let interval: NodeJS.Timeout | null = null
+    interval = setInterval(() => {
       const carouselEl = document.getElementById('product-carousel-widget')
 
-      if (carouselEl && typeof window !== 'undefined' && window.dispense) {
-        clearInterval(interval)
+      if (carouselEl && typeof window !== 'undefined' && (window as any).dispense) {
+        if (interval) {
+          clearInterval(interval)
+          interval = null
+        }
 
-        window.dispense.ProductCarousel({
+        (window as any).dispense.ProductCarousel({
           venueId: '83de9c41aa1a3cc5',
           selector: carouselEl,
           productCategory: 'aeebb7e2a7f046e9', // Deals
@@ -22,7 +26,9 @@ export default function ProductCarouselDeals() {
       }
     }, 100)
 
-    return () => clearInterval(interval)
+    return () => {
+      if (interval) clearInterval(interval)
+    }
   }, [])
 
   return (

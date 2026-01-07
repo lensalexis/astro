@@ -197,7 +197,9 @@ export default function FilterNav({
           return (
             <div key={key} className="relative">
               <button
-                ref={(el) => (buttonRefs.current[key] = el)}
+                ref={(el) => {
+                  buttonRefs.current[key] = el
+                }}
                 onClick={() => toggleDropdown(key)}
                 className="flex items-center gap-2 px-4 py-2 rounded-2xl font-semibold hover:brightness-95 cursor-pointer relative"
                 style={{ backgroundColor: '#eaeaea', color: '#5a5a5a' }}
@@ -205,9 +207,9 @@ export default function FilterNav({
                 {displayName}
 
                 {/* ✅ Selection count badge */}
-                {filters[key as keyof typeof filters].length > 0 && (
+                {Array.isArray(filters[key as keyof typeof filters]) && (filters[key as keyof typeof filters] as string[]).length > 0 && (
                   <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-[#5a5a5a] text-white">
-                    {filters[key as keyof typeof filters].length}
+                    {(filters[key as keyof typeof filters] as string[]).length}
                   </span>
                 )}
 
@@ -303,7 +305,7 @@ export default function FilterNav({
                       opt.toLowerCase().includes(search.toLowerCase())
                     )
                     .map((opt) => {
-                      const selected = filters[key as keyof typeof filters].includes(opt);
+                      const selected = Array.isArray(filters[key as keyof typeof filters]) && (filters[key as keyof typeof filters] as string[]).includes(opt);
                       return (
                         <button
                           key={opt}
