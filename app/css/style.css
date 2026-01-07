@@ -1,0 +1,197 @@
+@import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&display=swap');
+@import 'tailwindcss';
+
+/* Prevent unintended horizontal scrolling while keeping inner horizontal scrollers usable */
+/* Avoid forcing horizontal clipping globally; fix overflow at source instead. */
+
+/* Additional styles */
+@import './additional-styles/utility-patterns.css' layer(components);
+@import './additional-styles/theme.css';
+
+@plugin "@tailwindcss/forms" {
+  strategy: base;
+}
+@plugin "@tailwindcss/typography" {
+  strategy: base;
+}
+
+@theme {
+  --font-inter: Inter, sans-serif;
+  --font-nacelle: Nacelle, sans-serif;
+
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.5384;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.5715;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.5333;
+  --text-base--letter-spacing: -0.0125em;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.5;
+  --text-lg--letter-spacing: -0.0125em;
+  --text-xl: 1.25rem;
+  --text-xl--line-height: 1.5;
+  --text-xl--letter-spacing: -0.0125em;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.415;
+  --text-2xl--letter-spacing: -0.0268em;
+  --text-3xl: 1.75rem;
+  --text-3xl--line-height: 1.3571;
+  --text-3xl--letter-spacing: -0.0268em;
+  --text-4xl: 2.5rem;
+  --text-4xl--line-height: 1.1;
+  --text-4xl--letter-spacing: -0.0268em;
+  --text-5xl: 3.5rem;
+  --text-5xl--line-height: 1;
+  --text-5xl--letter-spacing: -0.0268em;
+  --text-6xl: 4rem;
+  --text-6xl--line-height: 1;
+  --text-6xl--letter-spacing: -0.0268em;
+  --text-7xl: 4.5rem;
+  --text-7xl--line-height: 1;
+  --text-7xl--letter-spacing: -0.0268em;
+
+  --animate-shine: shine 5s ease-in-out 500ms infinite;
+  --animate-gradient: gradient 6s linear infinite;  
+
+  @keyframes shine {
+    0% {
+      top: 0;
+      transform: scaleY(5);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.8;
+    }
+    20% {
+      top: 100%;
+      transform: scaleY(10);
+      opacity: 0;
+    }
+    100% {
+      top: 100%;
+      transform: scaleY(1);
+      opacity: 0;
+    }
+  }
+  @keyframes gradient {
+    to {
+      background-position: 200% center;
+    }
+  }
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom padding helper for hero spacing */
+.title-padding-top {
+  padding-top: 7pc;
+}
+
+/* Utility spacing */
+.space-to-right {
+  padding-right: 10px;
+}
+
+/* Mobile: give AI search space below fixed navbar */
+@media (max-width: 640px) {
+  .title-padding-top {
+    padding-top: calc(env(safe-area-inset-top) + 84px) !important;
+  }
+}
+
+@keyframes fade-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.animate-fade-slide {
+  animation: fade-slide 2.2s ease-in-out both;
+}
+
+@keyframes vertical-scroll {
+  0% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0%);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(0%);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100%);
+  }
+}
+
+.animate-vertical-scroll {
+  animation: vertical-scroll 2.2s ease-in-out both;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.bg-gray-950 {
+    background-color: #f4f4f4;
+    color: black;
+} 
+.text-indigo-200\/65 {
+    color: #000000;
+}
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem; /* match your site’s rounded-2xl */
+}
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+/* === Global green background + subtle glow === */
+@layer base {
+  html, body {
+    /* light base */
+    background-color: #f4f4f4; /* fallback */
+    color-scheme: light;
+
+    /* soften gradients for light mode */
+   background-image:
+      radial-gradient(900px 600px at 20% 15%, rgba(34,121,64,0.12), transparent 65%),
+      radial-gradient(900px 600px at 80% 35%, rgba(209,56,139,0.10), transparent 65%),
+      radial-gradient(1200px 800px at 50% 80%, rgba(34,121,64,0.08), transparent 70%);
+background-repeat: no-repeat;
+background-attachment: fixed;
+background-size: cover;
+
+    /* Restore a small horizontal gutter on mobile */
+    @media (max-width: 640px) {
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+  }
+}
+
+/* Prevent horizontal overflow on mobile: handled via layout fixes */
