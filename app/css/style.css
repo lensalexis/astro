@@ -193,11 +193,6 @@ background-repeat: no-repeat;
 background-attachment: fixed;
 background-size: cover;
 
-    /* Restore a small horizontal gutter on mobile */
-    @media (max-width: 640px) {
-      padding-left: 5px;
-      padding-right: 5px;
-    }
   }
 }
 
