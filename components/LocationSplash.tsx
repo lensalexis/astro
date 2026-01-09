@@ -16,16 +16,12 @@ dayjs.extend(timezone)
 
 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
-// Images for rotating carousel (from prompts)
-const ROTATING_IMAGES = [
-  '/images/post-thumb-03.jpg',
-  '/images/post-thumb-04.jpg',
-  '/images/post-thumb-05.jpg',
-  '/images/post-thumb-06.jpg',
-  '/images/post-thumb-07.jpg',
-  '/images/post-thumb-08.jpg',
-  '/images/post-thumb-09.jpg',
-  '/images/post-thumb-10.jpg',
+// Videos for rotating splash background (only these are used)
+// NOTE: the StoryTelling filename contains a space; keep it URL-encoded.
+const ROTATING_VIDEOS = [
+  '/videos/StoryTelling%20video_6-720p.mov',
+  '/videos/fivio.mov',
+  '/videos/briarwood.MOV',
 ]
 
 const getStoreStatus = (store: Store): boolean | null => {
@@ -68,7 +64,7 @@ export default function LocationSplash() {
   const [geoError, setGeoError] = useState<string | null>(null)
   const [ageVerified, setAgeVerified] = useState(false)
   const [ageError, setAgeError] = useState<string | null>(null)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const AGE_SESSION_KEY = 'jalh_age_verified_session'
   const router = useRouter()
@@ -81,11 +77,11 @@ export default function LocationSplash() {
     setStoreStatuses(statuses)
   }, [])
 
-  // Rotate images every 4 seconds with smooth transition
+  // Rotate background media with smooth crossfade
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentImageIndex((prev) => (prev + 1) % ROTATING_IMAGES.length)
-    }, 4000)
+      setCurrentMediaIndex((prev) => (prev + 1) % ROTATING_VIDEOS.length)
+    }, 7000)
     return () => clearInterval(interval)
   }, [])
 
@@ -174,23 +170,25 @@ export default function LocationSplash() {
 
   return (
     <div className="relative h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-black text-white overflow-hidden">
-      {/* Full-width rotating image background with gradient overlay */}
+      {/* Full-width rotating video background with gradient overlay */}
       <div className="absolute inset-0">
-        {ROTATING_IMAGES.map((image, idx) => (
+        {ROTATING_VIDEOS.map((src, idx) => (
           <div
-            key={idx}
+            key={src}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              idx === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              idx === currentMediaIndex ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <Image
-              src={image}
-              alt={`Cannabis product ${idx + 1}`}
-              fill
-              className="object-cover"
-              priority={idx === 0}
-              quality={90}
-            />
+            <video
+              className="h-full w-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload={idx === 0 ? 'auto' : 'metadata'}
+            >
+              <source src={src} />
+            </video>
             {/* Dark gradient overlay at bottom for text readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
             {/* Additional shadow gradient for depth */}
