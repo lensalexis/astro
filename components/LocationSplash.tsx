@@ -173,7 +173,7 @@ export default function LocationSplash() {
   }
 
   return (
-    <div className="relative h-screen bg-black text-white overflow-hidden">
+    <div className="relative h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-black text-white overflow-hidden">
       {/* Full-width rotating image background with gradient overlay */}
       <div className="absolute inset-0">
         {ROTATING_IMAGES.map((image, idx) => (
