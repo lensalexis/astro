@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import productService from "@/lib/productService";
-import cartService from "@/app/api/cartService";
 import type { Product } from "@/types/product";
 import { ProductType } from "@/types/product";
 import ProductCard, {
@@ -36,7 +35,6 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<Product | null>(null);
   const [related, setRelated] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
 
   const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!;
@@ -143,37 +141,6 @@ export default function ProductDetailPage() {
       hasDiscount: finalPrice < node.basePrice - 0.001,
     };
   }, [product, selectedTier]);
-
-  const handleAddToCart = async () => {
-    if (!product) return;
-    setAdding(true);
-    try {
-      const priceTierData =
-        product.priceType &&
-        (product.priceType === "PRICE_TIER" || product.priceType === "WEIGHT_TIER") &&
-        selectedTier
-          ? {
-              priceType: product.priceType,
-              type: product.type || ProductType.FLOWER,
-              weight: product.tiers?.find((t) => t.id === selectedTier.id)?.weight,
-            }
-          : undefined;
-
-      await cartService.addProduct({
-        venueId,
-        productId: product.id,
-        quantity: 1,
-        purchaseWeight: product.weight,
-        priceTierData,
-      });
-      window.dispatchEvent(new CustomEvent("cartUpdated"));
-    } catch (error) {
-      console.error("Failed to add to cart", error);
-      alert("Unable to add this item to your cart. Please try again.");
-    } finally {
-      setAdding(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -309,14 +276,6 @@ export default function ProductDetailPage() {
               </div>
             </div>
           )}
-
-          <button
-            onClick={handleAddToCart}
-            disabled={adding}
-            className="w-full rounded-full bg-purple-600 px-6 py-3 text-white font-semibold hover:bg-purple-700 disabled:opacity-50"
-          >
-            {adding ? "Adding..." : "Add to Cart"}
-          </button>
 
           <button
             onClick={() =>
