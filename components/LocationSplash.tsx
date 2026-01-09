@@ -24,6 +24,7 @@ const ROTATING_VIDEOS = [
   '/videos/fab.mov',
   '/videos/shoutout.MP4',
   '/videos/uws.mov',
+  '/videos/show.mov',
   '/videos/briarwood.MOV',
 ]
 
@@ -86,7 +87,7 @@ export default function LocationSplash() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentMediaIndex((prev) => (prev + 1) % ROTATING_VIDEOS.length)
-    }, 7000)
+    }, 11000)
     return () => clearInterval(interval)
   }, [])
 
