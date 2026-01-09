@@ -469,7 +469,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   ]
   // AI Mode prompts - Updated list with new categories
   const AI_MODE_PROMPTS = [
-    { id: 'recommend-deals', label: "What's on sale today", query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
+    { id: 'recommend-deals', label: "What's on sale today?", query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
     { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg', promptType: 'product' },
     { id: 'store-info', label: 'What are your current store hours and location?', query: 'what are your current store hours and location', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
     { id: 'best-sellers', label: 'Show me best sellers this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
@@ -2713,26 +2713,15 @@ For specific details about earning rates and redemption options, please contact 
 
   // Prevent body scroll when AI mode is open (but allow scrolling inside overlay)
   useEffect(() => {
-    if (aiModeOpen || forceAIMode) {
-      // Prevent body scroll when AI mode is open
-      const originalOverflow = document.body.style.overflow
-      const originalHeight = document.body.style.height
-      document.body.style.overflow = 'hidden'
-      // For forceAIMode, we still want to prevent body scroll but allow internal scrolling
-      if (forceAIMode) {
-        // Use dynamic viewport height on mobile to avoid content being hidden under browser UI
-        // (iOS Safari address bar / toolbar can make 100vh incorrect).
-        document.body.style.height = '100dvh'
-        document.documentElement.style.height = '100dvh'
-      }
-      
-      return () => {
-        document.body.style.overflow = originalOverflow
-        document.body.style.height = originalHeight
-        if (forceAIMode) {
-          document.documentElement.style.height = ''
-        }
-      }
+    // Only lock body scroll for the full-screen overlay experience.
+    // For `forceAIMode` (store pages), we want the page to scroll normally and
+    // the AI search header to behave like a sticky navbar.
+    if (!aiModeOpen || forceAIMode) return
+
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = originalOverflow
     }
   }, [aiModeOpen, forceAIMode])
 
@@ -2742,13 +2731,17 @@ For specific details about earning rates and redemption options, please contact 
         key="ai-mode-overlay"
         className={
           forceAIMode
-            ? "h-[100dvh] bg-white flex flex-col overflow-hidden"
+            ? "min-h-[100dvh] bg-white flex flex-col"
             : "fixed inset-0 z-50 bg-white flex flex-col overflow-hidden"
         }
       >
         {/* Search box inside AI Mode */}
         <div
-          className="px-4 pb-4 border-b border-gray-200"
+          className={
+            forceAIMode
+              ? "sticky top-0 z-40 bg-white/95 backdrop-blur px-4 pb-4 border-b border-gray-200"
+              : "px-4 pb-4 border-b border-gray-200"
+          }
           style={{
             // Prevent the top content from sitting under the notch/status bar on iOS
             paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
@@ -3016,14 +3009,18 @@ For specific details about earning rates and redemption options, please contact 
         {/* Content area - shows prompts or results */}
         <div 
           ref={aiModeScrollRef}
-          className="flex-1 overflow-y-auto overscroll-none px-4 py-6"
-          style={{ 
-            // Prevent "scrolling past" the prompt list on mobile (rubber-banding / extra scroll)
-            overscrollBehaviorY: 'none',
-            WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-            scrollBehavior: 'auto', // Prevent smooth scroll from interfering
-            minHeight: 0 // Critical for flex children to allow scrolling
-          }}
+          className={forceAIMode ? "px-4 py-6" : "flex-1 overflow-y-auto overscroll-none px-4 py-6"}
+          style={
+            forceAIMode
+              ? undefined
+              : {
+                  // Prevent "scrolling past" the prompt list on mobile (rubber-banding / extra scroll)
+                  overscrollBehaviorY: 'none',
+                  WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+                  scrollBehavior: 'auto', // Prevent smooth scroll from interfering
+                  minHeight: 0, // Critical for flex children to allow scrolling
+                }
+          }
         >
           <div className="max-w-2xl mx-auto">
 
