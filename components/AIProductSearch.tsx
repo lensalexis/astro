@@ -473,11 +473,8 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     { id: 'store-info', label: 'What are your current store hours and location?', query: 'what are your current store hours and location', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
     { id: 'best-sellers', label: 'Show me best sellers this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
     { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg', promptType: 'product' },
-    { id: 'recommend-edible', label: 'Recommend edibles for sleep', query: 'recommend edibles that help with sleep', category: 'Edibles', image: '/images/post-thumb-05.jpg', promptType: 'product' },
-    { id: 'recommend-deals', label: 'Recommend the best deals today', query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
-    { id: 'plan-evening', label: 'Plan a relaxing evening with cannabis', query: 'plan relaxing evening indica products edibles beverages', category: 'Multi-Product Bundle', image: '/images/post-thumb-10.jpg', promptType: 'bundle' },
-    { id: 'plan-party', label: 'Plan products for a social gathering', query: 'plan products for party social gathering sativa hybrid', category: 'Multi-Product Bundle', image: '/images/post-thumb-03.jpg', promptType: 'bundle' },
-    { id: 'plan-workout', label: 'Plan products for post-workout recovery', query: 'plan products for post workout recovery cbd topicals', category: 'Multi-Product Bundle', image: '/images/post-thumb-04.jpg', promptType: 'bundle' },
+    { id: 'recommend-edible', label: 'Best weed gummy for sleep', query: 'recommend edibles that help with sleep', category: 'Edibles', image: '/images/post-thumb-05.jpg', promptType: 'product' },
+    { id: 'recommend-deals', label: "What's on sale today", query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
   ]
   const PRODUCT_PROMPT_SUGGESTIONS = [
     'Show me relaxing indica flower',
@@ -1244,9 +1241,24 @@ If asked about specific products, you can mention that the customer can search f
       // Priority 1: Strain type filtering (primary filter when effectIntent is detected)
       // Use lenient matching similar to applyProductFilters to avoid excluding products
       // that have strain info in name/description but not in structured fields
+      // Check both filters.strainType (from intent router) and appliedFilters.strains (from FilterNav)
+      const strainFiltersToCheck: string[] = []
       if (filters.strainType) {
-        const targetStrain = filters.strainType.toLowerCase()
+        strainFiltersToCheck.push(filters.strainType)
+      }
+      // Also check appliedFilters.strains if it exists (for when Hybrid is added via FilterNav)
+      // Note: appliedFilters is created later, so we'll check it after it's created
+      
+      if (strainFiltersToCheck.length > 0) {
         const hasEffectIntent = !!filters.effectIntent
+        
+        // Special handling: For sleep/relaxation queries, include both Indica and Hybrid
+        // Hybrid products are also good for sleep and relaxation
+        const includeHybridForSleep = (
+          filters.effectIntent === 'sleep' || 
+          filters.effectIntent === 'relaxation' ||
+          (strainFiltersToCheck.some(s => s.toLowerCase() === 'indica') && hasEffectIntent && (filters.effectIntent === 'sleep' || filters.effectIntent === 'relaxation'))
+        )
         
         // Use lenient filtering that matches applyProductFilters logic
         // This checks strain, cannabisType, getStrainType, and name/description
@@ -1256,35 +1268,65 @@ If asked about specific products, you can mention that the customer can search f
           const strainType = (getStrainType(p) || '').toLowerCase()
           const blob = `${p.name || ''} ${p.description || ''} ${cannabisType} ${strainName}`.toLowerCase()
           
-          // Match logic similar to applyProductFilters
-          if (targetStrain === 'sativa' || targetStrain.includes('sativa')) {
-            return (
-              strainType.includes('sativa') ||
-              cannabisType.includes('sativa') ||
-              blob.includes('sativa')
-            )
+          // Check if product matches any of the target strains
+          for (const targetStrain of strainFiltersToCheck) {
+            const targetStrainLower = targetStrain.toLowerCase()
+            
+            // Special case: For sleep/relaxation, include both Indica and all Hybrid types
+            if (includeHybridForSleep && (targetStrainLower === 'indica' || targetStrainLower.includes('indica'))) {
+              // Check for indica
+              const isIndica = (
+                strainType.includes('indica') ||
+                cannabisType.includes('indica') ||
+                blob.includes('indica')
+              )
+              // Check for any hybrid type (hybrid, hybrid_indica, hybrid_sativa)
+              const isHybrid = (
+                strainType.includes('hybrid') ||
+                cannabisType.includes('hybrid') ||
+                blob.includes('hybrid')
+              )
+              if (isIndica || isHybrid) {
+                return true
+              }
+            }
+            
+            // Match logic similar to applyProductFilters
+            if (targetStrainLower === 'sativa' || targetStrainLower.includes('sativa')) {
+              if (
+                strainType.includes('sativa') ||
+                cannabisType.includes('sativa') ||
+                blob.includes('sativa')
+              ) {
+                return true
+              }
+            }
+            if (targetStrainLower === 'indica' || targetStrainLower.includes('indica')) {
+              if (
+                strainType.includes('indica') ||
+                cannabisType.includes('indica') ||
+                blob.includes('indica')
+              ) {
+                return true
+              }
+            }
+            if (targetStrainLower === 'hybrid' || targetStrainLower.includes('hybrid')) {
+              if (
+                strainType.includes('hybrid') ||
+                cannabisType.includes('hybrid') ||
+                blob.includes('hybrid')
+              ) {
+                return true
+              }
+            }
+            
+            // Exact matches
+            if (strainName === targetStrainLower || cannabisType === targetStrainLower || strainType === targetStrainLower) {
+              return true
+            }
+            if (strainName && strainName.includes(targetStrainLower)) return true
+            if (cannabisType && cannabisType.includes(targetStrainLower)) return true
           }
-          if (targetStrain === 'indica' || targetStrain.includes('indica')) {
-            return (
-              strainType.includes('indica') ||
-              cannabisType.includes('indica') ||
-              blob.includes('indica')
-            )
-          }
-          if (targetStrain === 'hybrid' || targetStrain.includes('hybrid')) {
-            return (
-              strainType.includes('hybrid') ||
-              cannabisType.includes('hybrid') ||
-              blob.includes('hybrid')
-            )
-          }
-          
-          // Exact matches
-          if (strainName === targetStrain || cannabisType === targetStrain || strainType === targetStrain) {
-            return true
-          }
-          if (strainName && strainName.includes(targetStrain)) return true
-          if (cannabisType && cannabisType.includes(targetStrain)) return true
           
           return false
         })
@@ -1294,7 +1336,7 @@ If asked about specific products, you can mention that the customer can search f
           filteredCount: filteredByStrain.length, 
           totalCount: allProducts.length,
           hasEffectIntent,
-          targetStrain
+          targetStrain: strainFiltersToCheck
         })
         
         allProducts = filteredByStrain
@@ -1305,12 +1347,18 @@ If asked about specific products, you can mention that the customer can search f
       if (filters.effectIntent) {
         const effectIntent = filters.effectIntent.toLowerCase()
         const effectKeywords = EFFECT_KEYWORDS[effectIntent as keyof typeof EFFECT_KEYWORDS]
+        // Special handling: for sleep/relaxation we want to keep hybrids too (they're often relevant
+        // and many products are missing explicit effects tags).
+        const includeHybridForSleep =
+          (effectIntent === 'sleep' || effectIntent === 'relaxation') &&
+          (filters.strainType || '').toLowerCase().includes('indica')
         
         if (effectKeywords && effectKeywords.preferredEffects) {
           const preferredEffects = effectKeywords.preferredEffects.map((e: string) => e.toLowerCase())
           
           // Separate products with effects data from those without
           const productsWithEffects: Product[] = []
+          const productsWithNonMatchingEffects: Product[] = []
           const productsWithoutEffects: Product[] = []
           
           allProducts.forEach((p: Product) => {
@@ -1322,34 +1370,64 @@ If asked about specific products, you can mention that the customer can search f
               )
               if (matches) {
                 productsWithEffects.push(p)
+              } else {
+                // Don't exclude non-matching effects; keep them, just lower priority.
+                productsWithNonMatchingEffects.push(p)
               }
             } else {
               // Product doesn't have effects data - include it if it matches strain type
               // OR if we don't have strain type data (be lenient for effect-based searches)
               const strainType = getStrainType(p)
-              if (!strainType || (filters.strainType && getStrainType(p)?.toLowerCase().includes(filters.strainType.toLowerCase()))) {
+              const strainTypeLower = (strainType || '').toLowerCase()
+              const cannabisTypeLower = (p.cannabisType || '').toLowerCase()
+              const targetStrainLower = (filters.strainType || '').toLowerCase()
+
+              // If no strain info, keep it (we already did strain + intent routing earlier)
+              if (!strainTypeLower) {
                 productsWithoutEffects.push(p)
+                return
               }
+
+              // If there is no target strain, keep it (effect intent is the driver)
+              if (!targetStrainLower) {
+                productsWithoutEffects.push(p)
+                return
+              }
+
+              // Normal case: keep if matches the routed target strain
+              if (strainTypeLower.includes(targetStrainLower)) {
+                productsWithoutEffects.push(p)
+                return
+              }
+
+              // Sleep/relaxation special case: allow hybrids alongside indica
+              if (includeHybridForSleep && (strainTypeLower.includes('hybrid') || cannabisTypeLower.includes('hybrid'))) {
+                productsWithoutEffects.push(p)
+                return
+              }
+              // Otherwise: exclude (strain doesn't match target)
             }
           })
           
           // Prioritize products with matching effects, but also include products without effects data
           // that match the strain type (since effect detection already set the correct strain type)
-          // If we have products with effects, use those; otherwise fall back to all products
+          // If we have products with matching effects, show those first; otherwise fall back.
           if (productsWithEffects.length > 0) {
-            allProducts = [...productsWithEffects, ...productsWithoutEffects]
+            allProducts = [...productsWithEffects, ...productsWithoutEffects, ...productsWithNonMatchingEffects]
             log('effect-filter-with-effects', { 
               requestId: rid, 
               withEffects: productsWithEffects.length, 
               withoutEffects: productsWithoutEffects.length,
+              nonMatchingEffects: productsWithNonMatchingEffects.length,
               total: allProducts.length 
             })
-          } else if (productsWithoutEffects.length > 0) {
-            // No products with effects, but we have products without effects data - include them
-            allProducts = productsWithoutEffects
+          } else if (productsWithoutEffects.length > 0 || productsWithNonMatchingEffects.length > 0) {
+            // No matching-effects products; keep what we have (don't hard-exclude).
+            allProducts = [...productsWithoutEffects, ...productsWithNonMatchingEffects]
             log('effect-filter-no-effects', { 
               requestId: rid, 
               withoutEffects: productsWithoutEffects.length,
+              nonMatchingEffects: productsWithNonMatchingEffects.length,
               total: allProducts.length 
             })
           } else {
@@ -1585,6 +1663,33 @@ If asked about specific products, you can mention that the customer can search f
 
       // Merge new filters with existing activeFilters to support stacking
       // Use normalizationFacets to ensure values match FilterNav's options exactly
+      
+      // Special handling: For sleep/relaxation queries, include both Indica and all Hybrid types in FilterNav
+      let strainTypesToAdd: string[] = []
+      if (filters.strainType) {
+        strainTypesToAdd.push(filters.strainType)
+        
+        // If it's a sleep/relaxation query with Indica, also include all Hybrid types
+        if ((filters.effectIntent === 'sleep' || filters.effectIntent === 'relaxation') && 
+            filters.strainType.toLowerCase() === 'indica') {
+          // Find all hybrid-related strain options (HYBRID, HYBRID_INDICA, HYBRID_SATIVA)
+          const hybridOptions = normalizationFacets.strains.filter(s => 
+            s.toLowerCase().includes('hybrid')
+          )
+          // Add all hybrid variations to ensure all hybrid types are selected
+          hybridOptions.forEach(hybridOption => {
+            if (!strainTypesToAdd.includes(hybridOption)) {
+              strainTypesToAdd.push(hybridOption)
+            }
+          })
+          
+          // Fallback if no hybrid options found in normalization
+          if (hybridOptions.length === 0) {
+            strainTypesToAdd.push('Hybrid', 'HYBRID_INDICA', 'HYBRID_SATIVA')
+          }
+        }
+      }
+      
       let appliedFilters: FacetedFilters = {
         categories: filters.category 
           ? mergeFilterArray(activeFilters.categories, [filters.category], normalizationFacets.categories)
@@ -1592,8 +1697,8 @@ If asked about specific products, you can mention that the customer can search f
         brands: filters.brand 
           ? mergeFilterArray(activeFilters.brands, [filters.brand], normalizationFacets.brands)
           : activeFilters.brands || [],
-        strains: filters.strainType 
-          ? mergeFilterArray(activeFilters.strains, [filters.strainType], normalizationFacets.strains)
+        strains: strainTypesToAdd.length > 0
+          ? mergeFilterArray(activeFilters.strains, strainTypesToAdd, normalizationFacets.strains)
           : activeFilters.strains || [],
         terpenes: filters.terpenes && filters.terpenes.length
           ? mergeFilterArray(activeFilters.terpenes, filters.terpenes, normalizationFacets.terpenes)
@@ -2424,10 +2529,11 @@ License: ${license}`
   // Handler for AI Mode prompt clicks
   const handleAiModePrompt = async (prompt: typeof AI_MODE_PROMPTS[0]) => {
     // Keep AI mode open - don't close it
-    setQuery(prompt.query)
+    // Use label for display consistency, but query for actual search processing
+    setQuery(prompt.label)
     setHasInteracted(true)
     const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
-    appendUserMessage(prompt.query, requestId)
+    appendUserMessage(prompt.label, requestId)
     setShowPrePrompts(false)
     
     try {
@@ -2500,26 +2606,32 @@ For specific details about earning rates and redemption options, please contact 
           ...intentResult.extracted,
           discountedOnly: true,
         }
-        await searchProductsWithFilters(filters, prompt.query, requestId)
+        // Use label for display consistency, query for processing
+        await searchProductsWithFilters(filters, prompt.label, requestId)
         return
       }
       
       if (prompt.promptType === 'bundle') {
         // Handle multi-product bundle planning
         const intentResult = routeIntent(prompt.query)
-        await searchProductsWithFilters(intentResult.extracted, prompt.query, requestId)
+        // Use label for display consistency, query for processing
+        await searchProductsWithFilters(intentResult.extracted, prompt.label, requestId)
         return
       }
       
       // Default: handle as product shopping
       const intentResult = routeIntent(prompt.query)
+      
       if (intentResult.intent === 'PRODUCT_SHOPPING' || intentResult.intent === 'PRODUCT_INFO') {
-        await searchProductsWithFilters(intentResult.extracted, prompt.query, requestId)
+        // Use label for display consistency, query for processing
+        // The searchProductsWithFilters function will handle including hybrid for sleep/relaxation queries
+        await searchProductsWithFilters(intentResult.extracted, prompt.label, requestId)
       } else if (intentResult.intent === 'STORE_INFO') {
-        handleStoreInfo(intentResult, prompt.query, requestId)
+        handleStoreInfo(intentResult, prompt.label, requestId)
       } else {
         // Fallback for other intents
-        await searchProductsWithFilters(intentResult.extracted, prompt.query, requestId)
+        // Use label for display consistency, query for processing
+        await searchProductsWithFilters(intentResult.extracted, prompt.label, requestId)
       }
     } catch (error) {
       console.error('Error processing AI mode prompt:', error)
