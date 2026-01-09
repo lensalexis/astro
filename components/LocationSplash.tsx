@@ -171,7 +171,7 @@ export default function LocationSplash() {
   }
 
   return (
-    <div className="relative min-h-screen bg-black text-white overflow-hidden">
+    <div className="relative h-screen bg-black text-white overflow-hidden">
       {/* Full-width rotating image background with gradient overlay */}
       <div className="absolute inset-0">
         {ROTATING_IMAGES.map((image, idx) => (
@@ -198,56 +198,56 @@ export default function LocationSplash() {
       </div>
 
       {/* Content overlay */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-10 h-full flex flex-col">
         {/* Top section with logo and content over image */}
-        <div className="flex-1 flex flex-col justify-end px-6 pb-8">
+        <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 pb-4 sm:pb-6">
           {/* Logo */}
-          <div className="mb-8 flex justify-center">
+          <div className="mb-4 sm:mb-6 flex justify-center">
             <Image 
               src="/images/jalh-logo.png" 
               alt="Just a Little Higher" 
               width={200} 
               height={60} 
-              className="h-10 w-auto drop-shadow-lg" 
+              className="h-8 sm:h-10 w-auto drop-shadow-lg" 
             />
           </div>
 
           {/* Title and subtitle */}
-          <div className="text-center space-y-3 mb-12">
-            <h1 className="text-4xl sm:text-5xl font-bold text-white drop-shadow-2xl">
+          <div className="text-center space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl">
               Ready to Get a Little Higher?
             </h1>
-            <p className="text-lg sm:text-xl text-gray-200 drop-shadow-lg">
+            <p className="text-sm sm:text-lg md:text-xl text-gray-200 drop-shadow-lg">
               Your Destination for Recreational Cannabis in New York
             </p>
           </div>
         </div>
 
         {/* Bottom section: Age verification or location selection */}
-        <div className="px-6 pb-12 pt-8">
+        <div className="px-4 sm:px-6 pb-6 sm:pb-8 pt-4">
           {!ageVerified ? (
             /* Age verification buttons - styled like prompt boxes */
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="text-center">
-                <div className="text-xl font-semibold text-white mb-6">Are you 21+?</div>
-                <div className="flex gap-4 justify-center">
+                <div className="text-lg sm:text-xl font-semibold text-white mb-4">Are you 21+?</div>
+                <div className="flex gap-3 sm:gap-4 justify-center">
                   <button
                     type="button"
                     onClick={() => handleAgeResponse(true)}
-                    className="px-8 py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 hover:border-white transition-all shadow-lg hover:shadow-xl text-gray-900 font-semibold text-base"
+                    className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 hover:border-white transition-all shadow-lg hover:shadow-xl text-gray-900 font-semibold text-sm sm:text-base"
                   >
                     Yes
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAgeResponse(false)}
-                    className="px-8 py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 hover:border-white transition-all shadow-lg hover:shadow-xl text-gray-900 font-semibold text-base"
+                    className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 hover:border-white transition-all shadow-lg hover:shadow-xl text-gray-900 font-semibold text-sm sm:text-base"
                   >
                     No
                   </button>
                 </div>
                 {ageError && (
-                  <p className="mt-4 text-sm text-red-300 font-medium">{ageError}</p>
+                  <p className="mt-3 text-xs sm:text-sm text-red-300 font-medium">{ageError}</p>
                 )}
               </div>
             </div>
