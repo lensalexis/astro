@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect, useMemo, ReactNode, type ReactElement } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
 import productService from '@/lib/productService'
-import ProductCard from '@/components/ui/ProductCard'
+import ProductCard, { computeFinalPrice, pickDisplayNode, pickPrimaryImage } from '@/components/ui/ProductCard'
 import type { Product } from '@/types/product'
 import { ProductType } from '@/types/product'
 import FilterNav from '@/components/ui/FilterNav'
@@ -488,11 +489,79 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       .replace(/\b\w/g, (c) => c.toUpperCase())
       .trim()
   }
+
+  const getCategorySlugForProduct = (p: Product) => {
+    const typeSlugMap: Partial<Record<ProductType, string>> = {
+      [ProductType.FLOWER]: 'flower',
+      [ProductType.PRE_ROLLS]: 'pre-rolls',
+      [ProductType.VAPORIZERS]: 'vaporizers',
+      [ProductType.CONCENTRATES]: 'concentrates',
+      [ProductType.EDIBLES]: 'edibles',
+      [ProductType.BEVERAGES]: 'beverages',
+      [ProductType.TINCTURES]: 'tinctures',
+    }
+
+    if (p.type && typeSlugMap[p.type]) return typeSlugMap[p.type] as string
+    if (p.category) return p.category.toLowerCase().replace(/\s+/g, '-')
+    return 'flower'
+  }
+
+  const BestSellerMasonryTile = ({ product, index }: { product: Product; index: number }) => {
+    const image = pickPrimaryImage(product)
+    const { basePrice, discountType, discountAmountFinal, discountValueFinal, discounts } =
+      pickDisplayNode(product)
+    const finalPrice = computeFinalPrice(
+      basePrice,
+      discountType,
+      discountAmountFinal,
+      discountValueFinal,
+      discounts
+    )
+    const hasDiscount = finalPrice < basePrice - 0.001
+    const heightOptions = [168, 208, 248, 192]
+    const imgHeight = heightOptions[index % heightOptions.length]
+
+    return (
+      <Link
+        href={`/shop/${getCategorySlugForProduct(product)}/${product.id}`}
+        className="block rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition border border-gray-200"
+      >
+        <div className="relative w-full bg-gray-100" style={{ height: imgHeight }}>
+          <img
+            src={image}
+            alt={product.name}
+            loading="lazy"
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="p-3">
+          {(product.brand?.name || product.category) && (
+            <div className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold truncate">
+              {product.brand?.name || product.category}
+            </div>
+          )}
+          <div className="mt-1 text-sm font-semibold text-gray-900 truncate">{product.name}</div>
+          <div className="mt-2 flex items-baseline gap-2">
+            {hasDiscount ? (
+              <>
+                <span className="text-xs text-gray-400 line-through">${basePrice.toFixed(2)}</span>
+                <span className="text-sm font-bold text-red-500">${finalPrice.toFixed(2)}</span>
+              </>
+            ) : (
+              <span className="text-sm font-bold text-indigo-600">${basePrice.toFixed(2)}</span>
+            )}
+          </div>
+        </div>
+      </Link>
+    )
+  }
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isChatMode, setIsChatMode] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [allProductsGlobal, setAllProductsGlobal] = useState<Product[]>([])
   const [showPrePrompts, setShowPrePrompts] = useState(true)
+  const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([])
+  const [bestSellerLoading, setBestSellerLoading] = useState(false)
   const [categoryCountsByApi, setCategoryCountsByApi] = useState<Record<string, number>>({})
   const [aiModeOpen, setAiModeOpen] = useState(forceAIMode)
   const [showFilterNav, setShowFilterNav] = useState(false)
@@ -509,6 +578,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const messageIdsRef = useRef<Set<string>>(new Set())
   const lastStoreInfoRef = useRef<{ id: string | null; ts: number }>({ id: null, ts: 0 })
   const lastSubmitRef = useRef<{ key: string; ts: number } | null>(null)
+  const bestSellerPrefetchReqIdRef = useRef(0)
   const [isListening, setIsListening] = useState(false)
   // Web Speech API types aren't always included in TS lib config; keep this as `any`.
   const recognitionRef = useRef<any>(null)
@@ -528,6 +598,43 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     store: (typeof stores)[number] | null
     requestId: string | null
   }>({ active: false, store: null, requestId: null })
+
+  // Prefetch best sellers so we can render a native masonry feed under prompts.
+  useEffect(() => {
+    const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID
+    if (!venueId) return
+    if (!showPrePrompts || showResults || chatMessages.length > 0) return
+    if (bestSellerProducts.length > 0) return
+
+    const controller = new AbortController()
+    const reqId = ++bestSellerPrefetchReqIdRef.current
+    setBestSellerLoading(true)
+    productService
+      .list({
+        venueId,
+        limit: 30,
+        sort: '-totalSold',
+        quantityMin: 1,
+      }, { signal: controller.signal })
+      .then((res) => {
+        if (reqId !== bestSellerPrefetchReqIdRef.current) return
+        setBestSellerProducts(res.data || [])
+      })
+      .catch((err) => {
+        if (reqId !== bestSellerPrefetchReqIdRef.current) return
+        if (err?.name === 'AbortError') return
+        console.error('Error prefetching best sellers:', err)
+        setBestSellerProducts([])
+      })
+      .finally(() => {
+        if (reqId !== bestSellerPrefetchReqIdRef.current) return
+        setBestSellerLoading(false)
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [bestSellerProducts.length, chatMessages.length, showPrePrompts, showResults])
 
   const filterPills = useMemo<FilterPill[]>(() => {
     const pills: FilterPill[] = []
@@ -3329,6 +3436,43 @@ For specific details about earning rates and redemption options, please contact 
                     )}
                   </div>
                 ))}
+
+                {(bestSellerLoading || bestSellerProducts.length > 0) && (
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between px-1">
+                      <div className="text-sm font-semibold text-gray-900">Best sellers this week</div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const p = AI_MODE_PROMPTS.find((x) => x.id === 'best-sellers')
+                          if (p) handleAiModePrompt(p)
+                        }}
+                        className="text-sm font-medium text-pink-600 hover:text-pink-700 transition"
+                      >
+                        View all
+                      </button>
+                    </div>
+
+                    {bestSellerLoading ? (
+                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div
+                            key={`bestseller-skeleton-${i}`}
+                            className="h-40 rounded-2xl bg-gray-100 animate-pulse"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 columns-2 sm:columns-3 gap-3">
+                        {bestSellerProducts.slice(0, 12).map((product, i) => (
+                          <div key={product.id} className="mb-3 break-inside-avoid">
+                            <BestSellerMasonryTile product={product} index={i} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
