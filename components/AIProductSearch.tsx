@@ -3355,13 +3355,13 @@ For specific details about earning rates and redemption options, please contact 
             {/* Show prompts if no results yet and pre-prompts should be visible */}
             {showPrePrompts && !showResults && chatMessages.length === 0 && (
               <div className="space-y-3">
-                {AI_MODE_PROMPTS.map((prompt, index) => (
+                {/* The 3 prompts - directly under the search box */}
+                {AI_MODE_PROMPTS.slice(0, 3).map((prompt) => (
                   <div key={prompt.id}>
                     <button
                       onClick={() => handleAiModePrompt(prompt)}
                       className="w-full flex items-center rounded-2xl overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
                     >
-                      {/* Image on left - touches edge */}
                       <div className="relative w-20 h-20 flex-shrink-0">
                         <Image
                           src={prompt.image}
@@ -3371,13 +3371,11 @@ For specific details about earning rates and redemption options, please contact 
                           sizes="80px"
                         />
                       </div>
-                      {/* Text in middle */}
                       <div className="flex-1 px-4 py-4">
                         <p className="text-base font-medium bg-gradient-to-r from-pink-500 via-blue-500 to-pink-500 bg-clip-text text-transparent bg-[length:200%_100%] animate-gradient-x">
                           {prompt.label}
                         </p>
                       </div>
-                      {/* Icon on right - 3 stars with animated gradient */}
                       <div className="flex-shrink-0 pr-4">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -3406,41 +3404,45 @@ For specific details about earning rates and redemption options, please contact 
                         </svg>
                       </div>
                     </button>
-                    {/* Loyalty Program Banner - Insert after prompt 3 (index 2) - between best sellers and vape */}
-                    {index === 2 && (
-                      <button
-                        onClick={() => {
-                          const loyaltyPrompt = { id: 'loyalty-program', label: 'How do I earn and redeem loyalty points?', query: 'how do I earn and redeem loyalty points', category: 'Loyalty Program', image: '/images/post-thumb-04.jpg', promptType: 'loyalty' as const }
-                          handleAiModePrompt(loyaltyPrompt)
-                        }}
-                        className="w-full relative rounded-2xl overflow-hidden group cursor-pointer mt-3"
-                      >
-                        {/* Full image background */}
-                        <div className="relative h-24 sm:h-28">
-                          <Image
-                            src="/images/post-thumb-04.jpg"
-                            alt="Loyalty Program"
-                            fill
-                            className="object-cover"
-                            sizes="100vw"
-                          />
-                          {/* Dark gradient overlay for text readability */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-black/40" />
-                          {/* Content */}
-                          <div className="absolute inset-0 flex flex-col justify-end items-start px-6 sm:px-8 pb-3 sm:pb-4 text-white">
-                            <h3 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg">
-                              How do I earn and redeem loyalty points?
-                            </h3>
-                            <p className="text-sm sm:text-base text-white/90 drop-shadow-md">
-                              Learn about our rewards program
-                            </p>
-                          </div>
-                        </div>
-                      </button>
-                    )}
                   </div>
                 ))}
 
+                {/* Loyalty Program Banner - under the 3 prompts */}
+                <button
+                  onClick={() => {
+                    const loyaltyPrompt = {
+                      id: 'loyalty-program',
+                      label: 'How do I earn and redeem loyalty points?',
+                      query: 'how do I earn and redeem loyalty points',
+                      category: 'Loyalty Program',
+                      image: '/images/post-thumb-04.jpg',
+                      promptType: 'loyalty' as const,
+                    }
+                    handleAiModePrompt(loyaltyPrompt)
+                  }}
+                  className="w-full relative rounded-2xl overflow-hidden group cursor-pointer"
+                >
+                  <div className="relative h-24 sm:h-28">
+                    <Image
+                      src="/images/post-thumb-04.jpg"
+                      alt="Loyalty Program"
+                      fill
+                      className="object-cover"
+                      sizes="100vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-black/40" />
+                    <div className="absolute inset-0 flex flex-col justify-end items-start px-6 sm:px-8 pb-3 sm:pb-4 text-white">
+                      <h3 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg">
+                        How do I earn and redeem loyalty points?
+                      </h3>
+                      <p className="text-sm sm:text-base text-white/90 drop-shadow-md">
+                        Learn about our rewards program
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Best sellers masonry grid - directly after the banner */}
                 {(bestSellerLoading || bestSellerProducts.length > 0) && (
                   <div className="pt-2">
                     <div className="flex items-center justify-between px-1">

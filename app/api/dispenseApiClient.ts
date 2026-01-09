@@ -3,6 +3,7 @@ import DispenseError from './dispenseError'
 type RequestMethod = 'GET' | 'POST' | 'DELETE' | 'PUT' | 'PATCH'
 
 export type RequestOptions = Pick<RequestInit, 'signal'> & {
+  cache?: RequestCache
   next?: {
     revalidate?: number
     tags?: string[]
@@ -34,7 +35,9 @@ export async function request<T extends any>({
     )
   )
 
-  console.log('URL', url.toString())
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('URL', url.toString())
+  }
 
   Object.keys(options.params ?? {}).forEach((key) => {
     const value = options?.params?.[key]
@@ -68,8 +71,17 @@ export async function request<T extends any>({
     body = JSON.stringify(options.body)
   }
 
+  // Next.js (prod) will cache server-side GET fetches by default unless told not to.
+  // Local dev appears "fresh" which can make prod look like it's missing updates.
+  // Default to no-store unless the caller explicitly opts into caching via `next.revalidate`
+  // or sets a `cache` policy themselves.
+  const cache: RequestCache | undefined =
+    options.cache ??
+    (method === 'GET' && options.next?.revalidate === undefined ? 'no-store' : undefined)
+
   const response = await fetch(url, {
     ...config,
+    cache,
     body,
   })
 
