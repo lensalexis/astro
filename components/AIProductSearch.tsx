@@ -472,7 +472,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const AI_MODE_PROMPTS = [
     { id: 'recommend-deals', label: "What's on sale today?", query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
     { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg', promptType: 'product' },
-    { id: 'store-info', label: 'Tell me about this store', query: 'tell me about this store', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
+    { id: 'store-info', label: 'What are your current store hours and location?', query: 'what are your current store hours and location', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
     { id: 'best-sellers', label: 'Show me best sellers this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
     { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg', promptType: 'product' },
     { id: 'recommend-edible', label: 'Best cannabis strains for creativity, focus, and energy', query: 'recommend sativa and hybrid_sativa products for creativity focus and energy', category: 'Strains', image: '/images/post-thumb-05.jpg', promptType: 'product' },
@@ -3241,13 +3241,15 @@ For specific details about earning rates and redemption options, please contact 
                 {/* Store Name */}
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
-                    <p className="text-sm font-semibold">{storeInfoDisplay.store.name}</p>
+                    <p className="text-sm font-semibold mb-1">Store Name</p>
+                    <p className="text-sm">{storeInfoDisplay.store.name}</p>
                   </div>
                 </div>
 
                 {/* Address */}
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                    <p className="text-sm font-semibold mb-1">Address</p>
                     <p className="text-sm">
                       {storeInfoDisplay.store.address || 
                         [storeInfoDisplay.store.addressLine1, storeInfoDisplay.store.addressLine2].filter(Boolean).join(', ')}
@@ -3259,9 +3261,8 @@ For specific details about earning rates and redemption options, please contact 
                 {storeInfoDisplay.store.phone && (
                   <div className="flex justify-start">
                     <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
-                      <p className="text-sm">
-                        <span className="font-semibold">Phone:</span> {storeInfoDisplay.store.phone}
-                      </p>
+                      <p className="text-sm font-semibold mb-1">Phone</p>
+                      <p className="text-sm">{storeInfoDisplay.store.phone}</p>
                     </div>
                   </div>
                 )}
@@ -3270,9 +3271,8 @@ For specific details about earning rates and redemption options, please contact 
                 {storeInfoDisplay.store.ocm && (
                   <div className="flex justify-start">
                     <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
-                      <p className="text-sm">
-                        <span className="font-semibold">OCM:</span> {storeInfoDisplay.store.ocm}
-                      </p>
+                      <p className="text-sm font-semibold mb-1">OCM License</p>
+                      <p className="text-sm">{storeInfoDisplay.store.ocm}</p>
                     </div>
                   </div>
                 )}
@@ -3280,18 +3280,15 @@ For specific details about earning rates and redemption options, please contact 
                 {/* Hours */}
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                    <p className="text-sm font-semibold mb-1">Hours</p>
                     {storeInfoDisplay.store.status === 'coming_soon' ? (
                       <p className="text-sm">
                         <span className="font-semibold">Coming Soon</span> - Hours are not yet available for this location.
                       </p>
                     ) : storeInfoDisplay.store.hoursDisplay ? (
-                      <p className="text-sm">
-                        <span className="font-semibold">Hours:</span> {storeInfoDisplay.store.hoursDisplay}
-                      </p>
+                      <p className="text-sm">{storeInfoDisplay.store.hoursDisplay}</p>
                     ) : (
-                      <p className="text-sm text-gray-600">
-                        <span className="font-semibold text-gray-700">Hours:</span> Not listed yet
-                      </p>
+                      <p className="text-sm text-gray-600">Not listed yet</p>
                     )}
                   </div>
                 </div>
@@ -3300,9 +3297,8 @@ For specific details about earning rates and redemption options, please contact 
                 {storeInfoDisplay.store.services && storeInfoDisplay.store.services.length > 0 && (
                   <div className="flex justify-start">
                     <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
-                      <p className="text-sm">
-                        <span className="font-semibold">Services:</span> {storeInfoDisplay.store.services.join(', ')}
-                      </p>
+                      <p className="text-sm font-semibold mb-1">Services</p>
+                      <p className="text-sm">{storeInfoDisplay.store.services.join(', ')}</p>
                     </div>
                   </div>
                 )}

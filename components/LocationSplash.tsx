@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
@@ -16,16 +16,16 @@ dayjs.extend(timezone)
 
 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
-// Videos for rotating splash background (only these are used)
-// NOTE: the StoryTelling filename contains a space; keep it URL-encoded.
-const ROTATING_VIDEOS = [
-  '/videos/StoryTelling%20video_6-720p.mov',
-  '/videos/fivio.mov',
-  '/videos/fab.mov',
-  '/videos/shoutout.MP4',
-  '/videos/uws.mov',
-  '/videos/show.mov',
-  '/videos/briarwood.MOV',
+// Images for rotating carousel (from prompts)
+const ROTATING_IMAGES = [
+  '/images/post-thumb-03.jpg',
+  '/images/post-thumb-04.jpg',
+  '/images/post-thumb-05.jpg',
+  '/images/post-thumb-06.jpg',
+  '/images/post-thumb-07.jpg',
+  '/images/post-thumb-08.jpg',
+  '/images/post-thumb-09.jpg',
+  '/images/post-thumb-10.jpg',
 ]
 
 const getStoreStatus = (store: Store): boolean | null => {
@@ -68,9 +68,7 @@ export default function LocationSplash() {
   const [geoError, setGeoError] = useState<string | null>(null)
   const [ageVerified, setAgeVerified] = useState(false)
   const [ageError, setAgeError] = useState<string | null>(null)
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
-  const videoRefs = useRef<Array<HTMLVideoElement | null>>([])
-  const [soundEnabled, setSoundEnabled] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const AGE_SESSION_KEY = 'jalh_age_verified_session'
   const router = useRouter()
@@ -83,80 +81,13 @@ export default function LocationSplash() {
     setStoreStatuses(statuses)
   }, [])
 
-  // Rotate background media with smooth crossfade
+  // Rotate images every 4 seconds with smooth transition
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentMediaIndex((prev) => (prev + 1) % ROTATING_VIDEOS.length)
-    }, 11000)
+      setCurrentImageIndex((prev) => (prev + 1) % ROTATING_IMAGES.length)
+    }, 4000)
     return () => clearInterval(interval)
   }, [])
-
-  // Enable audio after the first user interaction.
-  // Autoplay with sound is blocked on most mobile browsers; we start muted and unmute to 50% after a tap.
-  useEffect(() => {
-    if (soundEnabled) return
-    const enable = () => setSoundEnabled(true)
-    window.addEventListener('pointerdown', enable, { once: true })
-    window.addEventListener('touchstart', enable, { once: true })
-    window.addEventListener('keydown', enable, { once: true })
-    return () => {
-      window.removeEventListener('pointerdown', enable)
-      window.removeEventListener('touchstart', enable)
-      window.removeEventListener('keydown', enable)
-    }
-  }, [soundEnabled])
-
-  // Best-effort autoplay on all devices:
-  // - keep videos muted + playsInline (required for iOS autoplay)
-  // - imperatively call play() on the active video (some browsers ignore autoPlay attr)
-  // - retry when tab becomes visible
-  useEffect(() => {
-    const active = videoRefs.current[currentMediaIndex]
-
-    const syncAndPlayActive = () => {
-      const v = videoRefs.current[currentMediaIndex]
-      if (!v) return
-      // Always keep volume at 50% (muted controls whether you hear it)
-      v.volume = 0.5
-      v.muted = !soundEnabled
-      v.playsInline = true
-      const p = v.play()
-      if (p && typeof (p as Promise<void>).catch === 'function') {
-        ;(p as Promise<void>).catch(() => {
-          // Autoplay can still be blocked (power saver / data saver / user settings).
-          // If blocked, we keep the background element; user interaction will usually allow play.
-        })
-      }
-    }
-
-    // Pause others to reduce background resource usage
-    videoRefs.current.forEach((v, i) => {
-      if (!v) return
-      if (i !== currentMediaIndex) {
-        v.pause()
-        v.muted = true
-      }
-    })
-
-    if (active) {
-      // Reset to the start for a clean crossfade loop on rotation
-      try {
-        active.currentTime = 0
-      } catch {
-        // ignore
-      }
-    }
-
-    syncAndPlayActive()
-
-    const onVis = () => {
-      if (document.visibilityState === 'visible') syncAndPlayActive()
-    }
-    document.addEventListener('visibilitychange', onVis)
-    return () => {
-      document.removeEventListener('visibilitychange', onVis)
-    }
-  }, [currentMediaIndex, soundEnabled])
 
   const distances = useMemo(() => {
     if (!userLocation) return {}
@@ -243,32 +174,23 @@ export default function LocationSplash() {
 
   return (
     <div className="relative h-[100svh] supports-[height:100dvh]:h-[100dvh] bg-black text-white overflow-hidden">
-      {/* Full-width rotating video background with gradient overlay */}
+      {/* Full-width rotating image background with gradient overlay */}
       <div className="absolute inset-0">
-        {ROTATING_VIDEOS.map((src, idx) => (
+        {ROTATING_IMAGES.map((image, idx) => (
           <div
-            key={src}
+            key={idx}
             className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              idx === currentMediaIndex ? 'opacity-100' : 'opacity-0'
+              idx === currentImageIndex ? 'opacity-100' : 'opacity-0'
             }`}
           >
-            <video
-              ref={(el) => {
-                videoRefs.current[idx] = el
-              }}
-              className="h-full w-full object-cover"
-              autoPlay
-              muted
-              // Helps iOS/Safari treat it as an inline element and allow autoplay when muted.
-              loop
-              playsInline
-              // Avoids mobile UI overlays
-              controls={false}
-              disablePictureInPicture
-              preload={idx === 0 ? 'auto' : 'metadata'}
-            >
-              <source src={src} />
-            </video>
+            <Image
+              src={image}
+              alt={`Cannabis product ${idx + 1}`}
+              fill
+              className="object-cover"
+              priority={idx === 0}
+              quality={90}
+            />
             {/* Dark gradient overlay at bottom for text readability */}
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
             {/* Additional shadow gradient for depth */}
