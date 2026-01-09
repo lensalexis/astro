@@ -2717,7 +2717,7 @@ License: ${license}`
                         type="button"
                         onClick={() => toggleCategoryTile(cat.name)}
                         className={[
-                          'flex-none min-w-[150px] sm:min-w-[170px]',
+                          'flex-none',
                           'rounded-2xl overflow-hidden',
                           'flex items-center',
                           'shadow-sm transition',
@@ -2738,7 +2738,7 @@ License: ${license}`
                           />
                         </div>
                         {/* Text on right */}
-                        <span className="flex-1 text-left px-3 py-1.5">
+                        <span className="text-left px-3 py-1.5 whitespace-nowrap">
                           <span className="block text-sm font-semibold leading-tight">{cat.name}</span>
                         </span>
                       </button>
