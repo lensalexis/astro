@@ -22,6 +22,8 @@ const ROTATING_VIDEOS = [
   '/videos/StoryTelling%20video_6-720p.mov',
   '/videos/fivio.mov',
   '/videos/fab.mov',
+  '/videos/shoutout.MP4',
+  '/videos/uws.mov',
   '/videos/briarwood.MOV',
 ]
 
@@ -67,6 +69,7 @@ export default function LocationSplash() {
   const [ageError, setAgeError] = useState<string | null>(null)
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([])
+  const [soundEnabled, setSoundEnabled] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
   const AGE_SESSION_KEY = 'jalh_age_verified_session'
   const router = useRouter()
@@ -87,27 +90,72 @@ export default function LocationSplash() {
     return () => clearInterval(interval)
   }, [])
 
+  // Enable audio after the first user interaction.
+  // Autoplay with sound is blocked on most mobile browsers; we start muted and unmute to 50% after a tap.
+  useEffect(() => {
+    if (soundEnabled) return
+    const enable = () => setSoundEnabled(true)
+    window.addEventListener('pointerdown', enable, { once: true })
+    window.addEventListener('touchstart', enable, { once: true })
+    window.addEventListener('keydown', enable, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', enable)
+      window.removeEventListener('touchstart', enable)
+      window.removeEventListener('keydown', enable)
+    }
+  }, [soundEnabled])
+
   // Best-effort autoplay on all devices:
   // - keep videos muted + playsInline (required for iOS autoplay)
-  // - also imperatively call play() on the active video (some browsers ignore autoPlay attr)
+  // - imperatively call play() on the active video (some browsers ignore autoPlay attr)
+  // - retry when tab becomes visible
   useEffect(() => {
     const active = videoRefs.current[currentMediaIndex]
+
+    const syncAndPlayActive = () => {
+      const v = videoRefs.current[currentMediaIndex]
+      if (!v) return
+      // Always keep volume at 50% (muted controls whether you hear it)
+      v.volume = 0.5
+      v.muted = !soundEnabled
+      v.playsInline = true
+      const p = v.play()
+      if (p && typeof (p as Promise<void>).catch === 'function') {
+        ;(p as Promise<void>).catch(() => {
+          // Autoplay can still be blocked (power saver / data saver / user settings).
+          // If blocked, we keep the background element; user interaction will usually allow play.
+        })
+      }
+    }
+
     // Pause others to reduce background resource usage
     videoRefs.current.forEach((v, i) => {
       if (!v) return
-      if (i !== currentMediaIndex) v.pause()
+      if (i !== currentMediaIndex) {
+        v.pause()
+        v.muted = true
+      }
     })
-    if (!active) return
-    active.muted = true
-    active.playsInline = true
-    const p = active.play()
-    if (p && typeof (p as Promise<void>).catch === 'function') {
-      ;(p as Promise<void>).catch(() => {
-        // Autoplay can still be blocked in rare cases (power saver / data saver / user settings).
-        // We silently ignore; video remains as a background element.
-      })
+
+    if (active) {
+      // Reset to the start for a clean crossfade loop on rotation
+      try {
+        active.currentTime = 0
+      } catch {
+        // ignore
+      }
     }
-  }, [currentMediaIndex])
+
+    syncAndPlayActive()
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') syncAndPlayActive()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [currentMediaIndex, soundEnabled])
 
   const distances = useMemo(() => {
     if (!userLocation) return {}
