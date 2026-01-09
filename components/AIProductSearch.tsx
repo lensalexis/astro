@@ -469,12 +469,12 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   ]
   // AI Mode prompts - Updated list with new categories
   const AI_MODE_PROMPTS = [
+    { id: 'recommend-deals', label: "What's on sale today", query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
     { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg', promptType: 'product' },
     { id: 'store-info', label: 'What are your current store hours and location?', query: 'what are your current store hours and location', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
     { id: 'best-sellers', label: 'Show me best sellers this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
     { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg', promptType: 'product' },
-    { id: 'recommend-edible', label: 'Best weed gummy for sleep', query: 'recommend edibles that help with sleep', category: 'Edibles', image: '/images/post-thumb-05.jpg', promptType: 'product' },
-    { id: 'recommend-deals', label: "What's on sale today", query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
+    { id: 'recommend-edible', label: 'Best cannabis strains for creativity, focus, and energy', query: 'recommend sativa and hybrid_sativa products for creativity focus and energy', category: 'Strains', image: '/images/post-thumb-05.jpg', promptType: 'product' },
   ]
   const PRODUCT_PROMPT_SUGGESTIONS = [
     'Show me relaxing indica flower',
@@ -1381,6 +1381,8 @@ If asked about specific products, you can mention that the customer can search f
               const strainTypeLower = (strainType || '').toLowerCase()
               const cannabisTypeLower = (p.cannabisType || '').toLowerCase()
               const targetStrainLower = (filters.strainType || '').toLowerCase()
+              const strainNameLower = (p.strain || '').toLowerCase()
+              const blob = `${p.name || ''} ${p.description || ''} ${cannabisTypeLower} ${strainNameLower}`.toLowerCase()
 
               // If no strain info, keep it (we already did strain + intent routing earlier)
               if (!strainTypeLower) {
@@ -1401,9 +1403,42 @@ If asked about specific products, you can mention that the customer can search f
               }
 
               // Sleep/relaxation special case: allow hybrids alongside indica
-              if (includeHybridForSleep && (strainTypeLower.includes('hybrid') || cannabisTypeLower.includes('hybrid'))) {
+              if (includeHybridForSleep && (strainTypeLower.includes('hybrid') || cannabisTypeLower.includes('hybrid') || blob.includes('hybrid'))) {
                 productsWithoutEffects.push(p)
                 return
+              }
+
+              // Otherwise, do the same lenient matching as strain filtering / FilterNav:
+              // hybrid_sativa should be included for sativa intent even if getStrainType() is just "hybrid".
+              if (targetStrainLower.includes('sativa')) {
+                if (
+                  strainTypeLower.includes('sativa') ||
+                  cannabisTypeLower.includes('sativa') ||
+                  blob.includes('sativa')
+                ) {
+                  productsWithoutEffects.push(p)
+                  return
+                }
+              }
+              if (targetStrainLower.includes('indica')) {
+                if (
+                  strainTypeLower.includes('indica') ||
+                  cannabisTypeLower.includes('indica') ||
+                  blob.includes('indica')
+                ) {
+                  productsWithoutEffects.push(p)
+                  return
+                }
+              }
+              if (targetStrainLower.includes('hybrid')) {
+                if (
+                  strainTypeLower.includes('hybrid') ||
+                  cannabisTypeLower.includes('hybrid') ||
+                  blob.includes('hybrid')
+                ) {
+                  productsWithoutEffects.push(p)
+                  return
+                }
               }
               // Otherwise: exclude (strain doesn't match target)
             }
@@ -1686,6 +1721,23 @@ If asked about specific products, you can mention that the customer can search f
           // Fallback if no hybrid options found in normalization
           if (hybridOptions.length === 0) {
             strainTypesToAdd.push('Hybrid', 'HYBRID_INDICA', 'HYBRID_SATIVA')
+          }
+        }
+
+        // For uplifting/creative searches routed to Sativa, also include Hybrid-Sativa in FilterNav
+        // so chips and results stay aligned (many products are typed as "hybrid" with cannabisType "HYBRID_SATIVA").
+        if (filters.strainType.toLowerCase() === 'sativa' && filters.effectIntent) {
+          const hybridSativaOptions = normalizationFacets.strains.filter((s) => {
+            const lower = s.toLowerCase()
+            return lower.includes('hybrid') && lower.includes('sativa')
+          })
+          hybridSativaOptions.forEach((opt) => {
+            if (!strainTypesToAdd.includes(opt)) {
+              strainTypesToAdd.push(opt)
+            }
+          })
+          if (hybridSativaOptions.length === 0) {
+            strainTypesToAdd.push('HYBRID_SATIVA')
           }
         }
       }
@@ -2668,8 +2720,10 @@ For specific details about earning rates and redemption options, please contact 
       document.body.style.overflow = 'hidden'
       // For forceAIMode, we still want to prevent body scroll but allow internal scrolling
       if (forceAIMode) {
-        document.body.style.height = '100vh'
-        document.documentElement.style.height = '100vh'
+        // Use dynamic viewport height on mobile to avoid content being hidden under browser UI
+        // (iOS Safari address bar / toolbar can make 100vh incorrect).
+        document.body.style.height = '100dvh'
+        document.documentElement.style.height = '100dvh'
       }
       
       return () => {
@@ -2686,10 +2740,20 @@ For specific details about earning rates and redemption options, please contact 
   const aiModeOverlay = (aiModeOpen || forceAIMode) ? (
       <div 
         key="ai-mode-overlay"
-        className={forceAIMode ? "h-screen bg-white flex flex-col overflow-hidden" : "fixed inset-0 z-50 bg-white flex flex-col"}
+        className={
+          forceAIMode
+            ? "h-[100dvh] bg-white flex flex-col overflow-hidden"
+            : "fixed inset-0 z-50 bg-white flex flex-col overflow-hidden"
+        }
       >
         {/* Search box inside AI Mode */}
-        <div className="px-4 py-4 border-b border-gray-200">
+        <div
+          className="px-4 pb-4 border-b border-gray-200"
+          style={{
+            // Prevent the top content from sitting under the notch/status bar on iOS
+            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          }}
+        >
           <div className="max-w-2xl mx-auto">
             {/* Location modal */}
             {showLocationDropdown && (
@@ -2952,9 +3016,10 @@ For specific details about earning rates and redemption options, please contact 
         {/* Content area - shows prompts or results */}
         <div 
           ref={aiModeScrollRef}
-          className="flex-1 overflow-y-auto px-4 py-6"
+          className="flex-1 overflow-y-auto overscroll-none px-4 py-6"
           style={{ 
-            overscrollBehavior: 'contain',
+            // Prevent "scrolling past" the prompt list on mobile (rubber-banding / extra scroll)
+            overscrollBehaviorY: 'none',
             WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
             scrollBehavior: 'auto', // Prevent smooth scroll from interfering
             minHeight: 0 // Critical for flex children to allow scrolling
