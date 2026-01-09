@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ui/ProductCard";
 import productService from "@/lib/productService";
@@ -11,7 +11,7 @@ const FLOWER_CATEGORY = {
   id: "1af917cd40ce027b",
 };
 
-export default function CheckoutFinal() {
+function CheckoutFinalContent() {
   const [products, setProducts] = useState<any[]>([]);
   const [showStatus, setShowStatus] = useState(false);
   const [timeLeft, setTimeLeft] = useState(180); // 3 minutes
@@ -137,5 +137,17 @@ export default function CheckoutFinal() {
         </button>
       </div>
     </section>
+  );
+}
+
+export default function CheckoutFinal() {
+  return (
+    <Suspense
+      fallback={
+        <section className="py-12 text-center text-gray-500">Loading your upsell offers…</section>
+      }
+    >
+      <CheckoutFinalContent />
+    </Suspense>
   );
 }

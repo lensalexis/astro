@@ -722,7 +722,7 @@ export function routeIntent(userMessage: string): IntentResult {
   const isStoreInfo = storeInfoPatterns.some(pattern => pattern.test(userMessage))
   if (isStoreInfo) {
     const storeIdGuess = guessStoreId(userMessage)
-    const needsDisambiguation = !storeIdGuess && stores.length > 1
+    const needsStoreDisambiguation = !storeIdGuess && stores.length > 1
 
     return {
       intent: 'STORE_INFO',

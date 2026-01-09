@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import productService from "@/lib/productService";
 import ShopProductCard from "@/components/ui/ShopProductCard";
@@ -27,7 +27,7 @@ const effectToStrainMap: Record<string, string> = {
   "pain relief": "INDICA",
 };
 
-export default function ShopResults() {
+function ShopResultsContent() {
   const params = useSearchParams();
   const router = useRouter();
 
@@ -97,5 +97,13 @@ export default function ShopResults() {
         </div>
       )}
     </section>
+  );
+}
+
+export default function ShopResults() {
+  return (
+    <Suspense fallback={<section className="py-12 text-center text-gray-500">Loading products…</section>}>
+      <ShopResultsContent />
+    </Suspense>
   );
 }

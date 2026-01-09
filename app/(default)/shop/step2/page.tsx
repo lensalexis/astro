@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
 // 🎨 Effect text colors
@@ -21,7 +22,7 @@ const effects = [
   { label: "Pain Relief", strain: "indica" },
 ]
 
-export default function ShopStep2() {
+function ShopStep2Content() {
   const router = useRouter();
   const params = useSearchParams();
   const category = params.get("category");
@@ -73,4 +74,12 @@ export default function ShopStep2() {
       </button>
     </section>
   )
+}
+
+export default function ShopStep2() {
+  return (
+    <Suspense fallback={<section className="py-12 text-center text-gray-500">Loading filters…</section>}>
+      <ShopStep2Content />
+    </Suspense>
+  );
 }

@@ -1,6 +1,3 @@
-import { useMDXComponents } from "@/mdx-components";
-import { MDXProvider } from "@mdx-js/react";
-
 type CustomMDXProps = {
   source: string;
 };
@@ -9,8 +6,6 @@ type CustomMDXProps = {
 // Since @next/mdx compiles MDX at build time, we'll render the content as formatted text
 // For proper MDX rendering, you'd need next-mdx-remote or to import MDX files directly
 export function CustomMDX({ source }: CustomMDXProps) {
-  const components = useMDXComponents({});
-
   // Split content into lines and render with basic formatting
   const lines = source.split("\n");
   const elements: React.ReactNode[] = [];
@@ -96,9 +91,5 @@ export function CustomMDX({ source }: CustomMDXProps) {
     );
   }
 
-  return (
-    <MDXProvider components={components}>
-      <div>{elements}</div>
-    </MDXProvider>
-  );
+  return <div>{elements}</div>;
 }

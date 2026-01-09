@@ -1,13 +1,23 @@
 import "./css/style.css";
 
-import { Inter } from "next/font/google";
 import localFont from "next/font/local";
 import Script from "next/script"; // ✅ keep this import here
 import { UserProvider } from "@/components/UserContext"; // ✅ import your UserProvider
 import SiteChrome from "@/components/ui/SiteChrome";
 
-const inter = Inter({
-  subsets: ["latin"],
+const inter = localFont({
+  src: [
+    {
+      path: "../public/fonts/Inter-opsz-wght.ttf",
+      style: "normal",
+      weight: "100 900",
+    },
+    {
+      path: "../public/fonts/Inter-Italic-opsz-wght.ttf",
+      style: "italic",
+      weight: "100 900",
+    },
+  ],
   variable: "--font-inter",
   display: "swap",
 });

@@ -11,10 +11,39 @@ export enum ProductType {
   MERCHANDISE = "MERCHANDISE",
 }
 
+export enum ProductWeightUnit {
+  GRAMS = "GRAMS",
+  MILLIGRAMS = "MILLIGRAMS",
+  OUNCES = "OUNCES",
+  UNKNOWN = "UNKNOWN",
+  EACH = "EACH",
+}
+
 export enum ProductPriceType {
   REGULAR = "REGULAR",
   WEIGHT_TIER = "WEIGHT_TIER",
   PRICE_TIER = "PRICE_TIER",
+}
+
+export enum CannabisContentUnit {
+  PERCENTAGE = "%",
+  MILLIGRAMS = "mg",
+  MG_PER_GRAM = "mg/g",
+}
+
+export type ProductTier = {
+  id: string
+  price: number
+  weight?: number
+  weightUnit?: ProductWeightUnit
+  weightFormatted?: string
+  quantityAvailable?: number
+  purchaseQuantity?: number
+  discountValue?: number
+  discountAmount?: number
+  discountAmountFinal?: number
+  discountValueFinal?: number
+  discountTypeFinal?: "FLAT" | "PERCENT" | null
 }
 
 export type Product = {
@@ -37,12 +66,12 @@ export type Product = {
   new?: boolean
   featured?: boolean
   weight?: number
-  weightUnit?: string
+  weightUnit?: ProductWeightUnit
   size?: string
   type?: ProductType
   subType?: string
   cannabisType?: string
-  tiers?: any[]
+  tiers?: ProductTier[]
   variants?: Product[]
   effects?: string[]
   weightFormatted?: string
@@ -60,5 +89,73 @@ export type Product = {
     amount?: number
   }>
   strain?: string
+  labs?: {
+    thcMax?: number | null
+    thc?: number | null
+    thcA?: number | null
+    thcContentUnit?: CannabisContentUnit | null
+    cbdMax?: number | null
+    cbd?: number | null
+    cbdA?: number | null
+    cbdContentUnit?: CannabisContentUnit | null
+    terpenes?: string[]
+    alphaPinene?: number | null
+    betaCaryophyllene?: number | null
+    betaEudesmol?: number | null
+    betaMyrcene?: number | null
+    betaPinene?: number | null
+    bisabolol?: number | null
+    caryophylleneOxide?: number | null
+    guaiol?: number | null
+    humulene?: number | null
+    limonene?: number | null
+    linalool?: number | null
+    ocimene?: number | null
+    terpinene?: number | null
+    terpinolene?: number | null
+    threeCarene?: number | null
+    transNerolidol?: number | null
+  }
+  [key: string]: any
+}
+
+export type ListProductsParams = {
+  venueId: string
+  limit?: number
+  cursor?: string
+  sort?: string
+  search?: string
+  category?: string
+  categoryId?: string
+  discounted?: boolean
+  strain?: string
+  cannabisType?: string
+  priceMin?: number
+  priceMax?: number
+  quantityMin?: number
+  quantityMax?: number
+  weight?: string
+  brand?: string
+  productType?: string
+  effects?: string[]
+  terpenes?: string[]
+  [key: string]: string | number | boolean | string[] | undefined
+}
+
+export type ProductsResponse = {
+  data?: Product[]
+  meta?: {
+    total?: number
+    limit?: number
+    page?: number
+    [key: string]: any
+  }
+  pagination?: {
+    nextCursor?: string
+    prevCursor?: string
+    [key: string]: any
+  }
+  nextCursor?: string
+  next_cursor?: string
   [key: string]: any
 }

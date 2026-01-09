@@ -5,6 +5,7 @@ import Image from 'next/image'
 import productService from '@/lib/productService'
 import UniversalProductSlider from '@/components/home/UniversalProductSlider'
 import classNames from 'classnames'
+import type { Product } from '@/types/product'
 
 const categories = [
   { name: 'Flower', slug: 'flower', id: '1af917cd40ce027b', icon: '/images/icon-cannabis-flower.png' },
@@ -29,7 +30,7 @@ const activeColors: Record<string, string> = {
 
 export default function CategoryGrid() {
   const [activeCategory, setActiveCategory] = useState(categories[0])
-  const [products, setProducts] = useState([])
+  const [products, setProducts] = useState<Product[]>([])
 
   useEffect(() => {
     async function fetchProducts() {
