@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
 import { stores } from '@/lib/stores'
+import FloatingCartButton from '@/components/ui/FloatingCartButton'
 
 export default function SiteChrome() {
   const [mounted, setMounted] = useState(false)
@@ -387,6 +388,9 @@ export default function SiteChrome() {
           </div>
         </div>
       )}
+
+      {/* Floating Cart Button */}
+      <FloatingCartButton />
     </>
   )
 }

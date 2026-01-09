@@ -90,17 +90,49 @@ class CartService {
     }
 
     try {
-      const newCart = await request<CartWithItemProducts>({
+      // Build request body - include cartId if we have an existing cart to UPDATE it
+      const body: any = {
+        venueId: data.venueId,
+        items: data.items ?? [],
+      }
+
+      // If we have an existing cart with an ID, include it to UPDATE instead of CREATE
+      if (previousCart?.id) {
+        body.cartId = previousCart.id
+        console.log('🔄 Updating existing cart:', previousCart.id)
+      } else {
+        console.log('✨ Creating new cart')
+      }
+
+      // Cart operations require Organization API key, not venue key
+      // Use direct fetch with org API key (same pattern as add-upsell route)
+      const baseUrl = process.env.NEXT_PUBLIC_DISPENSE_BASE_URL || 'https://api.dispenseapp.com/2023-03'
+      const orgApiKey = process.env.DISPENSE_ORG_API_KEY || process.env.NEXT_PUBLIC_DISPENSE_API_KEY
+      
+      if (!orgApiKey) {
+        throw new Error('DISPENSE_ORG_API_KEY is required for cart operations')
+      }
+
+      console.log('🛒 Cart request body:', JSON.stringify(body, null, 2))
+
+      const response = await fetch(`${baseUrl}/carts`, {
         method: 'POST',
-        path: '/carts',
-        options: {
-          ...options,
-          body: {
-            ...data,
-            items: data.items ?? [],
-          },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-dispense-api-key': orgApiKey,
         },
+        body: JSON.stringify(body),
       })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('🛑 Cart API error:', errorText)
+        throw new Error(`Cart API error: ${response.status} - ${errorText}`)
+      }
+
+      const newCart = await response.json() as CartWithItemProducts
+
+      console.log('✅ Cart response:', { id: newCart.id, itemCount: newCart.items?.length || 0 })
 
       const queryClient = queryClientUtils.getQueryClient()
       queryClient.setQueryData(QueryClientKey.CART, newCart)
@@ -116,7 +148,7 @@ class CartService {
 
       return newCart
     } catch (error: any) {
-      console.error('🛑 Error creating cart:', error)
+      console.error('🛑 Error creating/updating cart:', error)
       throw error
     }
   }

@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
+import cartService from "@/app/api/cartService"
 
 // ----------------------
 // Types (from boilerplate)
@@ -292,6 +294,7 @@ function getTopTerpenes(p: Product, limit = 2): string[] {
 // ----------------------
 
 export default function ProductCard({ product }: { product: Product }) {
+  const [isAdding, setIsAdding] = useState(false)
   const image = pickPrimaryImage(product)
 
   const { basePrice, discountType, discountAmountFinal, discountValueFinal, discounts } =
@@ -312,6 +315,47 @@ export default function ProductCard({ product }: { product: Product }) {
   const thc = getCannabinoidLabel(product, "thc")
   const cbd = getCannabinoidLabel(product, "cbd")
   const terpenes = getTopTerpenes(product)
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (isAdding) return
+    
+    setIsAdding(true)
+    try {
+      const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!
+      
+      // Determine price tier data if applicable
+      const priceTierData = 
+        (product.priceType === ProductPriceType.PRICE_TIER || product.priceType === ProductPriceType.WEIGHT_TIER) &&
+        product.tiers && product.tiers.length > 0
+          ? {
+              priceType: product.priceType,
+              type: product.type || ProductType.FLOWER,
+              weight: product.tiers[0]?.weight,
+            }
+          : undefined
+
+      await cartService.addProduct({
+        venueId,
+        productId: product.id,
+        quantity: 1,
+        purchaseWeight: product.weight,
+        priceTierData,
+      })
+
+      // Trigger a custom event to update the floating cart
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cartUpdated'))
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      alert('Failed to add product to cart. Please try again.')
+    } finally {
+      setIsAdding(false)
+    }
+  }
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition text-black flex flex-col gap-3 h-full relative">
@@ -387,6 +431,15 @@ export default function ProductCard({ product }: { product: Product }) {
           <p className="text-indigo-600 font-bold text-lg">${basePrice.toFixed(2)}</p>
         )}
       </div>
+
+      {/* Add to Cart Button */}
+      <button
+        onClick={handleAddToCart}
+        disabled={isAdding}
+        className="mt-3 w-full rounded-lg bg-purple-600 text-white py-2 px-4 font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        {isAdding ? 'Adding...' : 'Add to Cart'}
+      </button>
     </div>
   )
 }
