@@ -200,9 +200,9 @@ export default function LocationSplash() {
       {/* Content overlay */}
       <div className="relative z-10 h-full flex flex-col">
         {/* Top section with logo and content over image */}
-        <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 pb-4 sm:pb-6">
+        <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 pb-2 sm:pb-3">
           {/* Logo */}
-          <div className="mb-4 sm:mb-6 flex justify-center">
+          <div className="mb-3 sm:mb-4 flex justify-center">
             <Image 
               src="/images/jalh-logo.png" 
               alt="Just a Little Higher" 
@@ -213,7 +213,7 @@ export default function LocationSplash() {
           </div>
 
           {/* Title and subtitle */}
-          <div className="text-center space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+          <div className="text-center space-y-1 sm:space-y-2 mb-4 sm:mb-5">
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl">
               Ready to Get a Little Higher?
             </h1>
@@ -224,7 +224,7 @@ export default function LocationSplash() {
         </div>
 
         {/* Bottom section: Age verification or location selection */}
-        <div className="px-4 sm:px-6 pb-6 sm:pb-8 pt-4">
+        <div className="px-4 sm:px-6 pb-6 sm:pb-8 pt-3">
           {!ageVerified ? (
             /* Age verification buttons - styled like prompt boxes */
             <div className="space-y-4">
