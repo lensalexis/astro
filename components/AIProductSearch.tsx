@@ -2731,7 +2731,7 @@ For specific details about earning rates and redemption options, please contact 
         key="ai-mode-overlay"
         className={
           forceAIMode
-            ? "min-h-[100dvh] bg-white flex flex-col"
+            ? "min-h-[100dvh] bg-transparent flex flex-col"
             : "fixed inset-0 z-50 bg-white flex flex-col overflow-hidden"
         }
       >
@@ -2739,7 +2739,7 @@ For specific details about earning rates and redemption options, please contact 
         <div
           className={
             forceAIMode
-              ? "sticky top-0 z-40 bg-white/95 backdrop-blur px-4 pb-4 border-b border-gray-200"
+              ? "sticky top-0 z-40 bg-white/0 backdrop-blur px-4 pb-4 border-b border-gray-200/60"
               : "px-4 pb-4 border-b border-gray-200"
           }
           style={{
