@@ -21,6 +21,7 @@ const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frida
 const ROTATING_VIDEOS = [
   '/videos/StoryTelling%20video_6-720p.mov',
   '/videos/fivio.mov',
+  '/videos/fab.mov',
   '/videos/briarwood.MOV',
 ]
 
