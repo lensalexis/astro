@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
+import { MapPinIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { stores, type Store } from '@/lib/stores'
 import type { Coordinates } from '@/types/location'
 import { useRouter } from 'next/navigation'
@@ -68,6 +69,7 @@ export default function LocationSplash() {
   const [ageVerified, setAgeVerified] = useState(false)
   const [ageError, setAgeError] = useState<string | null>(null)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [showLocationModal, setShowLocationModal] = useState(false)
   const AGE_SESSION_KEY = 'jalh_age_verified_session'
   const router = useRouter()
 
@@ -226,24 +228,49 @@ export default function LocationSplash() {
         {/* Bottom section: Age verification or location selection */}
         <div className="px-4 sm:px-6 pb-6 sm:pb-8 pt-3">
           {!ageVerified ? (
-            /* Age verification buttons - styled like prompt boxes */
+            /* Age verification buttons - styled like category pills */
             <div className="space-y-4">
               <div className="text-center">
-                <div className="text-lg sm:text-xl font-semibold text-white mb-4">Are you 21+?</div>
                 <div className="flex gap-3 sm:gap-4 justify-center">
                   <button
                     type="button"
                     onClick={() => handleAgeResponse(true)}
-                    className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 hover:border-white transition-all shadow-lg hover:shadow-xl text-gray-900 font-semibold text-sm sm:text-base"
+                    className="flex-none rounded-2xl overflow-hidden flex items-center shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 bg-emerald-700 text-white opacity-90 hover:opacity-100 cursor-pointer"
                   >
-                    Yes
+                    {/* Image on left - touches edge */}
+                    <div className="relative w-12 h-12 flex-shrink-0">
+                      <Image 
+                        src="/images/post-thumb-03.jpg" 
+                        alt="21+" 
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    </div>
+                    {/* Text on right */}
+                    <span className="text-left px-3 py-1.5 whitespace-nowrap">
+                      <span className="block text-sm font-semibold leading-tight">I am 21+</span>
+                    </span>
                   </button>
                   <button
                     type="button"
                     onClick={() => handleAgeResponse(false)}
-                    className="px-6 sm:px-8 py-2.5 sm:py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 border-2 border-gray-200 hover:border-white transition-all shadow-lg hover:shadow-xl text-gray-900 font-semibold text-sm sm:text-base"
+                    className="flex-none rounded-2xl overflow-hidden flex items-center shadow-sm transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 bg-pink-900 text-white opacity-90 hover:opacity-100 cursor-pointer"
                   >
-                    No
+                    {/* Image on left - touches edge */}
+                    <div className="relative w-12 h-12 flex-shrink-0">
+                      <Image 
+                        src="/images/post-thumb-05.jpg" 
+                        alt="Under 21" 
+                        fill
+                        className="object-cover"
+                        sizes="48px"
+                      />
+                    </div>
+                    {/* Text on right */}
+                    <span className="text-left px-3 py-1.5 whitespace-nowrap">
+                      <span className="block text-sm font-semibold leading-tight">I am under 21</span>
+                    </span>
                   </button>
                 </div>
                 {ageError && (
@@ -252,29 +279,17 @@ export default function LocationSplash() {
               </div>
             </div>
           ) : (
-            /* Location dropdown - appears in place of buttons */
+            /* Location button - appears in place of buttons */
             <div className="space-y-4">
-              <div className="w-full max-w-md mx-auto">
-                <label className="sr-only" htmlFor="store-select-hero">
-                  Choose a store
-                </label>
-                <select
-                  id="store-select-hero"
-                  value={activeStoreId ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value
-                    setActiveStoreId(value || null)
-                    if (value) router.push(`/stores/${value}`)
-                  }}
-                  className="w-full rounded-2xl border-2 border-white/30 bg-white/10 backdrop-blur-md px-5 py-4 text-base text-white shadow-2xl outline-none focus:border-white focus:ring-2 focus:ring-white/20 transition-all"
+              <div className="flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => setShowLocationModal(true)}
+                  className="flex items-center gap-3 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/30 hover:border-white px-6 py-3 text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all"
                 >
-                  <option value="" className="bg-gray-900 text-white">Select a location near you</option>
-                  {stores.map((store) => (
-                    <option key={store.id} value={store.id} className="bg-gray-900 text-white">
-                      {`${store.name} — ${store.addressLine1}, ${store.addressLine2}`}
-                    </option>
-                  ))}
-                </select>
+                  <MapPinIcon className="h-5 w-5 flex-shrink-0" />
+                  <span>Select a Location Near You</span>
+                </button>
               </div>
               {activeStore && (
                 <div className="flex justify-center">
@@ -296,6 +311,60 @@ export default function LocationSplash() {
                   </span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Location modal */}
+          {showLocationModal && (
+            <div className="fixed inset-0 z-[60] bg-white/95 backdrop-blur-sm">
+              <div className="max-w-2xl mx-auto h-full flex flex-col">
+                <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
+                  <div className="text-base font-semibold text-gray-900">Select a location</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationModal(false)}
+                    className="p-2 text-gray-600 hover:text-black"
+                    aria-label="Close location picker"
+                  >
+                    <XMarkIcon className="h-6 w-6" />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-4">
+                  <div className="space-y-2">
+                    {stores.map((store) => (
+                      <button
+                        key={store.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveStoreId(store.id)
+                          setShowLocationModal(false)
+                          router.push(`/stores/${store.id}`)
+                        }}
+                        className={[
+                          'w-full text-left rounded-xl border px-4 py-3',
+                          'hover:bg-gray-50 transition',
+                          activeStoreId === store.id ? 'border-green-700 bg-gray-50' : 'border-gray-200 bg-white',
+                        ].join(' ')}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-sm font-semibold text-gray-900">{store.name}</div>
+                            {store.address || store.addressLine1 ? (
+                              <div className="text-xs text-gray-600 mt-1">
+                                {store.address ||
+                                  [store.addressLine1, store.addressLine2].filter(Boolean).join(', ')}
+                              </div>
+                            ) : null}
+                          </div>
+                          {activeStoreId === store.id && (
+                            <div className="text-xs font-semibold text-gray-700">Selected</div>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

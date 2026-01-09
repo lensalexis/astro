@@ -469,16 +469,15 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   ]
   // AI Mode prompts - Updated list with new categories
   const AI_MODE_PROMPTS = [
-    { id: 'store-info', label: 'What are your current store hours and location?', query: 'what are your current store hours and location', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
-    { id: 'loyalty-program', label: 'How do I earn and redeem loyalty points?', query: 'how do I earn and redeem loyalty points', category: 'Loyalty Program', image: '/images/post-thumb-04.jpg', promptType: 'loyalty' },
     { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg', promptType: 'product' },
+    { id: 'store-info', label: 'What are your current store hours and location?', query: 'what are your current store hours and location', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
+    { id: 'best-sellers', label: 'Show me best sellers this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
     { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg', promptType: 'product' },
     { id: 'recommend-edible', label: 'Recommend edibles for sleep', query: 'recommend edibles that help with sleep', category: 'Edibles', image: '/images/post-thumb-05.jpg', promptType: 'product' },
     { id: 'recommend-deals', label: 'Recommend the best deals today', query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
     { id: 'plan-evening', label: 'Plan a relaxing evening with cannabis', query: 'plan relaxing evening indica products edibles beverages', category: 'Multi-Product Bundle', image: '/images/post-thumb-10.jpg', promptType: 'bundle' },
     { id: 'plan-party', label: 'Plan products for a social gathering', query: 'plan products for party social gathering sativa hybrid', category: 'Multi-Product Bundle', image: '/images/post-thumb-03.jpg', promptType: 'bundle' },
     { id: 'plan-workout', label: 'Plan products for post-workout recovery', query: 'plan products for post workout recovery cbd topicals', category: 'Multi-Product Bundle', image: '/images/post-thumb-04.jpg', promptType: 'bundle' },
-    { id: 'best-sellers', label: 'Show me bestselling products this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
   ]
   const PRODUCT_PROMPT_SUGGESTIONS = [
     'Show me relaxing indica flower',
@@ -2608,11 +2607,11 @@ For specific details about earning rates and redemption options, please contact 
                               router.push(`/stores/${store.id}`)
                             }
                           }}
-                          className={[
-                            'w-full text-left rounded-xl border px-4 py-3',
-                            'hover:bg-gray-50 transition',
-                            selectedLocation === store.id ? 'border-black/30 bg-gray-50' : 'border-gray-200 bg-white',
-                          ].join(' ')}
+                        className={[
+                          'w-full text-left rounded-xl border px-4 py-3',
+                          'hover:bg-gray-50 transition',
+                          selectedLocation === store.id ? 'border-green-700 bg-gray-50' : 'border-gray-200 bg-white',
+                        ].join(' ')}
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div>
@@ -2631,15 +2630,6 @@ For specific details about earning rates and redemption options, please contact 
                         </button>
                       ))}
                     </div>
-                  </div>
-                  <div className="px-4 py-4 border-t border-gray-200 flex items-center justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setShowLocationDropdown(false)}
-                      className="px-4 py-2 rounded-full border border-gray-300 text-sm font-medium text-gray-700"
-                    >
-                      Close
-                    </button>
                   </div>
                 </div>
               </div>
@@ -2686,10 +2676,34 @@ For specific details about earning rates and redemption options, please contact 
                 <div className="relative flex-1 flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
                   <button
                     type="submit"
-                    className="absolute left-4 text-gray-500 hover:text-gray-700 transition"
+                    className="absolute left-4 transition"
                     aria-label="Submit search"
                   >
-                    <MagnifyingGlassIcon className="h-5 w-5" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      className="h-5 w-5"
+                      aria-hidden="true"
+                    >
+                      <defs>
+                        <linearGradient id="searchStarGradient-ai-mode" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#ec4899" />
+                          <stop offset="50%" stopColor="#3b82f6" />
+                          <stop offset="100%" stopColor="#ec4899" />
+                          <animateTransform
+                            attributeName="gradientTransform"
+                            type="translate"
+                            values="-100 0;100 0;-100 0"
+                            dur="3s"
+                            repeatCount="indefinite"
+                          />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        fill="url(#searchStarGradient-ai-mode)"
+                        d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                      />
+                    </svg>
                   </button>
                   <input
                     id="ai-search-input-ai-mode"
@@ -2700,7 +2714,7 @@ For specific details about earning rates and redemption options, please contact 
                       if (enablePresetDropdown) setShowDropdown(true)
                     }}
                     placeholder="Search by mood, products, or preference"
-                    className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-full focus:outline-none focus-visible:outline-none"
+                    className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gradient-animated rounded-full focus:outline-none focus-visible:outline-none"
                     onChange={(e) => {
                       const newValue = e.target.value
                       setHasInteracted(true)
@@ -3056,34 +3070,90 @@ For specific details about earning rates and redemption options, please contact 
             {/* Show prompts if no results yet and pre-prompts should be visible */}
             {showPrePrompts && !showResults && chatMessages.length === 0 && (
               <div className="space-y-3">
-                {AI_MODE_PROMPTS.map((prompt) => (
-                  <button
-                    key={prompt.id}
-                    onClick={() => handleAiModePrompt(prompt)}
-                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
-                  >
-                    {/* Static image */}
-                    <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden">
-                      <Image
-                        src={prompt.image}
-                        alt={prompt.label}
-                        width={80}
-                        height={80}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-base font-medium text-gray-900 group-hover:text-purple-600 transition-colors">
-                        {prompt.label}
-                      </p>
-                      {prompt.category && (
-                        <p className="text-xs text-gray-500 mt-1">{prompt.category}</p>
-                      )}
-                    </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors flex-shrink-0">
-                      <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Z"/>
-                    </svg>
-                  </button>
+                {AI_MODE_PROMPTS.map((prompt, index) => (
+                  <div key={prompt.id}>
+                    <button
+                      onClick={() => handleAiModePrompt(prompt)}
+                      className="w-full flex items-center rounded-2xl overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
+                    >
+                      {/* Image on left - touches edge */}
+                      <div className="relative w-20 h-20 flex-shrink-0">
+                        <Image
+                          src={prompt.image}
+                          alt={prompt.label}
+                          fill
+                          className="object-cover"
+                          sizes="80px"
+                        />
+                      </div>
+                      {/* Text in middle */}
+                      <div className="flex-1 px-4 py-4">
+                        <p className="text-base font-medium bg-gradient-to-r from-pink-500 via-blue-500 to-pink-500 bg-clip-text text-transparent bg-[length:200%_100%] animate-gradient-x">
+                          {prompt.label}
+                        </p>
+                      </div>
+                      {/* Icon on right - 3 stars with animated gradient */}
+                      <div className="flex-shrink-0 pr-4">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          aria-hidden="true"
+                        >
+                          <defs>
+                            <linearGradient id={`promptStarGradient-${prompt.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" stopColor="#ec4899" />
+                              <stop offset="50%" stopColor="#3b82f6" />
+                              <stop offset="100%" stopColor="#ec4899" />
+                              <animateTransform
+                                attributeName="gradientTransform"
+                                type="translate"
+                                values="-100 0;100 0;-100 0"
+                                dur="3s"
+                                repeatCount="indefinite"
+                              />
+                            </linearGradient>
+                          </defs>
+                          <path
+                            fill={`url(#promptStarGradient-${prompt.id})`}
+                            d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                          />
+                        </svg>
+                      </div>
+                    </button>
+                    {/* Loyalty Program Banner - Insert after prompt 3 (index 2) - between best sellers and vape */}
+                    {index === 2 && (
+                      <button
+                        onClick={() => {
+                          const loyaltyPrompt = { id: 'loyalty-program', label: 'How do I earn and redeem loyalty points?', query: 'how do I earn and redeem loyalty points', category: 'Loyalty Program', image: '/images/post-thumb-04.jpg', promptType: 'loyalty' as const }
+                          handleAiModePrompt(loyaltyPrompt)
+                        }}
+                        className="w-full relative rounded-2xl overflow-hidden group cursor-pointer mt-3"
+                      >
+                        {/* Full image background */}
+                        <div className="relative h-24 sm:h-28">
+                          <Image
+                            src="/images/post-thumb-04.jpg"
+                            alt="Loyalty Program"
+                            fill
+                            className="object-cover"
+                            sizes="100vw"
+                          />
+                          {/* Dark gradient overlay for text readability */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-black/40" />
+                          {/* Content */}
+                          <div className="absolute inset-0 flex flex-col justify-end items-start px-6 sm:px-8 pb-3 sm:pb-4 text-white">
+                            <h3 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg">
+                              How do I earn and redeem loyalty points?
+                            </h3>
+                            <p className="text-sm sm:text-base text-white/90 drop-shadow-md">
+                              Learn about our rewards program
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -3119,17 +3189,47 @@ For specific details about earning rates and redemption options, please contact 
           <div className="flex justify-center mb-4">
             <div className="w-full max-w-2xl">
               <div className="relative flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-                <span className="absolute left-4 text-gray-500">
-                  <MagnifyingGlassIcon className="h-5 w-5" />
+                <span className="absolute left-4">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <defs>
+                      <linearGradient id="searchStarGradient-storefront" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#ec4899" />
+                        <stop offset="50%" stopColor="#3b82f6" />
+                        <stop offset="100%" stopColor="#ec4899" />
+                        <animateTransform
+                          attributeName="gradientTransform"
+                          type="translate"
+                          values="-100 0;100 0;-100 0"
+                          dur="3s"
+                          repeatCount="indefinite"
+                        />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      fill="url(#searchStarGradient-storefront)"
+                      d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                    />
+                  </svg>
                 </span>
                 <button
                   type="button"
                   onClick={handleStorefrontSearchClick}
                   className="w-full text-left pl-12 pr-4 py-3 bg-transparent border-none text-base text-black rounded-full focus:outline-none focus-visible:outline-none"
                 >
-                  <span className={query ? 'text-gray-900 font-medium' : 'text-gray-500'}>
-                    {query || 'Search by mood, product, brands, or preference'}
-                  </span>
+                  {query ? (
+                    <span className="text-gray-900 font-medium">
+                      {query}
+                    </span>
+                  ) : (
+                    <span className="bg-gradient-to-r from-pink-500 via-blue-500 to-pink-500 bg-clip-text text-transparent bg-[length:200%_100%] animate-gradient-x">
+                      Search by mood, product, brands, or preference
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

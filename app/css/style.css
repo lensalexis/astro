@@ -197,3 +197,32 @@ background-size: cover;
 }
 
 /* Prevent horizontal overflow on mobile: handled via layout fixes */
+
+/* Add pointer cursor to all buttons */
+button {
+  cursor: pointer;
+}
+
+/* Animated gradient for prompt text */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 3s ease infinite;
+}
+
+/* Animated gradient placeholder for search input */
+.placeholder-gradient-animated::placeholder {
+  background: linear-gradient(to right, #ec4899, #3b82f6, #ec4899);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-x 3s ease infinite;
+}
