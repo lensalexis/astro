@@ -124,7 +124,6 @@ const categoryMap: Record<string, string> = {
   'tinctures': 'Tinctures',
   'drops': 'Tinctures',
   'drop': 'Tinctures',
-  'oil': 'Tinctures', // Can also refer to tinctures
   'sublingual': 'Tinctures',
   'sublinguals': 'Tinctures',
   'oral': 'Tinctures',
