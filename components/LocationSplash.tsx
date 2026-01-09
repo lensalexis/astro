@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
@@ -65,6 +65,7 @@ export default function LocationSplash() {
   const [ageVerified, setAgeVerified] = useState(false)
   const [ageError, setAgeError] = useState<string | null>(null)
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
+  const videoRefs = useRef<Array<HTMLVideoElement | null>>([])
   const [showLocationModal, setShowLocationModal] = useState(false)
   const AGE_SESSION_KEY = 'jalh_age_verified_session'
   const router = useRouter()
@@ -84,6 +85,28 @@ export default function LocationSplash() {
     }, 7000)
     return () => clearInterval(interval)
   }, [])
+
+  // Best-effort autoplay on all devices:
+  // - keep videos muted + playsInline (required for iOS autoplay)
+  // - also imperatively call play() on the active video (some browsers ignore autoPlay attr)
+  useEffect(() => {
+    const active = videoRefs.current[currentMediaIndex]
+    // Pause others to reduce background resource usage
+    videoRefs.current.forEach((v, i) => {
+      if (!v) return
+      if (i !== currentMediaIndex) v.pause()
+    })
+    if (!active) return
+    active.muted = true
+    active.playsInline = true
+    const p = active.play()
+    if (p && typeof (p as Promise<void>).catch === 'function') {
+      ;(p as Promise<void>).catch(() => {
+        // Autoplay can still be blocked in rare cases (power saver / data saver / user settings).
+        // We silently ignore; video remains as a background element.
+      })
+    }
+  }, [currentMediaIndex])
 
   const distances = useMemo(() => {
     if (!userLocation) return {}
@@ -180,11 +203,18 @@ export default function LocationSplash() {
             }`}
           >
             <video
+              ref={(el) => {
+                videoRefs.current[idx] = el
+              }}
               className="h-full w-full object-cover"
               autoPlay
               muted
+              // Helps iOS/Safari treat it as an inline element and allow autoplay when muted.
               loop
               playsInline
+              // Avoids mobile UI overlays
+              controls={false}
+              disablePictureInPicture
               preload={idx === 0 ? 'auto' : 'metadata'}
             >
               <source src={src} />
