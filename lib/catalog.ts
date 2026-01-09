@@ -162,7 +162,7 @@ export const getThcTotal = (p: Product, useMax: boolean = true): number | null =
 }
 
 export const getCbdTotal = (p: Product): number | null => {
-  const cbdValue = p.labs?.cbd ?? p.labs?.cbdMax ?? p.labs?.cbdA ?? null
+  const cbdValue: string | number | null = (p.labs?.cbd ?? p.labs?.cbdMax ?? p.labs?.cbdA ?? null) as any
 
   if (cbdValue === null || cbdValue === undefined || cbdValue === '') return null
 

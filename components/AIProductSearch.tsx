@@ -48,6 +48,8 @@ type FilterPill = {
   label: string
 }
 
+type FacetValueKey = Exclude<keyof FacetedFilters, 'saleOnly'>
+
 
 // ============================================================================
 // PRESET DEFINITIONS (8 EXACT PRESETS)
@@ -2139,6 +2141,7 @@ License: ${license}`
     const strains = new Set<string>()
     const terpenes = new Set<string>()
     const weights = new Set<string>()
+    const effects = new Set<string>()
 
     items.forEach((p) => {
       const name = getCategoryLabel(p)
@@ -2151,6 +2154,10 @@ License: ${license}`
         p.weightFormatted ||
         (p.weight ? `${p.weight}${p.weightUnit ? ` ${p.weightUnit.toLowerCase()}` : ''}` : null)
       if (weightLabel) weights.add(weightLabel)
+      getTags(p).forEach((effect) => {
+        const label = effect.charAt(0).toUpperCase() + effect.slice(1)
+        effects.add(label)
+      })
     })
 
     const sortFn = (a: string, b: string) => a.localeCompare(b)
@@ -2164,6 +2171,7 @@ License: ${license}`
       strains: Array.from(strains).sort(sortFn),
       terpenes: Array.from(terpenes).sort(sortFn),
       weights: Array.from(weights).sort(sortFn),
+      effects: Array.from(effects).sort(sortFn),
     }
   }
 
@@ -2173,6 +2181,7 @@ License: ${license}`
     const strainCounts: Record<string, number> = {}
     const terpeneCounts: Record<string, number> = {}
     const weightCounts: Record<string, number> = {}
+    const effectCounts: Record<string, number> = {}
 
     items.forEach((p) => {
       const name = getCategoryLabel(p)
@@ -2191,6 +2200,10 @@ License: ${license}`
       p.labs?.terpenes?.forEach((t) => {
         if (t) terpeneCounts[t] = (terpeneCounts[t] || 0) + 1
       })
+      getTags(p).forEach((effect) => {
+        const label = effect.charAt(0).toUpperCase() + effect.slice(1)
+        effectCounts[label] = (effectCounts[label] || 0) + 1
+      })
     })
 
     // Ensure every official category key exists
@@ -2198,7 +2211,14 @@ License: ${license}`
       if (!(c.name in categoryCounts)) categoryCounts[c.name] = 0
     })
 
-    return { categories: categoryCounts, brands: brandCounts, strains: strainCounts, terpenes: terpeneCounts, weights: weightCounts }
+    return {
+      categories: categoryCounts,
+      brands: brandCounts,
+      strains: strainCounts,
+      terpenes: terpeneCounts,
+      weights: weightCounts,
+      effects: effectCounts,
+    }
   }
 
   const isOnSale = (p: Product) =>
@@ -2259,8 +2279,9 @@ License: ${license}`
 
     // When categories are selected (with or without other filters), always fetch category products first
     // Then apply other filters client-side to ensure we don't miss matches
-    if (f.categories && f.categories.length > 0) {
-      const selectedCategories = CATEGORY_DEFS.filter((c) => f.categories.includes(c.name))
+    const selectedCategoriesFilters = f.categories ?? []
+    if (selectedCategoriesFilters.length > 0) {
+      const selectedCategories = CATEGORY_DEFS.filter((c) => selectedCategoriesFilters.includes(c.name))
       if (selectedCategories.length > 0) {
         setLoading(true)
         try {
@@ -2372,8 +2393,8 @@ License: ${license}`
     if (pill.key === 'saleOnly') {
       next.saleOnly = false
     } else if (pill.value) {
-      const key = pill.key as keyof FacetedFilters
-      const current = next[key] ? [...(next[key] as string[])] : []
+      const key = pill.key as FacetValueKey
+      const current = next[key] ? [...next[key]!] : []
       // Remove matching value case-insensitively
       const updated = current.filter((val) => val.toLowerCase() !== pill.value!.toLowerCase())
       next[key] = updated.length ? updated : undefined
