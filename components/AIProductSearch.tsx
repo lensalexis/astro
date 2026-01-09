@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo, ReactNode, type ReactElement } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
-import { MapPinIcon, ChevronDownIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
 import productService from '@/lib/productService'
 import ProductCard from '@/components/ui/ProductCard'
@@ -145,6 +145,45 @@ const CATEGORY_KEYWORDS: { id: string; labels: string[] }[] = [
     labels: ['tincture', 'tinctures', 'drops', 'drop'] 
   },
 ]
+
+// Category tiles under the main search bar (image left, label right).
+// Uses the same category names as FilterNav (CATEGORY_DEFS.name) so toggling stays consistent.
+const CATEGORY_TILE_META: Record<
+  string,
+  {
+    image: string
+    className: string
+  }
+> = {
+  flower: {
+    image: '/images/post-thumb-03.jpg',
+    className: 'bg-emerald-700 text-white',
+  },
+  vaporizers: {
+    image: '/images/post-thumb-04.jpg',
+    className: 'bg-purple-700 text-white',
+  },
+  'pre-rolls': {
+    image: '/images/post-thumb-05.jpg',
+    className: 'bg-red-700 text-white',
+  },
+  concentrates: {
+    image: '/images/post-thumb-06.jpg',
+    className: 'bg-amber-700 text-white',
+  },
+  edibles: {
+    image: '/images/post-thumb-07.jpg',
+    className: 'bg-rose-700 text-white',
+  },
+  beverages: {
+    image: '/images/post-thumb-08.jpg',
+    className: 'bg-orange-700 text-white',
+  },
+  tinctures: {
+    image: '/images/post-thumb-09.jpg',
+    className: 'bg-blue-700 text-white',
+  },
+}
 
 // ============================================================================
 // PRESET FILTER FUNCTIONS
@@ -474,6 +513,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const [showFilterNavInAiMode, setShowFilterNavInAiMode] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
   const [activeFilters, setActiveFilters] = useState<FacetedFilters>({})
+  const [filterModalOpen, setFilterModalOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const aiModeScrollRef = useRef<HTMLDivElement>(null)
@@ -2267,6 +2307,20 @@ License: ${license}`
     categories: mergedCategoryCounts,
   }
 
+  const toggleCategoryTile = (categoryName: string) => {
+    const current = activeFilters.categories || []
+    const isSelected = current.some((v) => v.toLowerCase() === categoryName.toLowerCase())
+    const updated = isSelected
+      ? current.filter((v) => v.toLowerCase() !== categoryName.toLowerCase())
+      : [...current, categoryName]
+
+    const next: FacetedFilters = {
+      ...activeFilters,
+      categories: updated.length ? updated : undefined,
+    }
+    handleFiltersChange(next)
+  }
+
   const handleFiltersChange = async (f: FacetedFilters) => {
     const hasOtherFacetFilters = !!(
       f.brands?.length ||
@@ -2426,25 +2480,7 @@ License: ${license}`
     }
   }
 
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    if (!aiModeOpen) return
-    
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      // Don't close dropdowns if clicking on input or form elements
-      if (target.closest('input') || target.closest('form') || target.closest('button[type="submit"]')) {
-        return
-      }
-      if (!target.closest('[data-dropdown]')) {
-        setShowLocationDropdown(false)
-        setShowFilterNavInAiMode(false)
-      }
-    }
-    
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [aiModeOpen])
+  // (Previously used for header dropdowns; we now use full-screen modals.)
 
   // Focus the AI mode input once when overlay opens
   const aiModeJustOpenedRef = useRef(false)
@@ -2481,93 +2517,90 @@ License: ${license}`
         key="ai-mode-overlay"
         className="fixed inset-0 z-50 bg-white flex flex-col"
       >
-        {/* Header with location and filter icons */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <button
-            onClick={() => {
-              setAiModeOpen(false)
-              setShowFilterNavInAiMode(false)
-              setShowLocationDropdown(false)
-            }}
-            className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
-            aria-label="Close AI Mode"
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-4 relative">
-            {/* Location dropdown */}
-            <div className="relative" data-dropdown>
-              <button
-                onClick={() => {
-                  setShowLocationDropdown(!showLocationDropdown)
-                  setShowFilterNavInAiMode(false)
-                }}
-                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
-                aria-label="Select location"
-              >
-                <MapPinIcon className="h-5 w-5" />
-                <span className="text-sm">{selectedLocation ? stores.find(s => s.id === selectedLocation)?.name || 'Location' : 'Location'}</span>
-                <ChevronDownIcon className="h-4 w-4" />
-              </button>
-              {showLocationDropdown && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10 max-h-60 overflow-y-auto" data-dropdown>
-                  {stores.map((store) => (
-                    <button
-                      key={store.id}
-                      onClick={() => {
-                        setSelectedLocation(store.id)
-                        setShowLocationDropdown(false)
-                        // Update URL if on store page
-                        if (typeof window !== 'undefined') {
-                          router.push(`/stores/${store.id}`)
-                        }
-                      }}
-                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
-                    >
-                      {store.name}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Filter button */}
-            <div className="relative" data-dropdown>
-              <button
-                onClick={() => {
-                  setShowFilterNavInAiMode(!showFilterNavInAiMode)
-                  setShowLocationDropdown(false)
-                }}
-                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
-                aria-label="Open filters"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
-                </svg>
-                <span className="text-sm">Filter</span>
-                <ChevronDownIcon className="h-4 w-4" />
-              </button>
-              {showFilterNavInAiMode && (
-                <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-10 p-4 min-w-[300px] max-w-[90vw] max-h-[60vh] overflow-y-auto" data-dropdown>
-                  <FilterNav
-                    categories={categoryOptions}
-                    brands={facets.brands}
-                    strains={facets.strains}
-                    terpenes={facets.terpenes}
-                    weights={facets.weights}
-                    effects={facets.effects}
-                    counts={finalFacetCounts}
-                    onChange={handleFiltersChange}
-                    initialFilters={activeFilters}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Search box inside AI Mode */}
         <div className="px-4 py-4 border-b border-gray-200">
           <div className="max-w-2xl mx-auto">
+            {/* Location modal */}
+            {showLocationDropdown && (
+              <div className="fixed inset-0 z-[60] bg-white/95 backdrop-blur-sm">
+                <div className="max-w-2xl mx-auto h-full flex flex-col">
+                  <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <div className="text-base font-semibold text-gray-900">Select a location</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowLocationDropdown(false)}
+                      className="p-2 text-gray-600 hover:text-black"
+                      aria-label="Close location picker"
+                    >
+                      <XMarkIcon className="h-6 w-6" />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 py-4">
+                    <div className="space-y-2">
+                      {stores.map((store) => (
+                        <button
+                          key={store.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedLocation(store.id)
+                            setShowLocationDropdown(false)
+                            if (typeof window !== 'undefined') {
+                              router.push(`/stores/${store.id}`)
+                            }
+                          }}
+                          className={[
+                            'w-full text-left rounded-xl border px-4 py-3',
+                            'hover:bg-gray-50 transition',
+                            selectedLocation === store.id ? 'border-black/30 bg-gray-50' : 'border-gray-200 bg-white',
+                          ].join(' ')}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-gray-900">{store.name}</div>
+                              {store.address || store.addressLine1 ? (
+                                <div className="text-xs text-gray-600 mt-1">
+                                  {store.address ||
+                                    [store.addressLine1, store.addressLine2].filter(Boolean).join(', ')}
+                                </div>
+                              ) : null}
+                            </div>
+                            {selectedLocation === store.id && (
+                              <div className="text-xs font-semibold text-gray-700">Selected</div>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="px-4 py-4 border-t border-gray-200 flex items-center justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowLocationDropdown(false)}
+                      className="px-4 py-2 rounded-full border border-gray-300 text-sm font-medium text-gray-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Filter modal (AI Mode) */}
+            <FilterNav
+              categories={categoryOptions}
+              brands={facets.brands}
+              strains={facets.strains}
+              terpenes={facets.terpenes}
+              weights={facets.weights}
+              effects={facets.effects}
+              counts={finalFacetCounts}
+              onChange={handleFiltersChange}
+              initialFilters={activeFilters}
+              showTrigger={false}
+              open={showFilterNavInAiMode}
+              onOpenChange={setShowFilterNavInAiMode}
+            />
+
             <form 
               onSubmit={(e) => {
                 e.preventDefault()
@@ -2575,58 +2608,145 @@ License: ${license}`
               }} 
               className="w-full"
             >
-              <div className="relative flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-                <button
-                  type="submit"
-                  className="absolute left-4 text-gray-500 hover:text-gray-700 transition"
-                  aria-label="Submit search"
-                >
-                  <MagnifyingGlassIcon className="h-5 w-5" />
-                </button>
-                <input
-                  id="ai-search-input-ai-mode"
-                  ref={aiModeInputRef}
-                  type="text"
-                  value={query}
-                  onFocus={() => {
-                    if (enablePresetDropdown) setShowDropdown(true)
-                  }}
-                  placeholder="Search by mood, product, brands, or preference"
-                  className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-full focus:outline-none focus-visible:outline-none"
-                  onChange={(e) => {
-                    const newValue = e.target.value
-                    setHasInteracted(true)
-                    setQuery(newValue)
-                  }}
-                  onKeyDown={(e) => {
-                    // Prevent form submission on Enter if user is still typing
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      // Allow default form submission
-                    }
-                  }}
-                />
+              <div className="flex items-center gap-2">
+                {/* Location icon (opens location modal) */}
                 <button
                   type="button"
                   onClick={() => {
-                    if (recognitionRef.current) {
-                      try {
-                        setIsListening(true)
-                        recognitionRef.current.start()
-                      } catch {
-                        setIsListening(false)
-                      }
-                    }
+                    setShowLocationDropdown(true)
+                    setShowFilterNavInAiMode(false)
                   }}
-                  className="absolute right-4 text-gray-500 hover:text-gray-700 transition"
-                  aria-label="Start voice input"
+                  className="flex items-center justify-center text-gray-700 hover:text-gray-900 transition"
+                  aria-label="Choose location"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
-                    <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2z"/>
-                    <path d="M13 19.95a7.001 7.001 0 0 0 5.995-5.992L19 13h-2a5 5 0 0 1-9.995.217L7 13H5l.005.958A7.001 7.001 0 0 0 11 19.95V22h2v-2.05z"/>
+                  <MapPinIcon className="h-6 w-6" />
+                </button>
+
+                {/* Search input */}
+                <div className="relative flex-1 flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+                  <button
+                    type="submit"
+                    className="absolute left-4 text-gray-500 hover:text-gray-700 transition"
+                    aria-label="Submit search"
+                  >
+                    <MagnifyingGlassIcon className="h-5 w-5" />
+                  </button>
+                  <input
+                    id="ai-search-input-ai-mode"
+                    ref={aiModeInputRef}
+                    type="text"
+                    value={query}
+                    onFocus={() => {
+                      if (enablePresetDropdown) setShowDropdown(true)
+                    }}
+                    placeholder="Search by mood, product, brands, or preference"
+                    className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-full focus:outline-none focus-visible:outline-none"
+                    onChange={(e) => {
+                      const newValue = e.target.value
+                      setHasInteracted(true)
+                      setQuery(newValue)
+                    }}
+                    onKeyDown={(e) => {
+                      // Prevent form submission on Enter if user is still typing
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        // Allow default form submission
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (recognitionRef.current) {
+                        try {
+                          setIsListening(true)
+                          recognitionRef.current.start()
+                        } catch {
+                          setIsListening(false)
+                        }
+                      }
+                    }}
+                    className="absolute right-4 text-gray-500 hover:text-gray-700 transition"
+                    aria-label="Start voice input"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
+                      <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2z"/>
+                      <path d="M13 19.95a7.001 7.001 0 0 0 5.995-5.992L19 13h-2a5 5 0 0 1-9.995.217L7 13H5l.005.958A7.001 7.001 0 0 0 11 19.95V22h2v-2.05z"/>
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Filter icon (opens filter modal) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFilterNavInAiMode(true)
+                    setShowLocationDropdown(false)
+                  }}
+                  className="flex items-center justify-center text-gray-700 hover:text-gray-900 transition"
+                  aria-label="Open filters"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6">
+                    {/* Top horizontal line with circle */}
+                    <line x1="3" y1="9" x2="21" y2="9" strokeLinecap="round" />
+                    <circle cx="12" cy="9" r="2.5" fill="none" />
+                    {/* Bottom horizontal line with circle */}
+                    <line x1="3" y1="15" x2="21" y2="15" strokeLinecap="round" />
+                    <circle cx="12" cy="15" r="2.5" fill="none" />
                   </svg>
                 </button>
               </div>
             </form>
+
+            {/* Category tiles (AI Mode only) */}
+            <div className="mt-4">
+              <div className="overflow-x-auto scrollbar-hide">
+                <div className="flex gap-3 px-1">
+                  {CATEGORY_DEFS.map((cat) => {
+                    const selected = (activeFilters.categories || []).some(
+                      (v) => v.toLowerCase() === cat.name.toLowerCase()
+                    )
+                    const meta = CATEGORY_TILE_META[cat.slug] || {
+                      image: '/images/post-thumb-03.jpg',
+                      className: 'bg-gray-200 text-gray-900',
+                    }
+                    const lightText = meta.className.includes('text-white')
+
+                    return (
+                      <button
+                        key={cat.slug}
+                        type="button"
+                        onClick={() => toggleCategoryTile(cat.name)}
+                        className={[
+                          'flex-none min-w-[150px] sm:min-w-[170px]',
+                          'rounded-2xl overflow-hidden',
+                          'flex items-center',
+                          'shadow-sm transition',
+                          'focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30',
+                          meta.className,
+                          selected ? 'ring-2 ring-white/70 brightness-110' : 'opacity-90 hover:opacity-100',
+                        ].join(' ')}
+                        aria-pressed={selected}
+                      >
+                        {/* Image on left - touches edge */}
+                        <div className="relative w-12 h-12 flex-shrink-0">
+                          <Image 
+                            src={meta.image} 
+                            alt={cat.name} 
+                            fill
+                            className="object-cover"
+                            sizes="48px"
+                          />
+                        </div>
+                        {/* Text on right */}
+                        <span className="flex-1 text-left px-3 py-1.5">
+                          <span className="block text-sm font-semibold leading-tight">{cat.name}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2760,7 +2880,7 @@ License: ${license}`
 
             {showResults && !loading && products.length > 0 && (
               <div className="mb-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
                   {products.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
@@ -2879,7 +2999,7 @@ License: ${license}`
             </button>
             <button
               type="button"
-              onClick={() => setShowFilterNav(!showFilterNav)}
+              onClick={() => setFilterModalOpen(true)}
               className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-medium text-gray-700 transition-colors shadow-sm"
             >
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
@@ -2889,26 +3009,21 @@ License: ${license}`
             </button>
           </div>
 
-          {/* FilterNav - shown when Filter button is clicked */}
-          {showFilterNav && (
-            <div className="mb-4">
-              <div className="overflow-x-auto overflow-y-visible scrollbar-hide">
-                <div className="min-w-max overflow-visible">
-                  <FilterNav
-                    categories={categoryOptions}
-                    brands={facets.brands}
-                    strains={facets.strains}
-                    terpenes={facets.terpenes}
-                    weights={facets.weights}
-                    effects={facets.effects}
-                    counts={finalFacetCounts}
-                    onChange={handleFiltersChange}
-                    initialFilters={activeFilters}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Filter modal (opens directly from the main Filter button) */}
+          <FilterNav
+            categories={categoryOptions}
+            brands={facets.brands}
+            strains={facets.strains}
+            terpenes={facets.terpenes}
+            weights={facets.weights}
+            effects={facets.effects}
+            counts={finalFacetCounts}
+            onChange={handleFiltersChange}
+            initialFilters={activeFilters}
+            showTrigger={false}
+            open={filterModalOpen}
+            onOpenChange={setFilterModalOpen}
+          />
         </div>
       </div>
     </section>
