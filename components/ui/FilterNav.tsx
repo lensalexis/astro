@@ -10,20 +10,20 @@ import {
   MagnifyingGlassIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
-
 type FilterNavProps = {
   categories?: string[];
   brands: string[];
   strains: string[];
   terpenes: string[];
   weights: string[];
+  effects: string[];
   counts?: {
     categories?: Record<string, number>;
     brands?: Record<string, number>;
     strains?: Record<string, number>;
     terpenes?: Record<string, number>;
     weights?: Record<string, number>;
-    thcRanges?: Record<string, number>;
+    effects?: Record<string, number>;
   };
   onChange: (filters: any) => void;
   initialFilters?: {
@@ -32,19 +32,10 @@ type FilterNavProps = {
     strains?: string[];
     terpenes?: string[];
     weights?: string[];
-    thcRanges?: string[];
+    effects?: string[];
     saleOnly?: boolean;
   };
 };
-
-// THC range definitions (5 ranges to cover all possibilities)
-const THC_RANGES = [
-  '0-10%',
-  '10-20%',
-  '20-30%',
-  '30-40%',
-  '40%+',
-];
 
 export default function FilterNav({
   categories = [],
@@ -52,6 +43,7 @@ export default function FilterNav({
   strains,
   terpenes,
   weights,
+  effects,
   counts = {},
   onChange,
   initialFilters,
@@ -64,7 +56,7 @@ export default function FilterNav({
     strains: (initialFilters?.strains || []) as string[],
     terpenes: (initialFilters?.terpenes || []) as string[],
     weights: (initialFilters?.weights || []) as string[],
-    thcRanges: (initialFilters?.thcRanges || []) as string[],
+    effects: (initialFilters?.effects || []) as string[],
     saleOnly: initialFilters?.saleOnly || false,
   });
   const [search, setSearch] = useState("");
@@ -92,7 +84,7 @@ export default function FilterNav({
           strains: initialFilters.strains || [],
           terpenes: initialFilters.terpenes || [],
           weights: initialFilters.weights || [],
-          thcRanges: initialFilters.thcRanges || [],
+          effects: initialFilters.effects || [],
           saleOnly: initialFilters.saleOnly || false,
         })
       }
@@ -102,17 +94,24 @@ export default function FilterNav({
   // Close dropdown if clicked outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node
+      // Check if click is inside the dropdown portal
+      const portalElement = document.querySelector('[data-filter-dropdown]')
+      
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        !Object.values(buttonRefs.current).some(btn => btn?.contains(e.target as Node))
+        !dropdownRef.current.contains(target) &&
+        !Object.values(buttonRefs.current).some(btn => btn?.contains(target)) &&
+        !(portalElement && portalElement.contains(target))
       ) {
         setActiveDropdown(null);
         setDropdownPosition(null);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    }
   }, []);
 
   // Update position on scroll/resize
@@ -160,7 +159,13 @@ export default function FilterNav({
     }
   };
 
-  const toggleFilter = (type: keyof typeof filters, value: string) => {
+  const toggleFilter = (type: keyof typeof filters, value: string, e?: React.MouseEvent) => {
+    // Prevent event propagation to avoid closing dropdown
+    if (e) {
+      e.stopPropagation()
+      e.preventDefault()
+    }
+    
     const current = filters[type] as string[];
     const updated = current.includes(value)
       ? current.filter((v) => v !== value)
@@ -169,6 +174,7 @@ export default function FilterNav({
     const newFilters = { ...filters, [type]: updated };
     setFilters(newFilters);
     onChange(newFilters);
+    // Keep dropdown open after selection
   };
 
   const toggleSale = () => {
@@ -177,14 +183,13 @@ export default function FilterNav({
     onChange(newFilters);
   };
 
-  const optionsMap = {
-    categories: categoryOptions,
-    brands,
-    strains,
-    terpenes,
-    weights,
-    thcRanges: THC_RANGES,
-  };
+  const optionsMap: Partial<Record<string, string[]>> = {}
+  if (categoryOptions.length) optionsMap.categories = categoryOptions
+  if (brands?.length) optionsMap.brands = brands
+  if (strains?.length) optionsMap.strains = strains
+  if (terpenes?.length) optionsMap.terpenes = terpenes
+  if (weights?.length) optionsMap.weights = weights
+  if (effects?.length) optionsMap.effects = effects
 
   // --- Mobile sheet state ---
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -193,7 +198,7 @@ export default function FilterNav({
     <div className="w-full" ref={dropdownRef}>
       <div className="flex flex-wrap gap-3">
         {Object.keys(optionsMap).map((key) => {
-          const displayName = key === 'thcRanges' ? 'THC' : key.charAt(0).toUpperCase() + key.slice(1);
+          const displayName = key === 'categories' ? 'Types' : key.charAt(0).toUpperCase() + key.slice(1);
           return (
             <div key={key} className="relative">
               <button
@@ -223,24 +228,33 @@ export default function FilterNav({
           );
         })}
 
-        {/* Discounted toggle */}
-<div className="flex items-center gap-2 px-4 py-2 rounded-2xl font-semibold hover:brightness-95" style={{ backgroundColor: '#eaeaea', color: '#5a5a5a' }}>
-  {/* Dollar sign icon */}
-  <span style={{ color: '#5a5a5a' }}>$</span>
-  <span>Discounted</span>
+        {/* Discounted - same pattern as other filters */}
+        <div className="relative">
+          <button
+            ref={(el) => {
+              buttonRefs.current['discounted'] = el
+            }}
+            onClick={() => toggleDropdown('discounted')}
+            className="flex items-center gap-2 px-4 py-2 rounded-2xl font-semibold hover:brightness-95 cursor-pointer relative"
+            style={{ backgroundColor: '#eaeaea', color: '#5a5a5a' }}
+          >
+            <span>$</span>
+            <span>Discounted</span>
 
-  {/* Toggle switch */}
-  <label className="relative inline-flex items-center cursor-pointer ml-2">
-    <input
-      type="checkbox"
-      className="sr-only peer"
-      checked={filters.saleOnly}
-      onChange={toggleSale}
-    />
-    <div className="w-11 h-6 bg-[#5a5a5a]/30 rounded-full peer peer-checked:bg-[#5a5a5a]/50 transition"></div>
-    <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transform peer-checked:translate-x-5 transition"></div>
-  </label>
-</div>
+            {/* Selection count badge */}
+            {filters.saleOnly && (
+              <span className="ml-1 px-2 py-0.5 text-xs font-bold rounded-full bg-[#5a5a5a] text-white">
+                1
+              </span>
+            )}
+
+            {activeDropdown === 'discounted' ? (
+              <ChevronUpIcon className="h-4 w-4" style={{ color: '#5a5a5a' }} />
+            ) : (
+              <ChevronDownIcon className="h-4 w-4" style={{ color: '#5a5a5a' }} />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Portal-based dropdown to escape overflow clipping */}
@@ -271,6 +285,7 @@ export default function FilterNav({
 
           return (
             <div
+              data-filter-dropdown
               ref={dropdownRef}
               className="fixed z-[9999] bg-white rounded-xl shadow-xl overflow-hidden"
               style={{
@@ -279,63 +294,107 @@ export default function FilterNav({
                 maxHeight: `${dropdownMaxHeight}px`,
                 width: `${dropdownWidth}px`,
               }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="flex flex-col h-full">
-                {/* Search */}
-                <div className="p-3 border-b border-gray-100 shrink-0">
-                  <div className="relative">
-                    <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      placeholder={`Search ${key}...`}
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400 border-none"
-                    />
+                {/* Search - hide for discounted */}
+                {key !== 'discounted' && (
+                  <div className="p-3 border-b border-gray-100 shrink-0">
+                    <div className="relative">
+                      <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder={`Search ${key}...`}
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-400 border-none"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Options with internal scroll */}
                 <div
                   className="flex-1 min-h-0 overflow-y-auto p-2 space-y-1"
                   style={{ maxHeight: `${optionMaxHeight}px` }}
                 >
-                  {optionsMap[key as keyof typeof optionsMap]
-                    .filter((opt) =>
-                      opt.toLowerCase().includes(search.toLowerCase())
-                    )
-                    .map((opt) => {
-                      const selected = Array.isArray(filters[key as keyof typeof filters]) && (filters[key as keyof typeof filters] as string[]).includes(opt);
-                      return (
-                        <button
-                          key={opt}
-                          onClick={() => {
-                            toggleFilter(key as keyof typeof filters, opt);
-                          }}
-                          className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm font-medium ${
-                            selected
-                              ? "bg-green-100 text-green-700"
-                              : "hover:bg-gray-100 text-gray-700"
+                  {key === 'discounted' ? (
+                    // Special handling for discounted - single checkbox option
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        toggleSale()
+                      }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation()
+                      }}
+                      className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm font-medium ${
+                        filters.saleOnly
+                          ? "bg-green-100 text-green-700"
+                          : "hover:bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`h-4 w-4 border rounded flex items-center justify-center ${
+                            filters.saleOnly
+                              ? "bg-green-500 border-green-500 text-white"
+                              : "border-gray-300"
                           }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`h-4 w-4 border rounded flex items-center justify-center ${
-                                selected
-                                  ? "bg-green-500 border-green-500 text-white"
-                                  : "border-gray-300"
-                              }`}
-                            >
-                              {selected && <CheckIcon className="h-3 w-3" />}
+                          {filters.saleOnly && <CheckIcon className="h-3 w-3" />}
+                        </span>
+                        <span>On sale</span>
+                      </div>
+                    </button>
+                  ) : (
+                    // Regular filter options
+                    optionsMap[key as keyof typeof optionsMap]
+                      ?.filter((opt) =>
+                        opt.toLowerCase().includes(search.toLowerCase())
+                      )
+                      .map((opt) => {
+                        const filterValues = (filters[key as keyof typeof filters] as string[]) || []
+                        const selected = filterValues.some(val => val.toLowerCase() === opt.toLowerCase());
+                        return (
+                          <button
+                            key={opt}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              e.preventDefault()
+                              toggleFilter(key as keyof typeof filters, opt, e);
+                            }}
+                            onMouseDown={(e) => {
+                              // Prevent mousedown from triggering outside click handler
+                              e.stopPropagation()
+                            }}
+                            className={`flex items-center justify-between w-full px-3 py-2 rounded-md text-sm font-medium ${
+                              selected
+                                ? "bg-green-100 text-green-700"
+                                : "hover:bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`h-4 w-4 border rounded flex items-center justify-center ${
+                                  selected
+                                    ? "bg-green-500 border-green-500 text-white"
+                                    : "border-gray-300"
+                                }`}
+                              >
+                                {selected && <CheckIcon className="h-3 w-3" />}
+                              </span>
+                              <span>{opt}</span>
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {counts?.[key as keyof typeof counts]?.[opt] ?? 0}
                             </span>
-                            <span>{opt}</span>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {counts?.[key as keyof typeof counts]?.[opt] ?? 0}
-                          </span>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })
+                  )}
                 </div>
               </div>
           </div>

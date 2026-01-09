@@ -1,24 +1,41 @@
 // app/(default)/shop/[category]/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import productService from "@/lib/productService";
 import ProductCard from "@/components/ui/ProductCard";
 import FilterNav from "@/components/ui/FilterNav";
 import AIProductSearch from "@/components/AIProductSearch";
+import {
+  CATEGORY_DEFS,
+  applyProductFilters,
+  buildFacetCounts,
+  buildFacetOptions,
+  type FacetedFilters,
+} from "@/lib/catalog";
 
-const categories = [
-  { name: "Flower", slug: "flower", id: "1af917cd40ce027b", icon: "/images/icon-cannabis-flower.png" },
-  { name: "Vaporizers", slug: "vaporizers", id: "ba607fa13287b679", icon: "/images/icon-cannabis-vape.png", synonyms: ["vapes"] },
-  { name: "Pre Rolls", slug: "pre-rolls", id: "873e1156bc94041e", icon: "/images/icon-cannabis-preroll.png", synonyms: ["prerolls", "pre rolls"] },
-  { name: "Concentrates", slug: "concentrates", id: "dd753723f6875d2e", icon: "/images/icon-cannabis-concentrate.png" },
-  { name: "Edibles", slug: "edibles", id: "2f2c05a9bbb5fd43", icon: "/images/icon-cannabis-edibles.png" },
-  { name: "Beverages", slug: "beverages", id: "45d32b3453f51209", icon: "/images/icon-cannabis-beverage.png" },
-  { name: "Tinctures", slug: "tinctures", id: "4b9c5820c59418fa", icon: "/images/icon-cannabis-tinctures.png" },
-];
+const CATEGORY_ICONS: Record<string, string> = {
+  "flower": "/images/icon-cannabis-flower.png",
+  "vaporizers": "/images/icon-cannabis-vape.png",
+  "pre-rolls": "/images/icon-cannabis-preroll.png",
+  "concentrates": "/images/icon-cannabis-concentrate.png",
+  "edibles": "/images/icon-cannabis-edibles.png",
+  "beverages": "/images/icon-cannabis-beverage.png",
+  "tinctures": "/images/icon-cannabis-tinctures.png",
+};
+
+const CATEGORY_SYNONYMS: Record<string, string[]> = {
+  "vaporizers": ["vapes"],
+  "pre-rolls": ["prerolls", "pre rolls"],
+};
+
+const categories = CATEGORY_DEFS.map((cat) => ({
+  ...cat,
+  icon: CATEGORY_ICONS[cat.slug] || "/images/icon-cannabis-flower.png",
+  synonyms: CATEGORY_SYNONYMS[cat.slug] || [],
+}));
 
 function normalizeSlug(slug: string) {
   return slug.toLowerCase().replace(/\s+/g, "-").replace(/_/g, "-").trim();
@@ -34,12 +51,6 @@ function findCategory(raw: string | undefined) {
   );
 }
 
-// --- helper for weight formatting ---
-function normalizeWeight(weight: string | undefined | null): string | null {
-  if (!weight) return null;
-  return weight.replace(/\s+/g, "").toLowerCase(); // "3.5 g" → "3.5g"
-}
-
 export default function CategoryPage() {
   const params = useParams();
   const rawCategory = (params as any)?.category;
@@ -51,12 +62,13 @@ export default function CategoryPage() {
   const [aiResultsVisible, setAiResultsVisible] = useState(false);
 
   // Filters state
-  const [filters, setFilters] = useState({
-    categories: [] as string[],
-    brands: [] as string[],
-    strains: [] as string[],
-    terpenes: [] as string[],
-    weights: [] as string[],
+  const [filters, setFilters] = useState<FacetedFilters>({
+    categories: [],
+    brands: [],
+    strains: [],
+    terpenes: [],
+    weights: [],
+    effects: [],
     saleOnly: false,
   });
 
@@ -82,39 +94,19 @@ export default function CategoryPage() {
     fetchProducts();
   }, [selectedCategory]);
 
-  // Apply filters client-side
-  const filteredProducts = products.filter((p) => {
-    if (filters.categories.length && selectedCategory && !filters.categories.includes(selectedCategory.name)) {
-      return false
+  const normalizedFilters = useMemo<FacetedFilters>(() => {
+    const base: FacetedFilters = {
+      ...filters,
     }
-    if (filters.brands.length && !filters.brands.includes(p.brand?.name)) {
-      return false;
+    if ((!base.categories || base.categories.length === 0) && selectedCategory) {
+      base.categories = [selectedCategory.name]
     }
-    if (filters.strains.length && !filters.strains.includes(p.strain || p.cannabisType)) {
-      return false;
-    }
-    if (filters.terpenes.length) {
-      const terpeneList = p.labs?.terpenes || [];
-      if (!filters.terpenes.some((t) => terpeneList.includes(t))) {
-        return false;
-      }
-    }
-    if (filters.weights.length) {
-      const productWeights = [
-        normalizeWeight(p.size),
-        ...(p.tiers?.map((t: any) => normalizeWeight(t.weightFormatted)) || []),
-        p.weightFormatted,
-      ].filter(Boolean) as string[];
+    return base
+  }, [filters, selectedCategory])
 
-      if (!filters.weights.some((w) => productWeights.includes(w))) {
-        return false;
-      }
-    }
-    if (filters.saleOnly && !p.discounts?.length) {
-      return false;
-    }
-    return true;
-  });
+  const filteredProducts = useMemo(() => {
+    return applyProductFilters(products, normalizedFilters)
+  }, [products, normalizedFilters]);
 
   if (!selectedCategory) {
     return (
@@ -127,64 +119,15 @@ export default function CategoryPage() {
     );
   }
 
-  // ✅ Collect options dynamically
-  const categoryOptions = categories.map((c) => c.name)
-  const brandOptions = Array.from(new Set(products.map((p) => p.brand?.name).filter(Boolean))) as string[];
-  const strainOptions = Array.from(new Set(products.map((p) => p.strain || p.cannabisType).filter(Boolean))) as string[];
-  const terpeneOptions = Array.from(
-    new Set(products.flatMap((p) => p.labs?.terpenes || []).filter(Boolean))
-  ) as string[];
-  const weightOptions = Array.from(
-    new Set(
-      products.flatMap((p) => {
-        const weights: string[] = [];
-        if (p.weightFormatted) weights.push(p.weightFormatted);
-        if (p.size) weights.push(p.size);
-        if (Array.isArray(p.tiers)) {
-          p.tiers.forEach((t: any) => {
-            if (t.weightFormatted) weights.push(t.weightFormatted);
-          });
-        }
-        return weights;
-      }).filter(Boolean)
-    )
-  ) as string[];
+  const facets = useMemo(() => buildFacetOptions(products), [products]);
+  const facetCounts = useMemo(() => buildFacetCounts(products), [products]);
 
-  // ✅ Build counts dynamically
-  const counts = {
-    categories: { [selectedCategory.name]: products.length },
-    brands: products.reduce((acc, p) => {
-      if (p.brand?.name) acc[p.brand.name] = (acc[p.brand.name] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    strains: products.reduce((acc, p) => {
-      const strain = p.strain || p.cannabisType;
-      if (strain) acc[strain] = (acc[strain] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>),
-    terpenes: products.reduce((acc, p) => {
-      if (Array.isArray(p.labs?.terpenes)) {
-        p.labs.terpenes.forEach((t: string) => {
-          acc[t] = (acc[t] || 0) + 1;
-        });
-      }
-      return acc;
-    }, {} as Record<string, number>),
-    weights: products.reduce((acc, p) => {
-      const weights: string[] = [];
-      if (p.weightFormatted) weights.push(p.weightFormatted);
-      if (p.size) weights.push(p.size);
-      if (Array.isArray(p.tiers)) {
-        p.tiers.forEach((t: any) => {
-          if (t.weightFormatted) weights.push(t.weightFormatted);
-        });
-      }
-      weights.forEach((w) => {
-        acc[w] = (acc[w] || 0) + 1;
-      });
-      return acc;
-    }, {} as Record<string, number>),
-  };
+  const categoryOptions = categories.map((c) => c.name);
+  const brandOptions = facets.brands;
+  const strainOptions = facets.strains;
+  const terpeneOptions = facets.terpenes;
+  const weightOptions = facets.weights;
+  const effectOptions = facets.effects;
 
   return (
     <>
@@ -210,7 +153,9 @@ export default function CategoryPage() {
         strains={strainOptions}
         terpenes={terpeneOptions}
         weights={weightOptions}
-        counts={counts}
+        effects={effectOptions}
+        counts={facetCounts}
+        initialFilters={filters}
         onChange={(newFilters) => setFilters(newFilters)}
       />
 

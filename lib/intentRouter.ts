@@ -1,4 +1,5 @@
 import { stores } from './stores'
+import { matchKeywordFilters } from './filterKeywords'
 
 export type Intent = 'STORE_INFO' | 'PRODUCT_SHOPPING' | 'PRODUCT_INFO' | 'GENERAL_EDUCATION' | 'EDUCATION_WITH_PRODUCTS' | 'MIXED'
 
@@ -13,7 +14,6 @@ export type ExtractedFilters = {
   brand?: string
   query?: string
   maxThc?: number
-  thcRange?: string // e.g., '0-10%', '10-20%', '20-30%', '30-40%', '40%+'
   effectIntent?: string // e.g., 'sleep', 'energy', 'focus', 'pain', etc.
 }
 
@@ -521,22 +521,6 @@ function extractFilters(message: string): ExtractedFilters {
         filters.strainType = effectData.strainType
       }
       
-      // Set THC range based on effect (if not already set)
-      if (!filters.thcRange && effectData.thcRange) {
-        const avg = (effectData.thcRange.min + effectData.thcRange.max) / 2
-        if (avg < 10) {
-          filters.thcRange = '0-10%'
-        } else if (avg < 20) {
-          filters.thcRange = '10-20%'
-        } else if (avg < 30) {
-          filters.thcRange = '20-30%'
-        } else if (avg < 40) {
-          filters.thcRange = '30-40%'
-        } else {
-          filters.thcRange = '40%+'
-        }
-      }
-      
       // Set maxTHC for mild/beginner effects
       if (effectKey === 'mild' && !filters.maxThc) {
         filters.maxThc = 15
@@ -562,12 +546,18 @@ function extractFilters(message: string): ExtractedFilters {
   // Extract category (including from educational questions like "what are tinctures")
   // Check for exact matches first, then partial matches
   // Sort by length (longer first) to match more specific terms first
+  // Also handle combinations like "vape sativa" - category should be extracted even with other terms
   const sortedCategoryEntries = Object.entries(categoryMap).sort((a, b) => b[0].length - a[0].length)
   for (const [keyword, category] of sortedCategoryEntries) {
-    // Use word boundaries to avoid false matches
+    // Use word boundaries to avoid false matches, but also allow partial matches for common terms
     const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'i')
-    if (regex.test(lower)) {
+    const wordBoundaryRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i')
+    // For single-word keywords, also check if they appear anywhere in the message
+    // This helps with queries like "vape sativa" where "vape" should match even with other words
+    const isSingleWord = keyword.split(/\s+/).length === 1
+    const partialMatch = isSingleWord && lower.includes(keyword.toLowerCase())
+    
+    if (wordBoundaryRegex.test(lower) || partialMatch) {
       filters.category = category
       break
     }
@@ -605,54 +595,21 @@ function extractFilters(message: string): ExtractedFilters {
     filters.weight = weightMatch[1] + 'g'
   }
 
-  // Extract THC ranges
-  // Match patterns like "20% thc", "thc 20-30", "high thc", "low thc", etc.
-  const thcPercentMatch = lower.match(/(\d+)\s*%?\s*(?:thc|thc\s*level|thc\s*content)/i)
-  if (thcPercentMatch) {
-    const thcValue = parseInt(thcPercentMatch[1])
-    if (thcValue >= 0 && thcValue < 10) {
-      filters.thcRange = '0-10%'
-    } else if (thcValue >= 10 && thcValue < 20) {
-      filters.thcRange = '10-20%'
-    } else if (thcValue >= 20 && thcValue < 30) {
-      filters.thcRange = '20-30%'
-    } else if (thcValue >= 30 && thcValue < 40) {
-      filters.thcRange = '30-40%'
-    } else if (thcValue >= 40) {
-      filters.thcRange = '40%+'
-    }
-  } else {
-    // Match range patterns like "20-30% thc", "thc 15 to 25"
-    const thcRangeMatch = lower.match(/(\d+)\s*[-–—to]\s*(\d+)\s*%?\s*(?:thc|thc\s*level)/i)
-    if (thcRangeMatch) {
-      const min = parseInt(thcRangeMatch[1])
-      const max = parseInt(thcRangeMatch[2])
-      const avg = (min + max) / 2
-      if (avg < 10) {
-        filters.thcRange = '0-10%'
-      } else if (avg < 20) {
-        filters.thcRange = '10-20%'
-      } else if (avg < 30) {
-        filters.thcRange = '20-30%'
-      } else if (avg < 40) {
-        filters.thcRange = '30-40%'
-      } else {
-        filters.thcRange = '40%+'
-      }
-    } else {
-      // Match descriptive terms
-      if (lower.match(/\b(very\s+)?low\s+thc\b|\bthc\s*under\s*10\b|\bthc\s*below\s*10\b/i)) {
-        filters.thcRange = '0-10%'
-      } else if (lower.match(/\blow\s+thc\b|\bthc\s*10[-\s]?20\b|\bthc\s*under\s*20\b/i)) {
-        filters.thcRange = '10-20%'
-      } else if (lower.match(/\bmedium\s+thc\b|\bmoderate\s+thc\b|\bthc\s*20[-\s]?30\b/i)) {
-        filters.thcRange = '20-30%'
-      } else if (lower.match(/\bhigh\s+thc\b|\bthc\s*30[-\s]?40\b|\bthc\s*over\s*30\b/i)) {
-        filters.thcRange = '30-40%'
-      } else if (lower.match(/\bvery\s+high\s+thc\b|\bextremely\s+high\s+thc\b|\bthc\s*40\s*plus\b|\bthc\s*over\s*40\b/i)) {
-        filters.thcRange = '40%+'
-      }
-    }
+  const keywordMatches = matchKeywordFilters(lower)
+  if (!filters.category && keywordMatches.category) {
+    filters.category = keywordMatches.category
+  }
+  if (!filters.strainType && keywordMatches.strainType) {
+    filters.strainType = keywordMatches.strainType
+  }
+  if (!filters.weight && keywordMatches.weight) {
+    filters.weight = keywordMatches.weight
+  }
+  if (!filters.discountedOnly && keywordMatches.sale) {
+    filters.discountedOnly = true
+  }
+  if ((!filters.terpenes || filters.terpenes.length === 0) && keywordMatches.terpenes) {
+    filters.terpenes = keywordMatches.terpenes
   }
 
   // Extract brand (if mentioned)

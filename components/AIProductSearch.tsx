@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, ReactNode, type ReactElement } from 'react'
-import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { MapPinIcon, ChevronDownIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -14,6 +13,21 @@ import FilterNav from '@/components/ui/FilterNav'
 import { stores, about } from '@/lib/stores'
 import { useParams } from 'next/navigation'
 import { routeIntent, type Intent, type ExtractedFilters, EFFECT_KEYWORDS } from '@/lib/intentRouter'
+import {
+  CATEGORY_DEFS,
+  DEFAULT_CATEGORY_LABELS,
+  applyProductFilters,
+  buildFacetCounts,
+  buildFacetOptions,
+  getCategoryLabel,
+  getProductType,
+  getStrainType,
+  getTags,
+  getThcTotal,
+  getCbdTotal,
+  isOnSale,
+  type FacetedFilters,
+} from '@/lib/catalog'
 
 // ============================================================================
 // ALPINE IQ SCHEMA FIELD ACCESSORS
@@ -28,201 +42,10 @@ type ChatMessage = {
   requestId?: string
 }
 
-const CATEGORY_DEFS = [
-  { name: 'Flower', slug: 'flower', id: '1af917cd40ce027b' },
-  { name: 'Vaporizers', slug: 'vaporizers', id: 'ba607fa13287b679' },
-  { name: 'Pre Rolls', slug: 'pre-rolls', id: '873e1156bc94041e' },
-  { name: 'Concentrates', slug: 'concentrates', id: 'dd753723f6875d2e' },
-  { name: 'Edibles', slug: 'edibles', id: '2f2c05a9bbb5fd43' },
-  { name: 'Beverages', slug: 'beverages', id: '45d32b3453f51209' },
-  { name: 'Tinctures', slug: 'tinctures', id: '4b9c5820c59418fa' },
-]
-
-const CATEGORY_NAME_BY_SLUG = CATEGORY_DEFS.reduce<Record<string, string>>((acc, c) => {
-  acc[c.slug] = c.name
-  return acc
-}, {})
-
-const CATEGORY_NAME_BY_ID = CATEGORY_DEFS.reduce<Record<string, string>>((acc, c) => {
-  acc[c.id] = c.name
-  return acc
-}, {})
-
-const getProductType = (p: Product): string | null => {
-  // Map ProductType enum to Alpine IQ productType values
-  if (p.type) {
-    const typeMap: Record<string, string> = {
-      'FLOWER': 'flower',
-      'PRE_ROLLS': 'preRoll',
-      'VAPORIZERS': 'vape',
-      'EDIBLES': 'edible',
-      'TINCTURES': 'tincture',
-      'BEVERAGES': 'beverage',
-      'CONCENTRATES': 'concentrate',
-      'TOPICALS': 'topical',
-    }
-    const mapped = typeMap[p.type]
-    if (mapped) return mapped
-  }
-  
-  // Fallback: check category slug/name
-  if (p.category) {
-    const categoryLower = p.category.toLowerCase()
-    if (categoryLower.includes('flower')) return 'flower'
-    if (categoryLower.includes('pre') || categoryLower.includes('roll')) return 'preRoll'
-    if (categoryLower.includes('vape') || categoryLower.includes('vapor')) return 'vape'
-    if (categoryLower.includes('edible')) return 'edible'
-    if (categoryLower.includes('tincture')) return 'tincture'
-    if (categoryLower.includes('beverage') || categoryLower.includes('drink')) return 'beverage'
-    if (categoryLower.includes('concentrate')) return 'concentrate'
-    if (categoryLower.includes('topical')) return 'topical'
-  }
-  
-  // Fallback: check subType
-  if (p.subType) {
-    const subTypeLower = p.subType.toLowerCase()
-    if (subTypeLower.includes('flower')) return 'flower'
-    if (subTypeLower.includes('pre') || subTypeLower.includes('roll')) return 'preRoll'
-    if (subTypeLower.includes('vape')) return 'vape'
-    if (subTypeLower.includes('edible')) return 'edible'
-    if (subTypeLower.includes('tincture')) return 'tincture'
-    if (subTypeLower.includes('beverage')) return 'beverage'
-    if (subTypeLower.includes('concentrate')) return 'concentrate'
-    if (subTypeLower.includes('topical')) return 'topical'
-  }
-  
-  return null
-}
-
-const getCategoryLabel = (p: Product): string | null => {
-  if ((p as any)?.categoryId && CATEGORY_NAME_BY_ID[(p as any).categoryId]) {
-    return CATEGORY_NAME_BY_ID[(p as any).categoryId]
-  }
-  const t = getProductType(p)
-  if (!t) return null
-  const map: Record<string, string> = {
-    flower: CATEGORY_NAME_BY_SLUG['flower'] || 'Flower',
-    preRoll: CATEGORY_NAME_BY_SLUG['pre-rolls'] || 'Pre Rolls',
-    vape: CATEGORY_NAME_BY_SLUG['vaporizers'] || 'Vaporizers',
-    concentrate: CATEGORY_NAME_BY_SLUG['concentrates'] || 'Concentrates',
-    edible: CATEGORY_NAME_BY_SLUG['edibles'] || 'Edibles',
-    beverage: CATEGORY_NAME_BY_SLUG['beverages'] || 'Beverages',
-    tincture: CATEGORY_NAME_BY_SLUG['tinctures'] || 'Tinctures',
-    topical: 'Topicals',
-  }
-  return map[t] || null
-}
-
-const DEFAULT_CATEGORY_LABELS = [
-  'Flower',
-  'Vaporizers',
-  'Pre Rolls',
-  'Concentrates',
-  'Edibles',
-  'Beverages',
-  'Tinctures',
-  'Topicals',
-]
-
-const getStrainType = (p: Product): string | null => {
-  // IMPORTANT:
-  // `p.strain` is often a strain *name* (e.g., "Blue Dream") and does NOT include "sativa/indica/hybrid".
-  // `p.cannabisType` is the real strain *type*.
-  // We must consider BOTH, otherwise filtering by "Sativa/Indica/Hybrid" will return 0 for many products.
-  const rawStrain = `${p.cannabisType || ''} ${p.strain || ''}`.toLowerCase()
-  if (rawStrain.includes('indica') && rawStrain.includes('lean')) return 'indica-leaning'
-  if (rawStrain.includes('sativa') && rawStrain.includes('lean')) return 'sativa-leaning'
-  if (rawStrain.includes('indica')) return 'indica'
-  if (rawStrain.includes('sativa')) return 'sativa'
-  if (rawStrain.includes('hybrid')) return 'hybrid'
-  return null
-}
-
-const getTags = (p: Product): string[] => {
-  // Use effects array as tags
-  return (p.effects || []).map(tag => tag.toLowerCase())
-}
-
-const getThcTotal = (p: Product, useMax: boolean = true): number | null => {
-  // Get THC value - for beginner-friendly, use thc (not thcMax) to be more conservative
-  // For other presets, prefer thcMax, fallback to thc
-  // NOTE: API fields sometimes come back as string/number; widen the type to avoid TS 'never' paths.
-  const thcValue: string | number | null =
-    (useMax ? (p.labs?.thcMax ?? p.labs?.thc ?? null) : (p.labs?.thc ?? p.labs?.thcMax ?? null)) as any
-  
-  // Return null if value is null, undefined, empty string, or empty array
-  if (thcValue === null || thcValue === undefined || thcValue === '') return null
-  
-  // If it's a string, check for ranges (e.g., "22-25%", "22–25")
-  if (typeof thcValue === 'string') {
-    // Remove percentage signs and whitespace
-    const cleaned = thcValue.replace(/%/g, '').trim()
-    
-    // Check if it contains a range indicator (dash, en-dash, em-dash)
-    if (cleaned.includes('-') || cleaned.includes('–') || cleaned.includes('—')) {
-      // This is a range - return null (not a single valid number)
-      return null
-    }
-    
-    // Try to parse as number
-    const numValue = parseFloat(cleaned)
-    if (isNaN(numValue)) return null
-    return numValue
-  }
-  
-  // If it's already a number, validate it
-  if (typeof thcValue === 'number') {
-    if (isNaN(thcValue) || !isFinite(thcValue)) return null
-    return thcValue
-  }
-  
-  // Any other type is invalid
-  return null
-}
-
-const getCbdTotal = (p: Product): number | null => {
-  // Get CBD value - prefer cbdMax, fallback to cbd
-  // NOTE: API fields sometimes come back as string/number; widen the type to avoid TS 'never' paths.
-  const cbdValue: string | number | null = (p.labs?.cbdMax ?? p.labs?.cbd ?? null) as any
-  
-  // Return null if value is null, undefined, empty string, or empty array
-  if (cbdValue === null || cbdValue === undefined || cbdValue === '') return null
-  
-  // If it's a string, check for ranges
-  if (typeof cbdValue === 'string') {
-    // Remove percentage signs and whitespace
-    const cleaned = cbdValue.replace(/%/g, '').trim()
-    
-    // Check if it contains a range indicator
-    if (cleaned.includes('-') || cleaned.includes('–') || cleaned.includes('—')) {
-      // This is a range - return null (not a single valid number)
-      return null
-    }
-    
-    // Try to parse as number
-    const numValue = parseFloat(cleaned)
-    if (isNaN(numValue)) return null
-    return numValue
-  }
-  
-  // If it's already a number, validate it
-  if (typeof cbdValue === 'number') {
-    if (isNaN(cbdValue) || !isFinite(cbdValue)) return null
-    return cbdValue
-  }
-  
-  // Any other type is invalid
-  return null
-}
-
-const getOnSale = (p: Product): boolean => {
-  // Check for any discount indicators
-  return !!(
-    p.discounts?.length ||
-    p.discountAmountFinal ||
-    p.discountValueFinal ||
-    p.discountTypeFinal
-  )
+type FilterPill = {
+  key: keyof FacetedFilters | 'saleOnly'
+  value?: string
+  label: string
 }
 
 
@@ -490,7 +313,7 @@ const filterByPreset = (products: Product[], presetId: PresetId): Product[] => {
     case 'best-deals': {
       // onSale = true
       // Sort by highest discount or lowest price
-      filtered = filtered.filter((p) => getOnSale(p))
+      filtered = filtered.filter((p) => isOnSale(p))
       
       // Sort by discount percentage (highest first)
       filtered.sort((a, b) => {
@@ -588,7 +411,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const initialLocation = params?.storeId || currentStoreId || ''
   const [selectedLocation, setSelectedLocation] = useState(initialLocation)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const aiModeInputRef = useRef<HTMLInputElement>(null)
   const enablePresetDropdown = !!customChips
   const [phraseIndex, setPhraseIndex] = useState(0)
   const phrases = ['vape', 'pre roll', 'edible', 'concentrate', 'brand', 'tincture']
@@ -601,36 +424,57 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     { id: 'cat-beverages', label: 'Beverages', category: 'beverages' },
     { id: 'cat-tinctures', label: 'Tinctures', category: 'tinctures' },
   ]
-  const PRE_PROMPTS = [
-    { id: 'store-info', label: 'I want store information', type: 'store-info' as const, category: null },
-    { id: 'best-sellers', label: 'Show me best sellers', type: 'curated' as const, category: null },
-    { id: 'deals', label: 'Show discounted deals', type: 'curated' as const, category: null },
-    { id: 'browse-vapes', label: 'Browse vapes', type: 'browse' as const, category: 'Vaporizers' },
-    { id: 'browse-edibles', label: 'Browse edibles', type: 'browse' as const, category: 'Edibles' },
+  // Google-style prompts covering all categories with different problem-solving approaches
+  // AI Mode prompts - Google-style with Recommend/How do I/Plan a patterns
+  // Each prompt has a static image assigned
+  const AI_MODE_PROMPTS = [
+    // Recommend prompts (for people who don't want to think)
+    { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg' },
+    { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg' },
+    { id: 'recommend-edible', label: 'Recommend edibles for sleep', query: 'recommend edibles that help with sleep', category: 'Edibles', image: '/images/post-thumb-05.jpg' },
+    { id: 'recommend-deals', label: 'Recommend the best deals today', query: 'show me discounted products with best value', category: null, image: '/images/post-thumb-06.jpg' },
+    
+    // How do I prompts (for people with questions)
+    { id: 'how-choose-strain', label: 'How do I choose between indica and sativa?', query: 'how to choose between indica sativa hybrid strains', category: null, image: '/images/post-thumb-07.jpg' },
+    { id: 'how-use-tincture', label: 'How do I use tinctures effectively?', query: 'how to use tinctures properly dosage instructions', category: 'Tinctures', image: '/images/post-thumb-08.jpg' },
+    { id: 'how-start-edibles', label: 'How do I start with edibles safely?', query: 'how to start with edibles beginner guide safe dosage', category: 'Edibles', image: '/images/post-thumb-09.jpg' },
+    
+    // Plan a prompts (for planning/experiences)
+    { id: 'plan-evening', label: 'Plan a relaxing evening with cannabis', query: 'plan relaxing evening indica products edibles beverages', category: null, image: '/images/post-thumb-10.jpg' },
+    { id: 'plan-party', label: 'Plan products for a social gathering', query: 'plan products for party social gathering sativa hybrid', category: null, image: '/images/post-thumb-03.jpg' },
+    { id: 'plan-workout', label: 'Plan products for post-workout recovery', query: 'plan products for post workout recovery cbd topicals', category: null, image: '/images/post-thumb-04.jpg' },
+    
+    // Category-specific prompts
+    { id: 'browse-concentrates', label: 'Show me all concentrates', query: 'show me concentrates wax rosin shatter', category: 'Concentrates', image: '/images/post-thumb-05.jpg' },
+    { id: 'browse-beverages', label: 'Show me cannabis beverages', query: 'show me beverages drinks sodas teas', category: 'Beverages', image: '/images/post-thumb-06.jpg' },
+    { id: 'browse-pre-rolls', label: 'Show me pre-rolls ready to smoke', query: 'show me pre rolls joints ready to smoke', category: 'Pre Rolls', image: '/images/post-thumb-07.jpg' },
   ]
-  const bannerSlides = [
-    { id: 's1', img: '/images/post-thumb-13.jpg', title: 'Up to 60% Off', cta: '/shop/flower' },
-    { id: 's2', img: '/images/post-thumb-14.jpg', title: 'Fresh Drops Today', cta: '/shop/vaporizers' },
-    { id: 's3', img: '/images/post-thumb-07.jpg', title: 'Weekend Deals', cta: '/shop/edibles' },
+  const PRODUCT_PROMPT_SUGGESTIONS = [
+    'Show me relaxing indica flower',
+    'Find discounted vape carts',
+    'Recommend edibles that help with sleep',
   ]
-  const [bannerIndex, setBannerIndex] = useState(0)
+  const formatEffectLabel = (intent: string) => {
+    if (!intent) return ''
+    return intent
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim()
+  }
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isChatMode, setIsChatMode] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [allProductsGlobal, setAllProductsGlobal] = useState<Product[]>([])
   const [showPrePrompts, setShowPrePrompts] = useState(true)
   const [categoryCountsByApi, setCategoryCountsByApi] = useState<Record<string, number>>({})
-  const [activeFilters, setActiveFilters] = useState<{
-    categories?: string[]
-    brands?: string[]
-    strains?: string[]
-    terpenes?: string[]
-    weights?: string[]
-    thcRanges?: string[]
-    saleOnly?: boolean
-  }>({})
+  const [aiModeOpen, setAiModeOpen] = useState(false)
+  const [showFilterNav, setShowFilterNav] = useState(false)
+  const [showFilterNavInAiMode, setShowFilterNavInAiMode] = useState(false)
+  const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const [activeFilters, setActiveFilters] = useState<FacetedFilters>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const aiModeScrollRef = useRef<HTMLDivElement>(null)
   const lastProcessedQueryRef = useRef<string>('')
   const processingRef = useRef<boolean>(false)
   const inFlightRequestIds = useRef<Set<string>>(new Set())
@@ -651,6 +495,54 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     active: boolean
     requestId: string | null
   }>({ active: false, requestId: null })
+
+  const filterPills = useMemo<FilterPill[]>(() => {
+    const pills: FilterPill[] = []
+    const seen = new Set<string>() // Track seen values case-insensitively
+    
+    // Helper to check if value already exists (case-insensitive)
+    const isDuplicate = (key: string, value: string) => {
+      const keyValue = `${key}:${value.toLowerCase()}`
+      if (seen.has(keyValue)) return true
+      seen.add(keyValue)
+      return false
+    }
+    
+    activeFilters.categories?.forEach((category) => {
+      if (!isDuplicate('categories', category)) {
+        pills.push({ key: 'categories', value: category, label: category })
+      }
+    })
+    activeFilters.brands?.forEach((brand) => {
+      if (!isDuplicate('brands', brand)) {
+        pills.push({ key: 'brands', value: brand, label: brand })
+      }
+    })
+    activeFilters.strains?.forEach((strain) => {
+      if (!isDuplicate('strains', strain)) {
+        pills.push({ key: 'strains', value: strain, label: strain })
+      }
+    })
+    activeFilters.terpenes?.forEach((terp) => {
+      if (!isDuplicate('terpenes', terp)) {
+        pills.push({ key: 'terpenes', value: terp, label: terp })
+      }
+    })
+    activeFilters.weights?.forEach((weight) => {
+      if (!isDuplicate('weights', weight)) {
+        pills.push({ key: 'weights', value: weight, label: weight })
+      }
+    })
+    activeFilters.effects?.forEach((effect) => {
+      if (!isDuplicate('effects', effect)) {
+        pills.push({ key: 'effects', value: effect, label: effect })
+      }
+    })
+    if (activeFilters.saleOnly) {
+      pills.push({ key: 'saleOnly', label: 'On sale' })
+    }
+    return pills
+  }, [activeFilters])
 
   const log = (label: string, payload: Record<string, any>) => {
     console.log(`[CHAT] ${label}`, { ts: Date.now(), ...payload })
@@ -673,11 +565,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     recog.onerror = () => setIsListening(false)
     recog.onend = () => setIsListening(false)
     recognitionRef.current = recog
-  }, [])
-
-  useEffect(() => {
-    // Autofocus the chat input on mount
-    inputRef.current?.focus()
   }, [])
 
   useEffect(() => {
@@ -812,22 +699,12 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     return () => clearInterval(interval)
   }, [phrases.length])
 
-  // Banner rotation
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % bannerSlides.length)
-    }, 3500)
-    return () => clearInterval(timer)
-  }, [bannerSlides.length])
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
+        !dropdownRef.current.contains(event.target as Node)
       ) {
         setShowDropdown(false)
       }
@@ -1091,6 +968,9 @@ If asked about specific products, you can mention that the customer can search f
     if (filters.category) {
       parts.push(filters.category.toLowerCase())
     }
+    if (filters.effectIntent) {
+      parts.push(formatEffectLabel(filters.effectIntent).toLowerCase())
+    }
     if (filters.terpenes && filters.terpenes.length > 0) {
       parts.push(`${filters.terpenes[0].toLowerCase()}-containing`)
     }
@@ -1106,6 +986,85 @@ If asked about specific products, you can mention that the customer can search f
     }
     
     return parts.join(' ')
+  }
+
+  const RELAXATION_PLAN: Array<{ key: keyof FacetedFilters; label: string }> = [
+    { key: 'effects', label: 'effects' },
+    { key: 'terpenes', label: 'terpenes' },
+    { key: 'weights', label: 'weights' },
+    { key: 'strains', label: 'strains' },
+    { key: 'brands', label: 'brands' },
+    { key: 'saleOnly', label: 'discounts' },
+    { key: 'categories', label: 'category' },
+  ]
+
+  const tokenizeQuery = (text: string) =>
+    text.toLowerCase().split(/\s+/).map((token) => token.trim()).filter(Boolean)
+
+  const computeRelevanceScore = (product: Product, filters: FacetedFilters, query: string) => {
+    let score = 0
+    const category = (getCategoryLabel(product) || '').toLowerCase()
+    const strainType = (getStrainType(product) || '').toLowerCase()
+    const strainName = (product.strain || product.cannabisType || '').toLowerCase()
+    const brand = (product.brand?.name || '').toLowerCase()
+    const tagList = getTags(product)
+
+    if (filters.categories?.length) {
+      const matches = filters.categories.some((cat) => category === cat.toLowerCase())
+      if (matches) score += 3
+    }
+    if (filters.strains?.length) {
+      const matches = filters.strains.some((target) => {
+        const norm = target.toLowerCase()
+        return strainType.includes(norm) || strainName.includes(norm)
+      })
+      if (matches) score += 2
+    }
+    if (filters.brands?.length) {
+      const matches = filters.brands.some((target) => brand.includes(target.toLowerCase()))
+      if (matches) score += 1.5
+    }
+    if (filters.saleOnly && isOnSale(product)) {
+      score += 1
+    }
+    if (filters.terpenes?.length) {
+      const terpList = (product.labs?.terpenes || []).map((t) => (t || '').toLowerCase())
+      const matches = filters.terpenes.some((target) => terpList.includes(target.toLowerCase()))
+      if (matches) score += 1
+    }
+    if (filters.weights?.length) {
+      const weight = (product.weightFormatted || product.size || '').toLowerCase()
+      if (weight && filters.weights.some((target) => weight.includes(target.toLowerCase()))) {
+        score += 0.5
+      }
+    }
+    if (filters.effects?.length && tagList.length) {
+      const matches = filters.effects.some((effect) =>
+        tagList.some((tag) => tag.includes(effect.toLowerCase()))
+      )
+      if (matches) score += 1
+    }
+
+    if (query) {
+      const tokens = tokenizeQuery(query)
+      if (tokens.length) {
+        const haystack = `${product.name} ${product.description || ''} ${brand} ${strainName}`.toLowerCase()
+        const matches = tokens.filter((token) => haystack.includes(token)).length
+        score += matches * 0.4
+      }
+    }
+
+    return score
+  }
+
+  const rankProductsByProbability = (products: Product[], filters: FacetedFilters, query: string) => {
+    return products
+      .map((product) => ({
+        product,
+        score: computeRelevanceScore(product, filters, query),
+      }))
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.product)
   }
 
   // Enhanced product search with filters (pure: no chat appends)
@@ -1144,6 +1103,27 @@ If asked about specific products, you can mention that the customer can search f
     setShowPrePrompts(false)
 
     try {
+      // NOTE (root cause for "filters checked but no results" from search input):
+      // `intentRouter` always sets `filters.query = message`.
+      // If we always pass that into API `q` and/or hard-filter products by those tokens,
+      // natural-language prompts like "show me on sale" / "best value" can eliminate everything.
+      // Manual FilterNav works because it applies faceted filters only (no text query).
+      //
+      // Fix:
+      // - Only use API `q` + keyword refinement when there are NO explicit facet filters.
+      // - Prefer ranking for natural-language prompts instead of hard-filtering by stopwords.
+      const STOPWORDS = new Set([
+        'a','an','and','are','as','at','be','best','by','can','cheap','deals','deal','discount','discounted','do','for',
+        'from','get','i','in','is','it','me','my','of','on','or','please','recommend','sale','search','show','the','to',
+        'today','value','want','with','you','your',
+      ])
+      const getMeaningfulTokens = (q: string) =>
+        (q || '')
+          .toLowerCase()
+          .split(/\s+/)
+          .map((t) => t.replace(/[^a-z0-9\-]/g, '').trim())
+          .filter((t) => t.length >= 3 && !STOPWORDS.has(t))
+
       // Build search params (server-side filtering where possible)
       const params: any = {
         venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
@@ -1167,30 +1147,52 @@ If asked about specific products, you can mention that the customer can search f
       }
       // Strain type
       if (filters.strainType) params.strainType = filters.strainType
-      // Terpenes
-      if (filters.terpenes && filters.terpenes.length) params.terpenes = filters.terpenes
+      // Terpenes - filter client-side only (API doesn't support terpenes parameter)
+      // if (filters.terpenes && filters.terpenes.length) params.terpenes = filters.terpenes
       // Price
       if (filters.priceMin) params.priceMin = filters.priceMin
       if (filters.priceMax) params.priceMax = filters.priceMax
-      // Discounted
-      if (filters.discountedOnly) params.discountedOnly = true
+      // Discounted - API expects "discounted" parameter
+      if (filters.discountedOnly) params.discounted = true
       // Brand
       if (filters.brand) params.brand = filters.brand
       // Weight
       if (filters.weight) params.weight = filters.weight
       // THC max (low potency intent)
       if (filters.maxThc) params.thcMax = filters.maxThc
-      // Free-text query as fallback
-      if (filters.query) params.q = filters.query
+      const hasFacetFilters = !!(
+        filters.category ||
+        filters.strainType ||
+        (filters.terpenes && filters.terpenes.length) ||
+        filters.brand ||
+        filters.weight ||
+        filters.discountedOnly ||
+        filters.effectIntent ||
+        filters.maxThc
+      )
+      const meaningfulTokens = getMeaningfulTokens(filters.query || userQuery)
+      // Only apply API text-search when there are no facet filters and the query has meaningful tokens.
+      if (!hasFacetFilters && meaningfulTokens.length > 0) params.q = filters.query || userQuery
 
-      // Fetch products
-      // If effectIntent is detected, fetch ALL products via pagination to ensure comprehensive results
+      const shouldFetchFullCategory = !!filters.category
+      // If discount filter is active without category, fetch full catalog to ensure we get all discounted products
+      // This matches the behavior when manually toggling FilterNav which uses mergedFacetSource
+      // Also fetch full catalog for any facet-filtered query (limit=200 can miss matches).
+      const useFullCatalog =
+        !!filters.effectIntent ||
+        shouldFetchFullCategory ||
+        !!filters.discountedOnly ||
+        !!filters.strainType ||
+        !!filters.brand ||
+        !!filters.weight ||
+        !!(filters.terpenes && filters.terpenes.length) ||
+        !!filters.maxThc
       let allProducts: Product[] = []
-      if (filters.effectIntent) {
+      if (useFullCatalog) {
         try {
           allProducts = await fetchAllProducts(params)
         } catch (err) {
-          console.warn('Pagination failed for effect intent, trying single request:', err)
+          console.warn('Pagination failed, falling back to single request:', err)
           const res = await productService.list(params)
           allProducts = res.data || []
         }
@@ -1199,65 +1201,65 @@ If asked about specific products, you can mention that the customer can search f
         allProducts = res.data || []
       }
 
+      // Preserve original allProducts before filtering (for fallback if filtering removes all products)
+      const originalAllProducts = [...allProducts]
+
       // Apply client-side filters
       // Priority 1: Strain type filtering (primary filter when effectIntent is detected)
-      // BUT: If effectIntent is present, be more lenient - don't exclude products without strain data
+      // Use lenient matching similar to applyProductFilters to avoid excluding products
+      // that have strain info in name/description but not in structured fields
       if (filters.strainType) {
         const targetStrain = filters.strainType.toLowerCase()
         const hasEffectIntent = !!filters.effectIntent
         
-        // First, try strict filtering
+        // Use lenient filtering that matches applyProductFilters logic
+        // This checks strain, cannabisType, getStrainType, and name/description
         let filteredByStrain = allProducts.filter((p: Product) => {
-          const strainType = getStrainType(p)
-          if (!strainType) return false
-          const strainLower = strainType.toLowerCase()
-          // Match exact or leaning variants
-          if (targetStrain === 'sativa') {
-            return strainLower === 'sativa' || strainLower === 'sativa-leaning'
+          const strainName = (p.strain || '').toLowerCase()
+          const cannabisType = (p.cannabisType || '').toLowerCase()
+          const strainType = (getStrainType(p) || '').toLowerCase()
+          const blob = `${p.name || ''} ${p.description || ''} ${cannabisType} ${strainName}`.toLowerCase()
+          
+          // Match logic similar to applyProductFilters
+          if (targetStrain === 'sativa' || targetStrain.includes('sativa')) {
+            return (
+              strainType.includes('sativa') ||
+              cannabisType.includes('sativa') ||
+              blob.includes('sativa')
+            )
           }
-          if (targetStrain === 'indica') {
-            return strainLower === 'indica' || strainLower === 'indica-leaning'
+          if (targetStrain === 'indica' || targetStrain.includes('indica')) {
+            return (
+              strainType.includes('indica') ||
+              cannabisType.includes('indica') ||
+              blob.includes('indica')
+            )
           }
-          if (targetStrain === 'hybrid') {
-            return strainLower === 'hybrid'
+          if (targetStrain === 'hybrid' || targetStrain.includes('hybrid')) {
+            return (
+              strainType.includes('hybrid') ||
+              cannabisType.includes('hybrid') ||
+              blob.includes('hybrid')
+            )
           }
+          
+          // Exact matches
+          if (strainName === targetStrain || cannabisType === targetStrain || strainType === targetStrain) {
+            return true
+          }
+          if (strainName && strainName.includes(targetStrain)) return true
+          if (cannabisType && cannabisType.includes(targetStrain)) return true
+          
           return false
         })
         
-        // If we have effectIntent and strict filtering returned few/no results, be more lenient
-        if (hasEffectIntent && filteredByStrain.length < 10) {
-          log('strain-filter-lenient', { 
-            requestId: rid, 
-            strictCount: filteredByStrain.length, 
-            totalCount: allProducts.length,
-            effectIntent: filters.effectIntent 
-          })
-          // Include products that match strain type OR products without strain data (they might still match effects)
-          filteredByStrain = allProducts.filter((p: Product) => {
-            const strainType = getStrainType(p)
-            // If no strain type data, include it (will be filtered by effects if available)
-            if (!strainType) return true
-            const strainLower = strainType.toLowerCase()
-            // Match exact or leaning variants
-            if (targetStrain === 'sativa') {
-              return strainLower === 'sativa' || strainLower === 'sativa-leaning'
-            }
-            if (targetStrain === 'indica') {
-              return strainLower === 'indica' || strainLower === 'indica-leaning'
-            }
-            if (targetStrain === 'hybrid') {
-              return strainLower === 'hybrid'
-            }
-            return false
-          })
-        } else {
-          log('strain-filter-strict', { 
-            requestId: rid, 
-            filteredCount: filteredByStrain.length, 
-            totalCount: allProducts.length,
-            hasEffectIntent 
-          })
-        }
+        log('strain-filter-lenient', { 
+          requestId: rid, 
+          filteredCount: filteredByStrain.length, 
+          totalCount: allProducts.length,
+          hasEffectIntent,
+          targetStrain
+        })
         
         allProducts = filteredByStrain
       }
@@ -1404,10 +1406,8 @@ If asked about specific products, you can mention that the customer can search f
         })
       }
 
-      // Filter by discount
-      if (filters.discountedOnly) {
-        allProducts = allProducts.filter((p: Product) => getOnSale(p))
-      }
+      // Note: Discount filtering is handled later via applyProductFilters to ensure
+      // it works correctly with category filtering and stacking with other filters
 
       // Filter by brand if specified
       if (filters.brand) {
@@ -1416,6 +1416,33 @@ If asked about specific products, you can mention that the customer can search f
           const brandName = (p.brand?.name || '').toLowerCase()
           return brandName.includes(brandLower)
         })
+      }
+
+      // Auto-detect brand if user typed one
+      if (!filters.brand) {
+        const brandMap = new Map<string, string>()
+        allProducts.forEach((p) => {
+          const name = p.brand?.name?.trim()
+          if (name) {
+            const normalized = name.toLowerCase()
+            if (!brandMap.has(normalized)) {
+              brandMap.set(normalized, name)
+            }
+          }
+        })
+        const normalizedQuery = userQuery.toLowerCase()
+        const tokens = normalizedQuery.split(/\s+/).filter(Boolean)
+        for (const [lowerBrand, originalBrand] of brandMap.entries()) {
+          if (normalizedQuery.includes(lowerBrand)) {
+            filters.brand = originalBrand
+            break
+          }
+          const parts = lowerBrand.split(/\s+/)
+          if (parts.some((part) => tokens.includes(part))) {
+            filters.brand = originalBrand
+            break
+          }
+        }
       }
 
       // Parse numeric THC/CBD queries like "thc 30" or "cbd 10"
@@ -1436,76 +1463,308 @@ If asked about specific products, you can mention that the customer can search f
         })
       }
 
-      // Filter by THC range if specified
-      if (filters.thcRange) {
-        allProducts = allProducts.filter((p: Product) => {
-          const thcVal = getThcTotal(p, true)
-          if (thcVal === null) return false
-          
-          const range = filters.thcRange!
-          if (range === '0-10%') {
-            return thcVal >= 0 && thcVal < 10
-          } else if (range === '10-20%') {
-            return thcVal >= 10 && thcVal < 20
-          } else if (range === '20-30%') {
-            return thcVal >= 20 && thcVal < 30
-          } else if (range === '30-40%') {
-            return thcVal >= 30 && thcVal < 40
-          } else if (range === '40%+') {
-            return thcVal >= 40
-          }
-          return false
-        })
-      }
-
       // Keyword refinement across name/description/brand/strain/effects
-      if (filters.query) {
-        const lowerQuery = filters.query.toLowerCase()
-        const words = lowerQuery.split(/\\s+/).filter(Boolean)
+      // IMPORTANT: only do this for "pure text search" queries. For faceted queries,
+      // natural language tokens/stopwords frequently eliminate everything.
+      if (!hasFacetFilters && meaningfulTokens.length > 0) {
         allProducts = allProducts.filter((p: Product) => {
           const brandName = (p.brand?.name || '').toLowerCase()
           const strain = (p.strain || p.cannabisType || '').toLowerCase()
           const effects = (p.effects || []).join(' ').toLowerCase()
           const searchableText = `${p.name} ${p.description || ''} ${brandName} ${strain} ${effects}`.toLowerCase()
-          // match any word
-          return words.some(w => searchableText.includes(w))
+          return meaningfulTokens.some((w) => searchableText.includes(w))
+        })
+      }
+
+      const effectLabel = filters.effectIntent ? formatEffectLabel(filters.effectIntent) : null
+
+      // Use the same facets source that FilterNav uses for normalization
+      // Build from the same source that FilterNav uses (facetSource)
+      // This ensures filters match exactly what FilterNav expects
+      // Replicate the same logic as mergedFacetSource/facetSource
+      const normalizationSourceMap = new Map<string, Product>()
+      ;[...allProductsGlobal, ...baseProducts, ...products, ...allProducts].forEach((p) => {
+        if (p?.id) normalizationSourceMap.set(p.id, p)
       })
+      const normalizationSource = normalizationSourceMap.size > 0
+        ? Array.from(normalizationSourceMap.values())
+        : allProductsGlobal.length
+        ? allProductsGlobal
+        : baseProducts.length
+        ? baseProducts
+        : products.length
+        ? products
+        : allProducts
+      const normalizationFacets = buildFacetOptions(normalizationSource)
+      
+      // Normalize filter values to match option format (case-insensitive matching)
+      // Prefer exact case match, then case-insensitive match
+      const normalizeToOption = (value: string, options: string[]): string | null => {
+        if (!value) return null
+        // First try exact match
+        if (options.includes(value)) return value
+        // Then try case-insensitive match
+        const lower = value.toLowerCase()
+        const match = options.find(opt => opt.toLowerCase() === lower)
+        // If multiple matches exist, prefer the one that matches getStrainType format for strains
+        if (match) {
+          // For strains, prefer normalized format (Indica, Sativa, Hybrid)
+          if (lower === 'indica' || lower === 'sativa' || lower === 'hybrid') {
+            const normalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+            if (options.includes(normalized)) return normalized
+          }
+          return match
+        }
+        return null
       }
 
-      // Update active filters to sync with FilterNav
-      const newActiveFilters: typeof activeFilters = {
-        categories: filters.category ? [filters.category] : [],
-        strains: filters.strainType ? [filters.strainType] : [],
-        terpenes: filters.terpenes || [],
-        thcRanges: filters.thcRange ? [filters.thcRange] : [],
-        saleOnly: filters.discountedOnly || false,
+      // Helper to merge new values with existing, avoiding duplicates (case-insensitive)
+      // Prefers normalized values from options list to ensure consistency with FilterNav
+      const mergeFilterArray = (existing: string[] | undefined, newValues: string[], options: string[]): string[] => {
+        // Normalize all new values to match option format
+        const normalized = newValues.map(v => {
+          const normalized = normalizeToOption(v, options)
+          return normalized || v
+        })
+        
+        // Create a map of existing values (lowercase -> actual value) to preserve original format
+        const existingMap = new Map<string, string>()
+        ;(existing || []).forEach(v => {
+          const lower = v.toLowerCase()
+          // Normalize existing values too to match FilterNav format
+          const normalizedExisting = normalizeToOption(v, options) || v
+          existingMap.set(lower, normalizedExisting)
+        })
+        
+        // Add normalized new values
+        normalized.forEach(v => {
+          const lower = v.toLowerCase()
+          const normalizedV = normalizeToOption(v, options) || v
+          existingMap.set(lower, normalizedV)
+        })
+        
+        // Return deduplicated array with normalized values
+        return Array.from(existingMap.values())
       }
-      setActiveFilters(newActiveFilters)
 
-      // Limit results
-      const sliced = allProducts.slice(0, 100)
+      // Merge new filters with existing activeFilters to support stacking
+      // Use normalizationFacets to ensure values match FilterNav's options exactly
+      let appliedFilters: FacetedFilters = {
+        categories: filters.category 
+          ? mergeFilterArray(activeFilters.categories, [filters.category], normalizationFacets.categories)
+          : activeFilters.categories || [],
+        brands: filters.brand 
+          ? mergeFilterArray(activeFilters.brands, [filters.brand], normalizationFacets.brands)
+          : activeFilters.brands || [],
+        strains: filters.strainType 
+          ? mergeFilterArray(activeFilters.strains, [filters.strainType], normalizationFacets.strains)
+          : activeFilters.strains || [],
+        terpenes: filters.terpenes && filters.terpenes.length
+          ? mergeFilterArray(activeFilters.terpenes, filters.terpenes, normalizationFacets.terpenes)
+          : activeFilters.terpenes || [],
+        weights: filters.weight 
+          ? mergeFilterArray(activeFilters.weights, [filters.weight], normalizationFacets.weights)
+          : activeFilters.weights || [],
+        effects: activeFilters.effects || [],
+        // For saleOnly, if discount is detected from search input, set it to true
+        // Otherwise, preserve existing saleOnly state (supports stacking with manual FilterNav selection)
+        // Use OR logic: if either new filter or existing filter is true, set to true
+        saleOnly: filters.discountedOnly === true || activeFilters.saleOnly === true,
+      }
+
+      let relaxedFilter: string | null = null
+      
+      // If categories are in appliedFilters AND we didn't already fetch by categoryId,
+      // we need to fetch category products first (same logic as handleFiltersChange)
+      // Check if we already fetched by categoryId in the initial params
+      const alreadyFetchedByCategory = !!params.categoryId
+      let productsToFilter = allProducts
+      let filtersToApply = appliedFilters
+      
+      if (appliedFilters.categories && appliedFilters.categories.length > 0 && !alreadyFetchedByCategory) {
+        // We have categories in appliedFilters but didn't fetch by categoryId initially
+        // This can happen when filters are stacked (e.g., user searches "indica" then adds "flower")
+        const selectedCategories = CATEGORY_DEFS.filter((c) => appliedFilters.categories!.includes(c.name))
+        if (selectedCategories.length > 0) {
+          try {
+            const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!
+            const lists = await Promise.all(
+              selectedCategories.map((cat) =>
+                fetchAllProducts({
+                  venueId,
+                  categoryId: cat.id,
+                  quantityMin: 1,
+                  // Include discount filter if specified - API expects "discounted" parameter
+                  ...(appliedFilters.saleOnly ? { discounted: true } : {}),
+                })
+              )
+            )
+            const combined = lists.flat()
+            // Deduplicate by product id
+            const byId = new Map<string, Product>()
+            combined.forEach((p: any) => {
+              if (p?.id) byId.set(p.id, p)
+            })
+            productsToFilter = Array.from(byId.values())
+            
+            // Apply other filters (strains, brands, etc.) to category products
+            // Don't check categories again since we already fetched by categoryId
+            filtersToApply = {
+              categories: [],
+              brands: appliedFilters.brands || [],
+              strains: appliedFilters.strains || [],
+              terpenes: appliedFilters.terpenes || [],
+              weights: appliedFilters.weights || [],
+              effects: appliedFilters.effects || [],
+              saleOnly: appliedFilters.saleOnly || false,
+            }
+            productsToFilter = applyProductFilters(productsToFilter, filtersToApply)
+          } catch (err) {
+            console.warn('Failed to fetch category products, using allProducts:', err)
+            // Fall back to filtering allProducts
+            productsToFilter = applyProductFilters(allProducts, appliedFilters)
+          }
+        } else {
+          // Category names don't match, filter allProducts normally
+          productsToFilter = applyProductFilters(allProducts, appliedFilters)
+        }
+      } else if (alreadyFetchedByCategory && appliedFilters.categories && appliedFilters.categories.length > 0) {
+        // We already fetched by categoryId, so exclude categories from filter to avoid double-filtering
+        // Note: allProducts has already been filtered by strain (lines 1161-1222), but since both
+        // the early filtering and applyProductFilters use the same lenient matching logic,
+        // it's safe to filter again (it will just re-apply the same filter)
+        filtersToApply = {
+          categories: [],
+          brands: appliedFilters.brands || [],
+          strains: appliedFilters.strains || [],
+          terpenes: appliedFilters.terpenes || [],
+          weights: appliedFilters.weights || [],
+          effects: appliedFilters.effects || [],
+          saleOnly: appliedFilters.saleOnly || false,
+        }
+        productsToFilter = applyProductFilters(allProducts, filtersToApply)
+      } else {
+        // No categories, or already fetched by categoryId - filter allProducts normally
+        // But if allProducts was already strain-filtered, we need to account for that
+        // Actually, applyProductFilters will handle it correctly since it does case-insensitive matching
+        productsToFilter = applyProductFilters(allProducts, appliedFilters)
+      }
+      
+      // Ensure discount filter is applied client-side even if API was supposed to filter it
+      // This handles cases where API doesn't support discounted with categoryId or other edge cases
+      // Apply discount filter BEFORE any other processing to ensure it's always applied
+      if (appliedFilters.saleOnly) {
+        // Filter productsToFilter if it has items, otherwise filter allProducts
+        if (productsToFilter.length > 0) {
+          productsToFilter = productsToFilter.filter((p: Product) => isOnSale(p))
+        } else if (allProducts.length > 0) {
+          // If productsToFilter is empty, filter allProducts directly
+          productsToFilter = allProducts.filter((p: Product) => isOnSale(p))
+        }
+      }
+      
+      let filteredProducts = productsToFilter
+
+      const explicitUserFilters = !!(
+        filters.category ||
+        filters.strainType ||
+        (filters.terpenes && filters.terpenes.length) ||
+        filters.brand ||
+        filters.weight ||
+        filters.discountedOnly
+      )
+
+      if (!filteredProducts.length && !explicitUserFilters) {
+        for (const step of RELAXATION_PLAN) {
+          if (step.key === 'saleOnly') {
+            if (!filtersToApply.saleOnly) continue
+            filtersToApply = { ...filtersToApply, saleOnly: false }
+          } else {
+            const currentValues = (filtersToApply[step.key] as string[] | undefined) || []
+            if (!currentValues.length) continue
+            filtersToApply = { ...filtersToApply, [step.key]: [] } as FacetedFilters
+          }
+          // Re-filter with relaxed filters
+          filteredProducts = applyProductFilters(productsToFilter, filtersToApply)
+          if (filteredProducts.length) {
+            relaxedFilter = step.label
+            break
+          }
+        }
+      }
+
+      // IMPORTANT: If explicit filters were requested, do NOT fall back to unfiltered products.
+      // That creates a mismatch where pills/FilterNav show active filters, but results don't match.
+      if (!filteredProducts.length && !explicitUserFilters) {
+        filteredProducts = productsToFilter.length > 0 ? productsToFilter : allProducts
+      }
+
+      // Final check: if discount filter is active, ensure all products are actually on sale
+      // This is a safety net in case API filtering didn't work correctly
+      if (appliedFilters.saleOnly && filteredProducts.length > 0) {
+        const beforeCount = filteredProducts.length
+        filteredProducts = filteredProducts.filter((p: Product) => isOnSale(p))
+        if (beforeCount !== filteredProducts.length) {
+          log('discount-filter-reapplied', {
+            requestId: rid,
+            beforeCount,
+            afterCount: filteredProducts.length
+          })
+        }
+      }
+
+      const rankedProducts = rankProductsByProbability(filteredProducts, appliedFilters, userQuery)
+      const sliced = rankedProducts.slice(0, 100)
+
       setProducts(sliced)
       setBaseProducts(sliced)
       setIsChatMode(false)
-      // Hide pre-prompts when products are displayed
       setShowPrePrompts(false)
+      setActiveFilters(appliedFilters)
+      setLoading(false)
+      
+      log('search-complete', {
+        requestId: rid,
+        productsCount: sliced.length,
+        filteredCount: filteredProducts.length,
+        appliedFilters,
+        saleOnly: appliedFilters.saleOnly,
+        discountedOnly: filters.discountedOnly
+      })
+      
+      // Update allProductsGlobal if we fetched category products
+      if (appliedFilters.categories && appliedFilters.categories.length > 0 && productsToFilter.length > 0) {
+        setAllProductsGlobal(prev => {
+          const map = new Map<string, Product>()
+          ;[...prev, ...productsToFilter].forEach(p => {
+            if (p?.id) map.set(p.id, p)
+          })
+          return Array.from(map.values())
+        })
+      }
 
       // Generate descriptive summary
       const parts: string[] = []
-      if (filters.category) {
-        parts.push(filters.category)
+      if (appliedFilters.categories?.length) {
+        parts.push(appliedFilters.categories.join(' / '))
       }
-      if (filters.strainType) {
-        parts.push(filters.strainType.toLowerCase())
+      if (appliedFilters.strains?.length) {
+        parts.push(appliedFilters.strains.join('/').toLowerCase())
       }
-      if (filters.terpenes && filters.terpenes.length) {
-        parts.push(`${filters.terpenes[0].toLowerCase()}-containing`)
+      if (appliedFilters.terpenes && appliedFilters.terpenes.length) {
+        parts.push(`${appliedFilters.terpenes[0].toLowerCase()}-forward`)
       }
-      if (filters.discountedOnly) {
+      if (effectLabel) {
+        parts.push(effectLabel.toLowerCase())
+      }
+      if (appliedFilters.saleOnly) {
         parts.push('discounted')
       }
-      if (filters.brand) {
-        parts.push(`${filters.brand} brand`)
+      if (appliedFilters.brands && appliedFilters.brands.length) {
+        parts.push(`${appliedFilters.brands[0]} brand`)
+      }
+      if (relaxedFilter) {
+        parts.push(`relaxed ${relaxedFilter}`)
       }
       
       const filterDesc = parts.length > 0 ? parts.join(' ') : 'products'
@@ -1597,35 +1856,25 @@ If asked about specific products, you can mention that the customer can search f
 
     const rid = requestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
 
-    setLoading(true)
     setIsChatMode(true)
-    setShowResults(true)
 
     try {
-      // Step 1: Get concise explanation
       const explanation = await callOpenAI(userQuery, true, rid)
-      
-      // Step 2: Search products (pure search, no message appends)
-      const { products } = await searchProductsWithFilters(filters, userQuery, rid)
-      
-      // Step 3: Generate CTA line
       const filterDesc = getFilterDescription(filters)
-      const ctaLine = filterDesc 
-        ? `We carry ${filterDesc} options too — here are some available now.`
-        : `Here are some options available now.`
-      
-      // Step 4: Create single assistant message with explanation + CTA
-      const combinedContent = `${explanation}\n\n${ctaLine}`
+      const promptLines = PRODUCT_PROMPT_SUGGESTIONS.map((prompt) => `• ${prompt}`).join('\n')
+      const contextLine = filterDesc
+        ? `If you'd like, I can pull ${filterDesc} options from the menu.`
+        : 'Want product ideas?'
+      const combinedContent = `${explanation}\n\n${contextLine}\n\nTry these prompts:\n${promptLines}`
       appendAssistantMessage(combinedContent, rid)
-      
+
+      await searchProductsWithFilters(filters, userQuery, rid)
       setIsChatMode(false)
     } catch (error) {
       console.error('Error in education with products:', error)
       appendAssistantMessage('Sorry, I encountered an error. Please try again.', rid)
       setIsChatMode(true)
       setShowResults(false)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -1642,7 +1891,9 @@ If asked about specific products, you can mention that the customer can search f
 
     try {
       const aiResponse = await callOpenAI(userQuery, concise, rid)
-      appendAssistantMessage(aiResponse, rid)
+      const suggestionLines = PRODUCT_PROMPT_SUGGESTIONS.map((prompt) => `• ${prompt}`).join('\n')
+      const decoratedResponse = `${aiResponse}\n\n💡 Need product ideas? Try:\n${suggestionLines}`
+      appendAssistantMessage(decoratedResponse, rid)
     } catch (error) {
       console.error('Error in chat query:', error)
       appendAssistantMessage('Sorry, I encountered an error. Please try again.', rid)
@@ -1722,52 +1973,6 @@ License: ${license}`
     setStoreInfoPrompt({ active: true, requestId })
   }
 
-  const handleQuickPromptClick = async (promptId: string) => {
-    setHasInteracted(true)
-    setShowPrePrompts(false)
-    setShowDropdown(false)
-    const rid = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
-    
-    const prompt = PRE_PROMPTS.find((p) => p.id === promptId)
-    if (!prompt) return
-
-    if (prompt.type === 'store-info') {
-      handleStoreInfoPrompt(rid)
-      return
-    }
-
-    if (prompt.type === 'browse') {
-      // Category-specific browse (e.g., "Browse vapes")
-      if (prompt.category) {
-        const categoryId = findCategoryIdFromCategoryName(prompt.category)
-        if (categoryId) {
-          appendAssistantMessage(`Browsing ${prompt.category.toLowerCase()}...`, rid)
-          await searchProductsWithFilters({ category: prompt.category }, `browse ${prompt.category.toLowerCase()}`, rid)
-        } else {
-          appendAssistantMessage('Browsing across all categories...', rid)
-          await searchProductsWithFilters({}, 'show me options', rid)
-        }
-      } else {
-        // General browse (all categories)
-        appendAssistantMessage('Browsing across all categories...', rid)
-        await searchProductsWithFilters({}, 'show me options', rid)
-      }
-      return
-    }
-
-    if (prompt.type === 'curated') {
-      if (prompt.id === 'best-sellers') {
-        appendAssistantMessage('Here are our best sellers right now.', rid)
-        await searchProductsWithFilters({ discountedOnly: false }, 'show me best sellers', rid)
-        return
-      }
-
-      appendAssistantMessage('Here are a few standout picks right now.', rid)
-      await searchProductsWithFilters({ discountedOnly: true }, 'what’s good right now', rid)
-      return
-    }
-  }
-
   const handleGuidedSelection = async (field: 'feel' | 'modality', value: string) => {
     if (!guidedPrompt.active || !guidedPrompt.requestId) return
     const next = { ...guidedPrompt, [field]: value }
@@ -1778,36 +1983,10 @@ License: ${license}`
     }
   }
 
-  const handleQuickPrompt = (prompt: string) => {
-    setHasInteracted(true)
-    setShowPrePrompts(false)
-    // Map text prompts to presets
-    const promptMap: Record<string, PresetId> = {
-      'relax and unwind': 'relax-unwind',
-      'relax': 'relax-unwind',
-      'sleep support': 'sleep-support',
-      'sleep': 'sleep-support',
-      'uplifted': 'uplifted-energized',
-      'energized': 'uplifted-energized',
-      'sativa': 'uplifted-energized',
-      'beginner': 'beginner-friendly',
-      'mild': 'beginner-friendly',
-      'low thc': 'beginner-friendly',
-      'high thc': 'strong-high-thc',
-      'strong': 'strong-high-thc',
-      'pre-rolls': 'pre-rolls-ready',
-      'preroll': 'pre-rolls-ready',
-      'non-smokable': 'non-smokable',
-      'edibles': 'non-smokable',
-      'best deals': 'best-deals',
-      'deals': 'best-deals',
-      'sale': 'best-deals',
-    }
 
-    // Note: Preset mapping removed - now using filter-based search system
-    // Fallback to free-text search
-    setQuery(prompt)
-    searchProducts(prompt)
+  const handleStorefrontSearchClick = () => {
+    setShowDropdown(false)
+    setAiModeOpen(true)
   }
 
   // Clear/reset chat function
@@ -1824,6 +2003,8 @@ License: ${license}`
     setActiveFilters({})
     setLoading(false)
     setShowDropdown(false)
+    setShowFilterNav(false)
+    setShowFilterNavInAiMode(false)
     setStoreInfoPrompt({ active: false, requestId: null })
     setGuidedPrompt({ active: false, requestId: null, feel: null, modality: null })
     setHasInteracted(false)
@@ -1875,8 +2056,12 @@ License: ${license}`
           break
         }
           
-        case 'EDUCATION_WITH_PRODUCTS':
-          await handleEducationWithProducts(trimmedQuery, intentResult.extracted, requestId)
+      case 'EDUCATION_WITH_PRODUCTS':
+          if (isPureEducationQuery(trimmedQuery, intentResult.extracted)) {
+            await handleChatQuery(trimmedQuery, false, requestId)
+          } else {
+            await handleEducationWithProducts(trimmedQuery, intentResult.extracted, requestId)
+          }
           break
           
         case 'MIXED':
@@ -1920,6 +2105,22 @@ License: ${license}`
       filters.brand
     )
   }
+  const educationQuestionRegex = /^(how|what|why|when|where|who|can|should|could|would|is|are|does|do)\b/i
+  function isPureEducationQuery(message: string, filters: ExtractedFilters): boolean {
+    const trimmed = message.trim().toLowerCase()
+    const isQuestion = educationQuestionRegex.test(trimmed)
+    const hasMeaningfulFilters = !!(
+      filters.strainType ||
+      (filters.terpenes && filters.terpenes.length > 0) ||
+      filters.discountedOnly ||
+      filters.brand ||
+      filters.weight ||
+      filters.priceMin ||
+      filters.priceMax ||
+      filters.effectIntent
+    )
+    return isQuestion && !hasMeaningfulFilters
+  }
 
   const chipEmoji: Record<PresetId, string> = {
     'relax-unwind': '🌿',
@@ -1932,7 +2133,7 @@ License: ${license}`
     'best-deals': '💸',
   }
 
-  const getFacetOptions = (items: Product[]) => {
+  const buildFacetOptions = (items: Product[]) => {
     const categories = new Set<string>()
     const brands = new Set<string>()
     const strains = new Set<string>()
@@ -1966,7 +2167,7 @@ License: ${license}`
     }
   }
 
-  const getFacetCounts = (items: Product[]) => {
+  const buildFacetCounts = (items: Product[]) => {
     const categoryCounts: Record<string, number> = {}
     const brandCounts: Record<string, number> = {}
     const strainCounts: Record<string, number> = {}
@@ -2007,96 +2208,6 @@ License: ${license}`
       (p.discounts && p.discounts.length > 0)
     )
 
-  const applyFilters = (items: Product[], filters: { categories?: string[]; brands: string[]; strains: string[]; terpenes: string[]; weights: string[]; thcRanges?: string[]; saleOnly: boolean }) => {
-    return items.filter((p) => {
-      if (filters.categories && filters.categories.length) {
-        const cat = getCategoryLabel(p)
-        if (!cat || !filters.categories.includes(cat)) return false
-      }
-
-      if (filters.saleOnly && !isOnSale(p)) return false
-
-      if (filters.brands.length) {
-        const brandName = p.brand?.name || ''
-        if (!filters.brands.includes(brandName)) return false
-      }
-
-      if (filters.strains.length) {
-        // Support BOTH:
-        // - strain names (e.g. "Blue Dream")
-        // - strain types (Sativa/Indica/Hybrid) incl. leaning variants
-        const selected = filters.strains.map((s) => (s || '').toLowerCase().trim()).filter(Boolean)
-        const strainName = ((p.strain || '').trim() || '').toLowerCase()
-        const cannabisType = ((p.cannabisType || '').trim() || '').toLowerCase()
-        const strainType = (getStrainType(p) || '').toLowerCase() // sativa / indica / hybrid / sativa-leaning / indica-leaning
-        const blob = `${p.name || ''} ${p.description || ''} ${cannabisType} ${strainName}`.toLowerCase()
-
-        const matches = selected.some((sel) => {
-          // Exact matches for names/types coming from data
-          if (sel === strainName || sel === cannabisType || sel === strainType) return true
-          // If user picked "sativa", also match "sativa-leaning"
-          if (sel === 'sativa') {
-            return (
-              strainType === 'sativa' ||
-              strainType === 'sativa-leaning' ||
-              cannabisType.includes('sativa') ||
-              blob.includes('sativa')
-            )
-          }
-          if (sel === 'indica') {
-            return (
-              strainType === 'indica' ||
-              strainType === 'indica-leaning' ||
-              cannabisType.includes('indica') ||
-              blob.includes('indica')
-            )
-          }
-          if (sel === 'hybrid') {
-            return strainType === 'hybrid' || cannabisType.includes('hybrid') || blob.includes('hybrid')
-          }
-          return false
-        })
-
-        if (!matches) return false
-      }
-
-      if (filters.weights.length) {
-        const weightLabel =
-          p.weightFormatted ||
-          (p.weight ? `${p.weight}${p.weightUnit ? ` ${p.weightUnit.toLowerCase()}` : ''}` : '')
-        if (!weightLabel || !filters.weights.includes(weightLabel)) return false
-      }
-
-      if (filters.terpenes.length) {
-        const terpList = p.labs?.terpenes || []
-        if (!terpList.some((t) => filters.terpenes.includes(t))) return false
-      }
-
-      if (filters.thcRanges && filters.thcRanges.length > 0) {
-        const thcVal = getThcTotal(p, true)
-        if (thcVal === null) return false
-        
-        const matchesRange = filters.thcRanges.some((range) => {
-          if (range === '0-10%') {
-            return thcVal >= 0 && thcVal < 10
-          } else if (range === '10-20%') {
-            return thcVal >= 10 && thcVal < 20
-          } else if (range === '20-30%') {
-            return thcVal >= 20 && thcVal < 30
-          } else if (range === '30-40%') {
-            return thcVal >= 30 && thcVal < 40
-          } else if (range === '40%+') {
-            return thcVal >= 40
-          }
-          return false
-        })
-        if (!matchesRange) return false
-      }
-
-      return true
-    })
-  }
-
   const mergedFacetSource = useMemo(() => {
     const map = new Map<string, Product>()
     ;[...allProductsGlobal, ...baseProducts, ...products].forEach((p) => {
@@ -2113,8 +2224,8 @@ License: ${license}`
     ? baseProducts
     : products
 
-  const facets = getFacetOptions(facetSource)
-  const facetCounts = getFacetCounts(facetSource)
+  const facets = buildFacetOptions(facetSource)
+  const facetCounts = buildFacetCounts(facetSource)
   
   // Merge API-fetched category counts (more accurate) with computed counts
   const mergedCategoryCounts = useMemo(() => {
@@ -2136,13 +2247,13 @@ License: ${license}`
     categories: mergedCategoryCounts,
   }
 
-  const handleFiltersChange = async (f: any) => {
+  const handleFiltersChange = async (f: FacetedFilters) => {
     const hasOtherFacetFilters = !!(
       f.brands?.length ||
       f.strains?.length ||
       f.terpenes?.length ||
       f.weights?.length ||
-      f.thcRanges?.length ||
+      f.effects?.length ||
       f.saleOnly
     )
 
@@ -2178,15 +2289,15 @@ License: ${license}`
           // IMPORTANT: Don't check categories again since we already fetched by categoryId
           if (hasOtherFacetFilters) {
             // Create filters without categories to avoid double-filtering
-            // Explicitly set categories to empty array so applyFilters skips category check
-            const filtersWithoutCategories = {
+            // Explicitly set categories to empty array so applyProductFilters skips category check
+            const filtersWithoutCategories: FacetedFilters = {
               categories: [],
               brands: f.brands || [],
               strains: f.strains || [],
               terpenes: f.terpenes || [],
               weights: f.weights || [],
-              thcRanges: f.thcRanges || [],
-              saleOnly: f.saleOnly || false
+              effects: f.effects || [],
+              saleOnly: f.saleOnly || false,
             }
             console.log('Applying filters to category products:', {
               categoryProductsCount: categoryProducts.length,
@@ -2194,7 +2305,7 @@ License: ${license}`
               selectedCategories: selectedCategories.map(c => c.name)
             })
             const beforeCount = categoryProducts.length
-            categoryProducts = applyFilters(categoryProducts, filtersWithoutCategories)
+            categoryProducts = applyProductFilters(categoryProducts, filtersWithoutCategories)
             console.log('After applying filters:', {
               beforeCount,
               afterCount: categoryProducts.length,
@@ -2235,7 +2346,7 @@ License: ${license}`
       : baseProducts.length
       ? baseProducts
       : products
-    const filtered = applyFilters(source, f)
+    const filtered = applyProductFilters(source, f)
     setProducts(filtered)
     setShowResults(true)
     setActiveFilters(f)
@@ -2246,102 +2357,231 @@ License: ${license}`
     )
   }
 
+  const handleRemovePill = (pill: FilterPill) => {
+    const cloneValues = (arr?: string[]) => (arr ? [...arr] : undefined)
+    const next: FacetedFilters = {
+      categories: cloneValues(activeFilters.categories),
+      brands: cloneValues(activeFilters.brands),
+      strains: cloneValues(activeFilters.strains),
+      terpenes: cloneValues(activeFilters.terpenes),
+      weights: cloneValues(activeFilters.weights),
+      effects: cloneValues(activeFilters.effects),
+      saleOnly: activeFilters.saleOnly ?? false,
+    }
+
+    if (pill.key === 'saleOnly') {
+      next.saleOnly = false
+    } else if (pill.value) {
+      const key = pill.key as keyof FacetedFilters
+      const current = next[key] ? [...(next[key] as string[])] : []
+      // Remove matching value case-insensitively
+      const updated = current.filter((val) => val.toLowerCase() !== pill.value!.toLowerCase())
+      next[key] = updated.length ? updated : undefined
+    }
+
+    handleFiltersChange(next)
+  }
+
   const hasFacetData = facetSource.length > 0
 
-  return (
-    <section id="ai-search-anchor" className="relative title-padding-top">
-      <div className="mx-auto max-w-6xl w-full">
-        {/* Title removed per request; restore if needed */}
+  // Handler for AI Mode prompt clicks
+  const handleAiModePrompt = async (prompt: typeof AI_MODE_PROMPTS[0]) => {
+    // Keep AI mode open - don't close it
+    setQuery(prompt.query)
+    setHasInteracted(true)
+    const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
+    // Trigger search with the prompt query
+    const intentResult = routeIntent(prompt.query)
+    appendUserMessage(prompt.query, requestId)
+    setShowPrePrompts(false)
+    try {
+      if (intentResult.intent === 'PRODUCT_SHOPPING') {
+        await searchProductsWithFilters(intentResult.extracted, prompt.query, requestId)
+      } else if (intentResult.intent === 'STORE_INFO') {
+        handleStoreInfo(intentResult, prompt.query, requestId)
+      }
+    } catch (error) {
+      console.error('Error processing AI mode prompt:', error)
+    }
+  }
 
-        {/* Banner moved above the search box */}
-        <div className="relative overflow-hidden rounded-2xl shadow-sm mb-4">
-          <div className="relative h-40 sm:h-48">
-            <Image
-              src={bannerSlides[bannerIndex].img}
-              alt={bannerSlides[bannerIndex].title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 600px"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white px-6 text-center">
-              <p className="text-xl sm:text-2xl font-semibold drop-shadow">{bannerSlides[bannerIndex].title}</p>
-              <Link
-                href={bannerSlides[bannerIndex].cta}
-                className="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-purple-700 shadow hover:bg-white"
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    if (!aiModeOpen) return
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      // Don't close dropdowns if clicking on input or form elements
+      if (target.closest('input') || target.closest('form') || target.closest('button[type="submit"]')) {
+        return
+      }
+      if (!target.closest('[data-dropdown]')) {
+        setShowLocationDropdown(false)
+        setShowFilterNavInAiMode(false)
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [aiModeOpen])
+
+  // Focus the AI mode input once when overlay opens
+  const aiModeJustOpenedRef = useRef(false)
+  useEffect(() => {
+    if (aiModeOpen && !aiModeJustOpenedRef.current) {
+      aiModeJustOpenedRef.current = true
+      const timer = setTimeout(() => {
+        if (aiModeInputRef.current) {
+          aiModeInputRef.current.focus({ preventScroll: true })
+        }
+      }, 80)
+      return () => clearTimeout(timer)
+    } else if (!aiModeOpen) {
+      aiModeJustOpenedRef.current = false
+    }
+  }, [aiModeOpen])
+
+  // Prevent body scroll when AI mode is open (but allow scrolling inside overlay)
+  useEffect(() => {
+    if (aiModeOpen) {
+      // Only prevent body scroll, don't use position fixed as it interferes with internal scrolling
+      const originalOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      
+      return () => {
+        document.body.style.overflow = originalOverflow
+      }
+    }
+  }, [aiModeOpen])
+
+  // Full-screen AI Mode overlay - conditionally rendered
+  const aiModeOverlay = aiModeOpen ? (
+      <div 
+        key="ai-mode-overlay"
+        className="fixed inset-0 z-50 bg-white flex flex-col"
+      >
+        {/* Header with location and filter icons */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <button
+            onClick={() => {
+              setAiModeOpen(false)
+              setShowFilterNavInAiMode(false)
+              setShowLocationDropdown(false)
+            }}
+            className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+            aria-label="Close AI Mode"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+          <div className="flex items-center gap-4 relative">
+            {/* Location dropdown */}
+            <div className="relative" data-dropdown>
+              <button
+                onClick={() => {
+                  setShowLocationDropdown(!showLocationDropdown)
+                  setShowFilterNavInAiMode(false)
+                }}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                aria-label="Select location"
               >
-                Shop Deals
-              </Link>
+                <MapPinIcon className="h-5 w-5" />
+                <span className="text-sm">{selectedLocation ? stores.find(s => s.id === selectedLocation)?.name || 'Location' : 'Location'}</span>
+                <ChevronDownIcon className="h-4 w-4" />
+              </button>
+              {showLocationDropdown && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10 max-h-60 overflow-y-auto" data-dropdown>
+                  {stores.map((store) => (
+                    <button
+                      key={store.id}
+                      onClick={() => {
+                        setSelectedLocation(store.id)
+                        setShowLocationDropdown(false)
+                        // Update URL if on store page
+                        if (typeof window !== 'undefined') {
+                          router.push(`/stores/${store.id}`)
+                        }
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-gray-700"
+                    >
+                      {store.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {/* Filter button */}
+            <div className="relative" data-dropdown>
+              <button
+                onClick={() => {
+                  setShowFilterNavInAiMode(!showFilterNavInAiMode)
+                  setShowLocationDropdown(false)
+                }}
+                className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                aria-label="Open filters"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                </svg>
+                <span className="text-sm">Filter</span>
+                <ChevronDownIcon className="h-4 w-4" />
+              </button>
+              {showFilterNavInAiMode && (
+                <div className="absolute right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-10 p-4 min-w-[300px] max-w-[90vw] max-h-[60vh] overflow-y-auto" data-dropdown>
+                  <FilterNav
+                    categories={categoryOptions}
+                    brands={facets.brands}
+                    strains={facets.strains}
+                    terpenes={facets.terpenes}
+                    weights={facets.weights}
+                    effects={facets.effects}
+                    counts={finalFacetCounts}
+                    onChange={handleFiltersChange}
+                    initialFilters={activeFilters}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Title - separated above chat input */}
-        <div className="mx-auto max-w-6xl w-full mb-4">
-          <div className="flex items-center gap-2 text-left text-[20px] sm:text-[26px] font-semibold">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              className="h-6 w-6"
-              aria-hidden="true"
+        {/* Search box inside AI Mode */}
+        <div className="px-4 py-4 border-b border-gray-200">
+          <div className="max-w-2xl mx-auto">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSubmit(e)
+              }} 
+              className="w-full"
             >
-              <defs>
-                <linearGradient id="titleSparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#f472b6" />
-                  <stop offset="50%" stopColor="#a855f7" />
-                  <stop offset="100%" stopColor="#34d399" />
-                </linearGradient>
-              </defs>
-              <path
-                fill="url(#titleSparkGradient)"
-                d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
-              />
-            </svg>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-gradient-to-r from-pink-500 via-fuchsia-500 to-green-400 bg-clip-text text-transparent">
-                Find your next favorite
-              </span>
-              <span className="relative h-[32px] overflow-hidden inline-flex items-center">
-                <span
-                  key={phrases[phraseIndex]}
-                  className="animate-vertical-scroll inline-block text-[18px] sm:text-[22px] text-purple-700 font-semibold"
-                >
-                  {phrases[phraseIndex]}
-                </span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Standalone chat input container with FilterNav integrated */}
-        <div className="mx-auto max-w-6xl w-full">
-          <div className="border border-purple-200 bg-white rounded-[20px] shadow-[0_10px_25px_rgba(0,0,0,0.06)] px-4 py-4">
-            <form onSubmit={handleSubmit}>
-              <div className="relative">
+              <div className="relative flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
                 <button
                   type="submit"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-600 hover:text-purple-700 transition"
+                  className="absolute left-4 text-gray-500 hover:text-gray-700 transition"
                   aria-label="Submit search"
                 >
                   <MagnifyingGlassIcon className="h-5 w-5" />
                 </button>
                 <input
-                  id="ai-search-input"
-                  ref={inputRef}
+                  id="ai-search-input-ai-mode"
+                  ref={aiModeInputRef}
                   type="text"
                   value={query}
                   onFocus={() => {
                     if (enablePresetDropdown) setShowDropdown(true)
                   }}
-                  onClick={() => {
-                    if (enablePresetDropdown) setShowDropdown(true)
-                  }}
                   placeholder="Search by mood, product, brands, or preference"
-                  className="w-full pl-10 pr-16 py-4 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-[16px] focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+                  className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-full focus:outline-none focus-visible:outline-none"
                   onChange={(e) => {
+                    const newValue = e.target.value
                     setHasInteracted(true)
-                    setQuery(e.target.value)
+                    setQuery(newValue)
+                  }}
+                  onKeyDown={(e) => {
+                    // Prevent form submission on Enter if user is still typing
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      // Allow default form submission
+                    }
                   }}
                 />
                 <button
@@ -2356,7 +2596,7 @@ License: ${license}`
                       }
                     }
                   }}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-purple-600 transition"
+                  className="absolute right-4 text-gray-500 hover:text-gray-700 transition"
                   aria-label="Start voice input"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
@@ -2366,39 +2606,50 @@ License: ${license}`
                 </button>
               </div>
             </form>
-
-            {/* FilterNav integrated inside search box */}
-            <div className="mt-3 pt-3 border-t border-purple-100">
-              <div className="overflow-x-auto overflow-y-visible scrollbar-hide">
-                <div className="min-w-max overflow-visible">
-                  <FilterNav
-                    categories={categoryOptions}
-                    brands={facets.brands}
-                    strains={facets.strains}
-                    terpenes={facets.terpenes}
-                    weights={facets.weights}
-                    counts={finalFacetCounts}
-                    onChange={handleFiltersChange}
-                    initialFilters={activeFilters}
-                  />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Store info and guided prompts - moved outside chat container */}
-        <div className="mx-auto max-w-6xl w-full mt-4">
-          <div className="px-4">
+        {/* Content area - shows prompts or results */}
+        <div 
+          ref={aiModeScrollRef}
+          className="flex-1 overflow-y-auto px-4 py-6"
+          style={{ 
+            overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+            scrollBehavior: 'auto' // Prevent smooth scroll from interfering
+          }}
+        >
+          <div className="max-w-2xl mx-auto">
+            {filterPills.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {filterPills.map((pill) => (
+                  <button
+                    key={`${pill.key}-${pill.value || 'sale'}`}
+                    onClick={() => handleRemovePill(pill)}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 text-sm text-gray-700 px-3 py-1.5 hover:bg-gray-200 transition"
+                  >
+                    <span>{pill.label}</span>
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {storeInfoPrompt.active && (
-              <div className="space-y-2">
+              <div className="mb-4 space-y-2">
                 <div className="text-sm font-semibold text-gray-700">Select a location</div>
                 <div className="flex flex-wrap gap-2">
                   {stores.map((s) => (
                     <button
                       key={s.id}
-                      onClick={() => handleStoreInfoPrompt(storeInfoPrompt.requestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`, s.id)}
+                      onClick={() =>
+                        handleStoreInfoPrompt(
+                          storeInfoPrompt.requestId ||
+                            crypto.randomUUID?.() ||
+                            `${Date.now()}-${Math.random()}`,
+                          s.id
+                        )
+                      }
                       className="px-3 py-2 rounded-full border text-sm bg-white text-gray-800 hover:bg-purple-50"
                     >
                       {s.name}
@@ -2409,7 +2660,7 @@ License: ${license}`
             )}
 
             {guidedPrompt.active && (
-              <div className="space-y-3">
+              <div className="mb-4 space-y-3">
                 <div className="text-sm font-semibold text-gray-700">How do you want to feel?</div>
                 <div className="flex flex-wrap gap-2">
                   {['Calm', 'Uplifted', 'Focused', 'Balanced'].map((mood) => (
@@ -2442,106 +2693,204 @@ License: ${license}`
                 </div>
               </div>
             )}
-          </div>
-        </div>
-        {/* Pre-prompts below search, bubble style */}
-        {showPrePrompts && (
-          <div className="mx-auto max-w-6xl w-full px-0 sm:px-0 mt-4 flex flex-col items-start gap-3">
-            {PRE_PROMPTS.map((pp) => (
-              <button
-                key={pp.id}
-                onClick={() => handleQuickPromptClick(pp.id)}
-                className="inline-flex items-center gap-3 rounded-2xl bg-blue-500 px-4 py-3 text-white text-sm font-medium shadow-sm hover:brightness-95 cursor-pointer"
-              >
-                <span>{pp.label}</span>
-                <ArrowUturnLeftIcon className="h-4 w-4 text-white" />
-              </button>
-            ))}
-          </div>
-        )}
 
-        {/* Results and chat stream below the search box */}
-        <div className="mx-auto max-w-6xl w-full px-0 sm:px-0 mt-6 space-y-4">
-          {/* Clear button - show when there are messages or results */}
-          {(chatMessages.length > 0 || showResults || products.length > 0) && (
-            <div className="flex justify-end px-4 sm:px-0">
-              <button
-                onClick={handleClearChat}
-                className="inline-flex items-center gap-2 rounded-full bg-gray-100 hover:bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors"
-                aria-label="Clear chat and reset"
-              >
-                <XMarkIcon className="h-4 w-4" />
-                <span>Clear</span>
-              </button>
-            </div>
-          )}
-          
-          {chatMessages.length > 0 && (
-            <div className="w-full space-y-3 px-4 sm:px-0">
-              {chatMessages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
+            {/* Show chat messages and results if they exist */}
+            {chatMessages.length > 0 && (
+              <div className="mb-6 space-y-3">
+                {chatMessages.map((msg, idx) => (
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                      msg.role === 'user' ? 'bg-purple-600 text-white' : 'bg-blue-500 text-white'
-                    }`}
+                    key={idx}
+                    className={`flex items-center gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    {msg.role === 'user' && idx === chatMessages.length - 1 && (
+                      <button
+                        onClick={handleClearChat}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-gray-100 hover:bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors flex-shrink-0"
+                        aria-label="Clear chat and reset"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                        <span>Clear</span>
+                      </button>
+                    )}
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                        msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-900'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          )}
-
-          {loading && (
-            <div className="flex justify-start px-4 sm:px-0">
-              <div className="bg-gray-100 rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                  <p className="text-sm text-gray-600">
-                    {isChatMode ? 'Thinking...' : 'Searching products...'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {showResults && !loading && products.length > 0 && (
-            <div className="px-0 sm:px-0">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
-              <p className="text-xs text-gray-600 mt-2 text-center">
-                This feature is still in Beta and may make mistakes.
-              </p>
-            </div>
-          )}
+            )}
 
-          {showResults && !loading && products.length === 0 && (
-            <div className="text-center py-8 px-4 sm:px-0">
-              <p className="text-black mb-4">No products available matching this search.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowResults(false)
-                  setQuery('')
-                  setProducts([])
-                  setSelectedPreset(null)
-                  setShowDropdown(true)
-                }}
-                className="px-6 py-2 rounded-full bg-pink-500 hover:bg-pink-600 text-white font-medium transition"
-              >
-                Start Over
-              </button>
+            {loading && (
+              <div className="flex justify-start mb-6">
+                <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                    <p className="text-sm text-gray-600">
+                      {isChatMode ? 'Thinking...' : 'Searching products...'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showResults && !loading && products.length > 0 && (
+              <div className="mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {products.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {showResults && !loading && products.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-black mb-4">No products available matching this search.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResults(false)
+                    setQuery('')
+                    setProducts([])
+                    setSelectedPreset(null)
+                    setShowDropdown(true)
+                  }}
+                  className="px-6 py-2 rounded-full bg-pink-500 hover:bg-pink-600 text-white font-medium transition"
+                >
+                  Start Over
+                </button>
+              </div>
+            )}
+
+
+            {/* Show prompts if no results yet and pre-prompts should be visible */}
+            {showPrePrompts && !showResults && chatMessages.length === 0 && (
+              <div className="space-y-3">
+                {AI_MODE_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt.id}
+                    onClick={() => handleAiModePrompt(prompt)}
+                    className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
+                  >
+                    {/* Static image */}
+                    <div className="flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden">
+                      <Image
+                        src={prompt.image}
+                        alt={prompt.label}
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-base font-medium text-gray-900 group-hover:text-purple-600 transition-colors">
+                        {prompt.label}
+                      </p>
+                      {prompt.category && (
+                        <p className="text-xs text-gray-500 mt-1">{prompt.category}</p>
+                      )}
+                    </div>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5 text-gray-400 group-hover:text-purple-600 transition-colors flex-shrink-0">
+                      <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Z"/>
+                    </svg>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+  ) : null
+
+  return (
+    <>
+      {aiModeOverlay}
+      <section id="ai-search-anchor" className="relative title-padding-top">
+      <div className="mx-auto max-w-6xl w-full">
+        {/* Title removed per request; restore if needed */}
+
+        {/* Google-style search interface */}
+        <div className="mx-auto max-w-6xl w-full px-4 sm:px-6">
+          {/* Logo - positioned like Google */}
+          <div className="flex justify-center mb-8">
+            <img
+              src="/images/jalh-logo.png"
+              alt="Just a Little Higher"
+              className="h-16 sm:h-20 w-auto"
+            />
+          </div>
+
+          {/* Minimalist search input - stands on its own */}
+          <div className="flex justify-center mb-4">
+            <div className="w-full max-w-2xl">
+              <div className="relative flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+                <span className="absolute left-4 text-gray-500">
+                  <MagnifyingGlassIcon className="h-5 w-5" />
+                </span>
+                <button
+                  type="button"
+                  onClick={handleStorefrontSearchClick}
+                  className="w-full text-left pl-12 pr-4 py-3 bg-transparent border-none text-base text-black rounded-full focus:outline-none focus-visible:outline-none"
+                >
+                  <span className={query ? 'text-gray-900 font-medium' : 'text-gray-500'}>
+                    {query || 'Search by mood, product, brands, or preference'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Mode and Filter buttons */}
+          <div className="flex justify-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setAiModeOpen(true)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-medium text-gray-700 transition-colors shadow-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                <path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Z"/>
+              </svg>
+              AI Mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowFilterNav(!showFilterNav)}
+              className="flex items-center gap-2 px-6 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-full text-sm font-medium text-gray-700 transition-colors shadow-sm"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-4 w-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+              </svg>
+              Filter
+            </button>
+          </div>
+
+          {/* FilterNav - shown when Filter button is clicked */}
+          {showFilterNav && (
+            <div className="mb-4">
+              <div className="overflow-x-auto overflow-y-visible scrollbar-hide">
+                <div className="min-w-max overflow-visible">
+                  <FilterNav
+                    categories={categoryOptions}
+                    brands={facets.brands}
+                    strains={facets.strains}
+                    terpenes={facets.terpenes}
+                    weights={facets.weights}
+                    effects={facets.effects}
+                    counts={finalFacetCounts}
+                    onChange={handleFiltersChange}
+                    initialFilters={activeFilters}
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
       </div>
     </section>
+    </>
   )
 }

@@ -23,7 +23,7 @@ export const ProductDefaultImage =
 // Helpers
 // ----------------------
 
-function pickPrimaryImage(p: Product) {
+export function pickPrimaryImage(p: Product) {
   return (
     p.image ||
     p.primary_image_url ||
@@ -33,7 +33,7 @@ function pickPrimaryImage(p: Product) {
   )
 }
 
-function pickDisplayNode(p: Product): {
+export function pickDisplayNode(p: Product): {
   basePrice: number
   discountType?: "FLAT" | "PERCENT" | null
   discountAmountFinal?: number | null
@@ -84,7 +84,7 @@ function pickDisplayNode(p: Product): {
   }
 }
 
-function computeFinalPrice(
+export function computeFinalPrice(
   basePrice: number,
   discountType?: "FLAT" | "PERCENT" | null,
   discountAmountFinal?: number | null,
@@ -111,7 +111,7 @@ function computeFinalPrice(
   return final
 }
 
-function formatStrainType(type?: string | null) {
+export function formatStrainType(type?: string | null) {
   const t = (type ?? "").toUpperCase()
   if (t === "SATIVA") return "Sativa"
   if (t === "INDICA") return "Indica"
@@ -121,7 +121,7 @@ function formatStrainType(type?: string | null) {
   return null
 }
 
-function getStrainIcon(type?: string | null) {
+export function getStrainIcon(type?: string | null) {
   const t = (type ?? "").toUpperCase()
   if (t === "SATIVA") return "/icons/sativa.svg"
   if (t === "INDICA") return "/icons/indica.svg"
@@ -131,7 +131,7 @@ function getStrainIcon(type?: string | null) {
   return null
 }
 
-function getCannabinoidLabel(p: Product, key: "thc" | "cbd"): string | null {
+export function getCannabinoidLabel(p: Product, key: "thc" | "cbd"): string | null {
   const val =
     p.labs?.[`${key}Max` as keyof typeof p.labs] ??
     p.labs?.[key as keyof typeof p.labs] ??
@@ -141,7 +141,7 @@ function getCannabinoidLabel(p: Product, key: "thc" | "cbd"): string | null {
   return `${key.toUpperCase()} ${val}${unit}`
 }
 
-function getTopTerpenes(p: Product, limit = 2): string[] {
+export function getTopTerpenes(p: Product, limit = 2): string[] {
   if (!p.labs) return []
 
   if (Array.isArray(p.labs.terpenes) && p.labs.terpenes.length > 0) {
@@ -173,6 +173,25 @@ function getTopTerpenes(p: Product, limit = 2): string[] {
   }
 
   return entries.slice(0, limit).map((e) => terpeneNames[e.key] || e.key)
+}
+
+function getCategorySlug(p: Product) {
+  const typeSlugMap: Partial<Record<ProductType, string>> = {
+    [ProductType.FLOWER]: "flower",
+    [ProductType.PRE_ROLLS]: "pre-rolls",
+    [ProductType.VAPORIZERS]: "vaporizers",
+    [ProductType.CONCENTRATES]: "concentrates",
+    [ProductType.EDIBLES]: "edibles",
+    [ProductType.BEVERAGES]: "beverages",
+    [ProductType.TINCTURES]: "tinctures",
+  }
+  if (p.type && typeSlugMap[p.type]) {
+    return typeSlugMap[p.type] as string
+  }
+  if (p.category) {
+    return p.category.toLowerCase().replace(/\s+/g, "-")
+  }
+  return "flower"
 }
 
 // ----------------------
@@ -247,11 +266,7 @@ export default function ProductCard({ product }: { product: Product }) {
     <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition text-black flex flex-col gap-3 h-full relative">
       {/* Image with Add to Cart button */}
       <div className="w-full h-48 flex rounded-2xl items-center justify-center overflow-hidden relative">
-        <Link
-          href={`https://www.kinebudsdispensary.com/menu/${product.category}/${product.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+        <Link href={`/shop/${getCategorySlug(product)}/${product.id}`}>
           <img src={image} alt={product.name} className="w-full h-full object-cover" />
         </Link>
 

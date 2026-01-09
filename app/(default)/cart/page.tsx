@@ -78,14 +78,18 @@ export default function CartPage() {
   }
 
   const handleCheckout = async () => {
-    // Ensure cart is synced with Dispense API before opening checkout
     if (!cart || !cart.items || cart.items.length === 0) {
       alert('Your cart is empty')
       return
     }
 
+    const openCheckout = (cartId?: string | null) => {
+      const baseUrl = 'https://kinebudsdispensary.com/menu/cart'
+      const destination = cartId ? `${baseUrl}?cartId=${cartId}` : baseUrl
+      window.location.href = destination
+    }
+
     try {
-      // Re-sync cart with API to ensure it's up to date
       const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!
       const syncedCart = await cartService.create({
         venueId,
@@ -95,22 +99,10 @@ export default function CartPage() {
           purchaseWeight: item.purchaseWeight,
         })),
       })
-
-      if (syncedCart?.id) {
-        // Open checkout with the synced cart ID
-        window.open(`https://kinebudsdispensary.com/menu/cart?cartId=${syncedCart.id}`, '_blank')
-      } else {
-        // Fallback: open cart without ID (should still work if cart is in session)
-        window.open('https://kinebudsdispensary.com/menu/cart', '_blank')
-      }
+      openCheckout(syncedCart?.id || cart?.id)
     } catch (error) {
       console.error('Error syncing cart:', error)
-      // Still try to open checkout even if sync fails
-      if (cart?.id) {
-        window.open(`https://kinebudsdispensary.com/menu/cart?cartId=${cart.id}`, '_blank')
-      } else {
-        window.open('https://kinebudsdispensary.com/menu/cart', '_blank')
-      }
+      openCheckout(cart?.id)
     }
   }
 
