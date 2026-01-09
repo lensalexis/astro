@@ -434,10 +434,12 @@ type AIProductSearchProps = {
   onResultsVisibleChange?: (visible: boolean) => void
   customChips?: ReactNode
   currentStoreId?: string
+  /** If true, AI mode is always open and storefront view is hidden */
+  forceAIMode?: boolean
 }
 
 export default function AIProductSearch(props: AIProductSearchProps = {}): ReactElement {
-  const { onResultsVisibleChange, customChips, currentStoreId } = props
+  const { onResultsVisibleChange, customChips, currentStoreId, forceAIMode = false } = props
   const { user } = useUser()
   const router = useRouter()
   const params = useParams<{ storeId?: string }>()
@@ -465,30 +467,18 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     { id: 'cat-beverages', label: 'Beverages', category: 'beverages' },
     { id: 'cat-tinctures', label: 'Tinctures', category: 'tinctures' },
   ]
-  // Google-style prompts covering all categories with different problem-solving approaches
-  // AI Mode prompts - Google-style with Recommend/How do I/Plan a patterns
-  // Each prompt has a static image assigned
+  // AI Mode prompts - Updated list with new categories
   const AI_MODE_PROMPTS = [
-    // Recommend prompts (for people who don't want to think)
-    { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg' },
-    { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg' },
-    { id: 'recommend-edible', label: 'Recommend edibles for sleep', query: 'recommend edibles that help with sleep', category: 'Edibles', image: '/images/post-thumb-05.jpg' },
-    { id: 'recommend-deals', label: 'Recommend the best deals today', query: 'show me discounted products with best value', category: null, image: '/images/post-thumb-06.jpg' },
-    
-    // How do I prompts (for people with questions)
-    { id: 'how-choose-strain', label: 'How do I choose between indica and sativa?', query: 'how to choose between indica sativa hybrid strains', category: null, image: '/images/post-thumb-07.jpg' },
-    { id: 'how-use-tincture', label: 'How do I use tinctures effectively?', query: 'how to use tinctures properly dosage instructions', category: 'Tinctures', image: '/images/post-thumb-08.jpg' },
-    { id: 'how-start-edibles', label: 'How do I start with edibles safely?', query: 'how to start with edibles beginner guide safe dosage', category: 'Edibles', image: '/images/post-thumb-09.jpg' },
-    
-    // Plan a prompts (for planning/experiences)
-    { id: 'plan-evening', label: 'Plan a relaxing evening with cannabis', query: 'plan relaxing evening indica products edibles beverages', category: null, image: '/images/post-thumb-10.jpg' },
-    { id: 'plan-party', label: 'Plan products for a social gathering', query: 'plan products for party social gathering sativa hybrid', category: null, image: '/images/post-thumb-03.jpg' },
-    { id: 'plan-workout', label: 'Plan products for post-workout recovery', query: 'plan products for post workout recovery cbd topicals', category: null, image: '/images/post-thumb-04.jpg' },
-    
-    // Category-specific prompts
-    { id: 'browse-concentrates', label: 'Show me all concentrates', query: 'show me concentrates wax rosin shatter', category: 'Concentrates', image: '/images/post-thumb-05.jpg' },
-    { id: 'browse-beverages', label: 'Show me cannabis beverages', query: 'show me beverages drinks sodas teas', category: 'Beverages', image: '/images/post-thumb-06.jpg' },
-    { id: 'browse-pre-rolls', label: 'Show me pre-rolls ready to smoke', query: 'show me pre rolls joints ready to smoke', category: 'Pre Rolls', image: '/images/post-thumb-07.jpg' },
+    { id: 'store-info', label: 'What are your current store hours and location?', query: 'what are your current store hours and location', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
+    { id: 'loyalty-program', label: 'How do I earn and redeem loyalty points?', query: 'how do I earn and redeem loyalty points', category: 'Loyalty Program', image: '/images/post-thumb-04.jpg', promptType: 'loyalty' },
+    { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg', promptType: 'product' },
+    { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg', promptType: 'product' },
+    { id: 'recommend-edible', label: 'Recommend edibles for sleep', query: 'recommend edibles that help with sleep', category: 'Edibles', image: '/images/post-thumb-05.jpg', promptType: 'product' },
+    { id: 'recommend-deals', label: 'Recommend the best deals today', query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
+    { id: 'plan-evening', label: 'Plan a relaxing evening with cannabis', query: 'plan relaxing evening indica products edibles beverages', category: 'Multi-Product Bundle', image: '/images/post-thumb-10.jpg', promptType: 'bundle' },
+    { id: 'plan-party', label: 'Plan products for a social gathering', query: 'plan products for party social gathering sativa hybrid', category: 'Multi-Product Bundle', image: '/images/post-thumb-03.jpg', promptType: 'bundle' },
+    { id: 'plan-workout', label: 'Plan products for post-workout recovery', query: 'plan products for post workout recovery cbd topicals', category: 'Multi-Product Bundle', image: '/images/post-thumb-04.jpg', promptType: 'bundle' },
+    { id: 'best-sellers', label: 'Show me bestselling products this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
   ]
   const PRODUCT_PROMPT_SUGGESTIONS = [
     'Show me relaxing indica flower',
@@ -508,7 +498,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const [allProductsGlobal, setAllProductsGlobal] = useState<Product[]>([])
   const [showPrePrompts, setShowPrePrompts] = useState(true)
   const [categoryCountsByApi, setCategoryCountsByApi] = useState<Record<string, number>>({})
-  const [aiModeOpen, setAiModeOpen] = useState(false)
+  const [aiModeOpen, setAiModeOpen] = useState(forceAIMode)
   const [showFilterNav, setShowFilterNav] = useState(false)
   const [showFilterNavInAiMode, setShowFilterNavInAiMode] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
@@ -537,6 +527,11 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     active: boolean
     requestId: string | null
   }>({ active: false, requestId: null })
+  const [storeInfoDisplay, setStoreInfoDisplay] = useState<{
+    active: boolean
+    store: (typeof stores)[number] | null
+    requestId: string | null
+  }>({ active: false, store: null, requestId: null })
 
   const filterPills = useMemo<FilterPill[]>(() => {
     const pills: FilterPill[] = []
@@ -1838,58 +1833,25 @@ If asked about specific products, you can mention that the customer can search f
     await searchProductsWithFilters(intentResult.extracted, searchQuery, requestId)
   }
 
-  // Handle store info queries
+  // Handle store info queries - show only current store
   const handleStoreInfo = (intentResult: ReturnType<typeof routeIntent>, userQuery: string, requestId?: string) => {
     const rid = requestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
-    let response = ''
-    const lowerQuery = userQuery.toLowerCase()
-
-    if (intentResult.needsStoreDisambiguation) {
-      // List all stores
-      response = 'Which location would you like information about?\n\n'
-      stores.forEach((store, idx) => {
-        response += `${idx + 1}. ${store.name}\n   ${store.address || `${store.addressLine1}, ${store.addressLine2}`}\n`
-      })
+    
+    // Get the current store ID from URL params or selected location
+    const currentStoreId = getActiveStoreId()
+    const store = stores.find(s => s.id === currentStoreId)
+    
+    if (store) {
+      // Set store info to display in boxes
+      setStoreInfoDisplay({ active: true, store, requestId: rid })
+      setIsChatMode(true)
+      setShowResults(false)
     } else {
-      // Find specific store
-      const storeId = intentResult.storeIdGuess
-      const store = stores.find(s => s.id === storeId)
-
-      if (store) {
-        response = `**${store.name}**\n\n`
-        response += `📍 Address: ${store.address || `${store.addressLine1}, ${store.addressLine2}`}\n`
-        
-        if (store.phone) {
-          response += `📞 Phone: ${store.phone}\n`
-        }
-        
-        if (store.ocm) {
-          response += `📋 OCM License: ${store.ocm}\n`
-        }
-        
-        if (store.status === 'coming_soon') {
-          response += `\n🚧 **Coming Soon**\n`
-          response += `Hours are not yet available for this location.`
-        } else if (store.hoursDisplay) {
-          response += `\n🕐 Hours: ${store.hoursDisplay}\n`
-        } else {
-          response += `\n🕐 Hours: Not listed yet.\n`
-        }
-        
-        if (store.services && store.services.length > 0) {
-          response += `\n✅ Services: ${store.services.join(', ')}\n`
-        }
-      } else {
-        response = 'I couldn\'t find that location. Which location would you like information about?\n\n'
-        stores.slice(0, 3).forEach((store, idx) => {
-          response += `${idx + 1}. ${store.name}\n   ${store.address || `${store.addressLine1}, ${store.addressLine2}`}\n`
-        })
-      }
+      // No store found - show message
+      appendAssistantMessage('I couldn\'t find store information for the current location.', rid)
+      setIsChatMode(true)
+      setShowResults(false)
     }
-
-    appendAssistantMessage(response, rid)
-    setIsChatMode(true)
-    setShowResults(false)
   }
 
   // Handle EDUCATION_WITH_PRODUCTS: single-turn response with explanation + products
@@ -2048,6 +2010,7 @@ License: ${license}`
     setShowFilterNav(false)
     setShowFilterNavInAiMode(false)
     setStoreInfoPrompt({ active: false, requestId: null })
+    setStoreInfoDisplay({ active: false, store: null, requestId: null })
     setGuidedPrompt({ active: false, requestId: null, feel: null, modality: null })
     setHasInteracted(false)
   }
@@ -2465,22 +2428,109 @@ License: ${license}`
     setQuery(prompt.query)
     setHasInteracted(true)
     const requestId = crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
-    // Trigger search with the prompt query
-    const intentResult = routeIntent(prompt.query)
     appendUserMessage(prompt.query, requestId)
     setShowPrePrompts(false)
+    
     try {
-      if (intentResult.intent === 'PRODUCT_SHOPPING') {
+      // Handle special prompt types
+      if (prompt.promptType === 'store_info') {
+        // Get current store and display in boxes
+        const currentStoreId = getActiveStoreId()
+        const store = stores.find(s => s.id === currentStoreId)
+        if (store) {
+          setStoreInfoDisplay({ active: true, store, requestId })
+          setIsChatMode(true)
+          setShowResults(false)
+        } else {
+          appendAssistantMessage('I couldn\'t find store information for the current location.', requestId)
+        }
+        return
+      }
+      
+      if (prompt.promptType === 'loyalty') {
+        // Handle loyalty program query
+        const loyaltyInfo = `Loyalty Program Information:
+
+Earn Points:
+• Make purchases at any JALH location
+• Points are earned based on your purchase amount
+• Check with store staff for current point earning rates
+
+Redeem Points:
+• Visit any JALH location to redeem your points
+• Points can be used for discounts on future purchases
+• Speak with store staff to check your current point balance and redemption options
+
+For specific details about earning rates and redemption options, please contact your local JALH store or visit in person.`
+        appendAssistantMessage(loyaltyInfo, requestId)
+        return
+      }
+      
+      if (prompt.promptType === 'bestsellers') {
+        // Fetch bestselling products
+        setLoading(true)
+        setShowResults(true)
+        try {
+          const res = await productService.list({
+            venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+            limit: 50,
+            sort: '-totalSold',
+            quantityMin: 1,
+          })
+          const bestSellers = res.data || []
+          setProducts(bestSellers)
+          setBaseProducts(bestSellers)
+          if (bestSellers.length > 0) {
+            appendAssistantMessage(`Here are our bestselling products this week:`, requestId)
+          } else {
+            appendAssistantMessage(`No bestselling products available at this time.`, requestId)
+          }
+        } catch (error) {
+          console.error('Error fetching bestsellers:', error)
+          appendAssistantMessage(`Sorry, I couldn't fetch the bestselling products right now.`, requestId)
+        } finally {
+          setLoading(false)
+        }
+        return
+      }
+      
+      if (prompt.promptType === 'deals') {
+        // Handle deals/promotions - show discounted products
+        const intentResult = routeIntent(prompt.query)
+        const filters = {
+          ...intentResult.extracted,
+          discountedOnly: true,
+        }
+        await searchProductsWithFilters(filters, prompt.query, requestId)
+        return
+      }
+      
+      if (prompt.promptType === 'bundle') {
+        // Handle multi-product bundle planning
+        const intentResult = routeIntent(prompt.query)
+        await searchProductsWithFilters(intentResult.extracted, prompt.query, requestId)
+        return
+      }
+      
+      // Default: handle as product shopping
+      const intentResult = routeIntent(prompt.query)
+      if (intentResult.intent === 'PRODUCT_SHOPPING' || intentResult.intent === 'PRODUCT_INFO') {
         await searchProductsWithFilters(intentResult.extracted, prompt.query, requestId)
       } else if (intentResult.intent === 'STORE_INFO') {
         handleStoreInfo(intentResult, prompt.query, requestId)
+      } else {
+        // Fallback for other intents
+        await searchProductsWithFilters(intentResult.extracted, prompt.query, requestId)
       }
     } catch (error) {
       console.error('Error processing AI mode prompt:', error)
+      appendAssistantMessage(`Sorry, I encountered an error processing your request.`, requestId)
     }
   }
 
   // (Previously used for header dropdowns; we now use full-screen modals.)
+
+  // (URL parameter check removed - AI mode is now always open on store pages via forceAIMode prop)
 
   // Focus the AI mode input once when overlay opens
   const aiModeJustOpenedRef = useRef(false)
@@ -2500,22 +2550,32 @@ License: ${license}`
 
   // Prevent body scroll when AI mode is open (but allow scrolling inside overlay)
   useEffect(() => {
-    if (aiModeOpen) {
-      // Only prevent body scroll, don't use position fixed as it interferes with internal scrolling
+    if (aiModeOpen || forceAIMode) {
+      // Prevent body scroll when AI mode is open
       const originalOverflow = document.body.style.overflow
+      const originalHeight = document.body.style.height
       document.body.style.overflow = 'hidden'
+      // For forceAIMode, we still want to prevent body scroll but allow internal scrolling
+      if (forceAIMode) {
+        document.body.style.height = '100vh'
+        document.documentElement.style.height = '100vh'
+      }
       
       return () => {
         document.body.style.overflow = originalOverflow
+        document.body.style.height = originalHeight
+        if (forceAIMode) {
+          document.documentElement.style.height = ''
+        }
       }
     }
-  }, [aiModeOpen])
+  }, [aiModeOpen, forceAIMode])
 
-  // Full-screen AI Mode overlay - conditionally rendered
-  const aiModeOverlay = aiModeOpen ? (
+  // Full-screen AI Mode overlay - conditionally rendered (or always if forceAIMode)
+  const aiModeOverlay = (aiModeOpen || forceAIMode) ? (
       <div 
         key="ai-mode-overlay"
-        className="fixed inset-0 z-50 bg-white flex flex-col"
+        className={forceAIMode ? "h-screen bg-white flex flex-col overflow-hidden" : "fixed inset-0 z-50 bg-white flex flex-col"}
       >
         {/* Search box inside AI Mode */}
         <div className="px-4 py-4 border-b border-gray-200">
@@ -2639,7 +2699,7 @@ License: ${license}`
                     onFocus={() => {
                       if (enablePresetDropdown) setShowDropdown(true)
                     }}
-                    placeholder="Search by mood, product, brands, or preference"
+                    placeholder="Search by mood, products, or preference"
                     className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gray-500 rounded-full focus:outline-none focus-visible:outline-none"
                     onChange={(e) => {
                       const newValue = e.target.value
@@ -2697,10 +2757,23 @@ License: ${license}`
               </div>
             </form>
 
-            {/* Category tiles (AI Mode only) */}
+            {/* Category tiles and filter pills (AI Mode only) */}
             <div className="mt-4">
               <div className="overflow-x-auto scrollbar-hide">
                 <div className="flex gap-3 px-1">
+                  {/* Active filter pills - shown first */}
+                  {filterPills.map((pill) => (
+                    <button
+                      key={`${pill.key}-${pill.value || 'sale'}`}
+                      onClick={() => handleRemovePill(pill)}
+                      className="flex-none inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 text-sm text-gray-700 px-3 py-1.5 hover:bg-gray-200 transition whitespace-nowrap"
+                    >
+                      <span>{pill.label}</span>
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  ))}
+                  
+                  {/* Category tiles */}
                   {CATEGORY_DEFS.map((cat) => {
                     const selected = (activeFilters.categories || []).some(
                       (v) => v.toLowerCase() === cat.name.toLowerCase()
@@ -2757,24 +2830,12 @@ License: ${license}`
           style={{ 
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-            scrollBehavior: 'auto' // Prevent smooth scroll from interfering
+            scrollBehavior: 'auto', // Prevent smooth scroll from interfering
+            minHeight: 0 // Critical for flex children to allow scrolling
           }}
         >
           <div className="max-w-2xl mx-auto">
-            {filterPills.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {filterPills.map((pill) => (
-                  <button
-                    key={`${pill.key}-${pill.value || 'sale'}`}
-                    onClick={() => handleRemovePill(pill)}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 text-sm text-gray-700 px-3 py-1.5 hover:bg-gray-200 transition"
-                  >
-                    <span>{pill.label}</span>
-                    <XMarkIcon className="h-4 w-4" />
-                  </button>
-                ))}
-              </div>
-            )}
+
 
             {storeInfoPrompt.active && (
               <div className="mb-4 space-y-2">
@@ -2843,7 +2904,7 @@ License: ${license}`
                     key={idx}
                     className={`flex items-center gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {msg.role === 'user' && idx === chatMessages.length - 1 && (
+                    {msg.role === 'user' && (
                       <button
                         onClick={handleClearChat}
                         className="inline-flex items-center gap-2 rounded-2xl bg-gray-100 hover:bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors flex-shrink-0"
@@ -2862,6 +2923,90 @@ License: ${license}`
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Clear button - show when there's content but no user messages yet (e.g., store info, results) */}
+            {chatMessages.length === 0 && (storeInfoDisplay.active || showResults || loading) && (
+              <div className="mb-6 flex justify-end">
+                <button
+                  onClick={handleClearChat}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-gray-100 hover:bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors flex-shrink-0"
+                  aria-label="Clear chat and reset"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                  <span>Clear</span>
+                </button>
+              </div>
+            )}
+
+            {/* Store info display - rendered after chat messages */}
+            {storeInfoDisplay.active && storeInfoDisplay.store && (
+              <div className="mb-6 space-y-3">
+                {/* Store Name */}
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                    <p className="text-sm font-semibold mb-1">Store Name</p>
+                    <p className="text-sm">{storeInfoDisplay.store.name}</p>
+                  </div>
+                </div>
+
+                {/* Address */}
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                    <p className="text-sm font-semibold mb-1">Address</p>
+                    <p className="text-sm">
+                      {storeInfoDisplay.store.address || 
+                        [storeInfoDisplay.store.addressLine1, storeInfoDisplay.store.addressLine2].filter(Boolean).join(', ')}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                {storeInfoDisplay.store.phone && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                      <p className="text-sm font-semibold mb-1">Phone</p>
+                      <p className="text-sm">{storeInfoDisplay.store.phone}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* OCM License */}
+                {storeInfoDisplay.store.ocm && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                      <p className="text-sm font-semibold mb-1">OCM License</p>
+                      <p className="text-sm">{storeInfoDisplay.store.ocm}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Hours */}
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                    <p className="text-sm font-semibold mb-1">Hours</p>
+                    {storeInfoDisplay.store.status === 'coming_soon' ? (
+                      <p className="text-sm">
+                        <span className="font-semibold">Coming Soon</span> - Hours are not yet available for this location.
+                      </p>
+                    ) : storeInfoDisplay.store.hoursDisplay ? (
+                      <p className="text-sm">{storeInfoDisplay.store.hoursDisplay}</p>
+                    ) : (
+                      <p className="text-sm text-gray-600">Not listed yet</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Services */}
+                {storeInfoDisplay.store.services && storeInfoDisplay.store.services.length > 0 && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[80%] rounded-2xl bg-gray-200 text-gray-900 px-4 py-3">
+                      <p className="text-sm font-semibold mb-1">Services</p>
+                      <p className="text-sm">{storeInfoDisplay.store.services.join(', ')}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -2946,6 +3091,11 @@ License: ${license}`
         </div>
       </div>
   ) : null
+
+  // If forceAIMode is true, only render AI mode overlay (no storefront)
+  if (forceAIMode) {
+    return <>{aiModeOverlay}</>
+  }
 
   return (
     <>

@@ -27,8 +27,8 @@ export default function SiteChrome() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
-  const showChrome = pathname !== '/'
   const hasStoreContext = pathname.startsWith('/stores/')
+  const showChrome = pathname !== '/' && !hasStoreContext
   const AGE_SESSION_KEY = 'jalh_age_verified_session'
   const [modalQuery, setModalQuery] = useState('')
 

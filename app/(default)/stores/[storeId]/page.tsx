@@ -1,5 +1,12 @@
-import StoreDetailClient from '@/components/stores/StoreDetailClient'
+'use client'
+
+import { useEffect } from 'react'
+import AIProductSearch from '@/components/AIProductSearch'
 
 export default function StoreDetailPage() {
-  return <StoreDetailClient />
+  return (
+    <div className="min-h-screen">
+      <AIProductSearch forceAIMode={true} />
+    </div>
+  )
 }
