@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, ReactNode, type ReactElement } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
-import productService from '@/lib/productService'
 import ProductCard, { computeFinalPrice, pickDisplayNode, pickPrimaryImage } from '@/components/ui/ProductCard'
 import type { Product } from '@/types/product'
 import { ProductType } from '@/types/product'
@@ -14,6 +14,7 @@ import FilterNav from '@/components/ui/FilterNav'
 import { stores, about } from '@/lib/stores'
 import { useParams } from 'next/navigation'
 import { routeIntent, type Intent, type ExtractedFilters, EFFECT_KEYWORDS } from '@/lib/intentRouter'
+import { listDispenseProducts } from '@/utils/dispenseClient'
 import {
   CATEGORY_DEFS,
   DEFAULT_CATEGORY_LABELS,
@@ -401,13 +402,12 @@ const fetchAllProducts = async (params: any): Promise<Product[]> => {
       requestParams.cursor = cursor
     }
 
-    const res = await productService.list(requestParams)
+    const res = await listDispenseProducts<Product>(requestParams)
     const products = res.data || []
     allProducts.push(...products)
 
     // Check for next cursor in response
-    const responseAny = res as any
-    cursor = responseAny.nextCursor || responseAny.next_cursor || responseAny.pagination?.nextCursor
+    cursor = (res as any).nextCursor || undefined
     
     // Pagination rules:
     // - Continue if API returned a cursor (even if this page is < limit)
@@ -468,14 +468,210 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     { id: 'cat-beverages', label: 'Beverages', category: 'beverages' },
     { id: 'cat-tinctures', label: 'Tinctures', category: 'tinctures' },
   ]
-  // AI Mode prompts - Updated list with new categories
-  const AI_MODE_PROMPTS = [
-    { id: 'recommend-deals', label: "What's on sale today?", query: 'show me discounted products with best value', category: 'Deals/Promotions', image: '/images/post-thumb-06.jpg', promptType: 'deals' },
-    { id: 'recommend-flower', label: 'Recommend the best flower for relaxation', query: 'recommend best indica flower for relaxation', category: 'Flower', image: '/images/post-thumb-03.jpg', promptType: 'product' },
-    { id: 'store-info', label: 'Tell me about this store', query: 'tell me about this store', category: 'Store Information', image: '/images/post-thumb-03.jpg', promptType: 'store_info' },
-    { id: 'best-sellers', label: 'Show me best sellers this week', query: 'show me bestselling products this week', category: 'Best Sellers', image: '/images/post-thumb-05.jpg', promptType: 'bestsellers' },
-    { id: 'recommend-vape', label: 'Recommend a vape for beginners', query: 'recommend beginner friendly vape cartridges', category: 'Vaporizers', image: '/images/post-thumb-04.jpg', promptType: 'product' },
-    { id: 'recommend-edible', label: 'Best cannabis strains for creativity, focus, and energy', query: 'recommend sativa and hybrid_sativa products for creativity focus and energy', category: 'Strains', image: '/images/post-thumb-05.jpg', promptType: 'product' },
+  type FeedId =
+    | 'best-sellers'
+    | 'trending'
+    | 'easy-picks'
+    | 'calm-unwind'
+    | 'best-value'
+    | 'uplifting-daytime'
+    | 'staff-picks'
+
+  type AiPrompt = {
+    id: string
+    label: string
+    query: string
+    category: string
+    image: string
+    promptType:
+      | 'product'
+      | 'deals'
+      | 'store_info'
+      | 'bestsellers'
+      | 'loyalty'
+      | 'bundle'
+      | 'feed'
+      | 'category'
+    feedId?: FeedId
+    categorySlug?: string
+  }
+
+  // AI Mode prompts (rendered + internal feed actions)
+  const AI_MODE_PROMPTS: AiPrompt[] = [
+    // Top 3 (under search box)
+    {
+      id: 'recommend-deals',
+      label: "What's on sale today?",
+      query: 'show me discounted products with best value',
+      category: 'Deals/Promotions',
+      image: '/images/post-thumb-06.jpg',
+      promptType: 'deals',
+    },
+    {
+      id: 'recommend-calm-flower',
+      label: 'Recommend the best flower for relaxation',
+      query: 'recommend best indica flower for relaxation and calming',
+      category: 'Flower',
+      image: '/images/post-thumb-03.jpg',
+      promptType: 'product',
+    },
+    {
+      id: 'store-info',
+      label: 'Tell me about this store',
+      query: 'tell me about this store',
+      category: 'Store Information',
+      image: '/images/post-thumb-03.jpg',
+      promptType: 'store_info',
+    },
+
+    // Prompts after Best Selling this week (2)
+    {
+      id: 'prompt-edibles-low-dose',
+      label: 'Find low-dose edibles for a chill vibe',
+      query: 'recommend low dose edibles for relaxation, beginner friendly',
+      category: 'Edibles',
+      image: '/images/post-thumb-05.jpg',
+      promptType: 'product',
+    },
+    {
+      id: 'prompt-concentrates-flavor',
+      label: 'Show me flavorful concentrates (live resin / rosin)',
+      query: 'show me concentrates like live resin and rosin, best flavor',
+      category: 'Concentrates',
+      image: '/images/post-thumb-04.jpg',
+      promptType: 'product',
+    },
+
+    // Prompts after Trending Right Now (2)
+    {
+      id: 'prompt-beverages',
+      label: 'Show me THC beverages I can sip',
+      query: 'show me cannabis beverages and drinkables',
+      category: 'Beverages',
+      image: '/images/post-thumb-06.jpg',
+      promptType: 'product',
+    },
+    {
+      id: 'prompt-balanced-1-1',
+      label: 'Recommend balanced 1:1 THC:CBD options',
+      query: 'recommend balanced thc cbd 1:1 products for beginners',
+      category: 'Balanced',
+      image: '/images/post-thumb-04.jpg',
+      promptType: 'product',
+    },
+
+    // Prompts after Easy Picks for First Timers (2)
+    {
+      id: 'prompt-pre-roll-under-25',
+      label: 'Find pre-rolls under $25',
+      query: 'find pre rolls under 25 dollars',
+      category: 'Pre Rolls',
+      image: '/images/post-thumb-05.jpg',
+      promptType: 'product',
+    },
+    {
+      id: 'prompt-vapes-beginners',
+      label: 'Best vapes for beginners',
+      query: 'best vapes for beginners',
+      category: 'Vaporizers',
+      image: '/images/post-thumb-03.jpg',
+      promptType: 'product',
+    },
+
+    // Prompt after Calm & Unwind Favorites (1)
+    {
+      id: 'prompt-sleep-edible',
+      label: 'Recommend edibles for sleep (stay asleep)',
+      query: 'recommend edibles for sleep and staying asleep',
+      category: 'Sleep Support',
+      image: '/images/post-thumb-03.jpg',
+      promptType: 'product',
+    },
+
+    // Prompt after Best Value Right Now (1)
+    {
+      id: 'prompt-bundle-under-80',
+      label: 'Build me a best-value bundle under $80',
+      query: 'build a best value cannabis bundle under 80 dollars across categories',
+      category: 'Bundle',
+      image: '/images/post-thumb-06.jpg',
+      promptType: 'bundle',
+    },
+
+    // Prompt after Uplifting & Daytime Picks (1)
+    {
+      id: 'prompt-daytime-vape',
+      label: 'Recommend a daytime vape for focus & energy',
+      query: 'recommend sativa and hybrid sativa vape cartridges for focus and energy',
+      category: 'Vaporizers',
+      image: '/images/post-thumb-05.jpg',
+      promptType: 'product',
+    },
+
+    // Internal feed actions (used by section "View all" buttons)
+    {
+      id: 'feed-best-sellers',
+      label: 'Show me best sellers this week',
+      query: 'show me bestselling products this week',
+      category: 'Best Sellers',
+      image: '/images/post-thumb-05.jpg',
+      promptType: 'bestsellers',
+      feedId: 'best-sellers',
+    },
+    {
+      id: 'feed-trending',
+      label: 'Show me trending right now',
+      query: 'show me trending products right now',
+      category: 'Trending',
+      image: '/images/post-thumb-05.jpg',
+      promptType: 'feed',
+      feedId: 'trending',
+    },
+    {
+      id: 'feed-easy-picks',
+      label: 'Show me easy picks for first timers',
+      query: 'show me beginner friendly easy cannabis products',
+      category: 'Easy Picks',
+      image: '/images/post-thumb-04.jpg',
+      promptType: 'feed',
+      feedId: 'easy-picks',
+    },
+    {
+      id: 'feed-calm-unwind',
+      label: 'Show me calm & unwind favorites',
+      query: 'show me calming relaxing favorites',
+      category: 'Calm & Unwind',
+      image: '/images/post-thumb-03.jpg',
+      promptType: 'feed',
+      feedId: 'calm-unwind',
+    },
+    {
+      id: 'feed-best-value',
+      label: 'Show me best value right now',
+      query: 'show me best value deals right now',
+      category: 'Best Value',
+      image: '/images/post-thumb-06.jpg',
+      promptType: 'feed',
+      feedId: 'best-value',
+    },
+    {
+      id: 'feed-uplifting-daytime',
+      label: 'Show me uplifting & daytime picks',
+      query: 'show me uplifting daytime picks',
+      category: 'Uplifting',
+      image: '/images/post-thumb-05.jpg',
+      promptType: 'feed',
+      feedId: 'uplifting-daytime',
+    },
+    {
+      id: 'feed-staff-picks',
+      label: 'Show me staff picks',
+      query: 'show me staff picks',
+      category: 'Staff Picks',
+      image: '/images/post-thumb-04.jpg',
+      promptType: 'feed',
+      feedId: 'staff-picks',
+    },
   ]
   const PRODUCT_PROMPT_SUGGESTIONS = [
     'Show me relaxing indica flower',
@@ -506,6 +702,29 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     return 'flower'
   }
 
+  const hashStringToInt = (input: string) => {
+    let hash = 0
+    for (let i = 0; i < input.length; i++) {
+      hash = (hash << 5) - hash + input.charCodeAt(i)
+      hash |= 0
+    }
+    return Math.abs(hash)
+  }
+
+  const getDeterministicTileHeight = (productId: string) => {
+    const heightOptions = [168, 208, 248, 192]
+    const n = hashStringToInt(productId)
+    return heightOptions[n % heightOptions.length]
+  }
+
+  const getDiscountPercent = (p: Product) => {
+    const v = (p as any)?.discountValueFinal
+    if (typeof v === 'number' && v > 0) return v
+    const first = (p as any)?.discounts?.[0]?.value
+    if (typeof first === 'number' && first > 0) return first
+    return 0
+  }
+
   const BestSellerMasonryTile = ({ product, index }: { product: Product; index: number }) => {
     const image = pickPrimaryImage(product)
     const { basePrice, discountType, discountAmountFinal, discountValueFinal, discounts } =
@@ -518,8 +737,8 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       discounts
     )
     const hasDiscount = finalPrice < basePrice - 0.001
-    const heightOptions = [168, 208, 248, 192]
-    const imgHeight = heightOptions[index % heightOptions.length]
+    // Deterministic heights prevent visual "shuffle" if ordering changes.
+    const imgHeight = getDeterministicTileHeight(product.id) || (index % 2 === 0 ? 208 : 192)
 
     return (
       <Link
@@ -531,7 +750,8 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
             src={image}
             alt={product.name}
             loading="lazy"
-            className="w-full h-full object-cover"
+            decoding="async"
+            className="w-full h-full object-cover transform-gpu"
           />
         </div>
         <div className="p-3">
@@ -561,12 +781,25 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const [allProductsGlobal, setAllProductsGlobal] = useState<Product[]>([])
   const [showPrePrompts, setShowPrePrompts] = useState(true)
   const [bestSellerProducts, setBestSellerProducts] = useState<Product[]>([])
-  const [bestSellerLoading, setBestSellerLoading] = useState(false)
+  const [bestSellerLoading, setBestSellerLoading] = useState(true)
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([])
+  const [trendingLoading, setTrendingLoading] = useState(true)
+  const [easyPicksProducts, setEasyPicksProducts] = useState<Product[]>([])
+  const [easyPicksLoading, setEasyPicksLoading] = useState(true)
+  const [calmUnwindProducts, setCalmUnwindProducts] = useState<Product[]>([])
+  const [calmUnwindLoading, setCalmUnwindLoading] = useState(true)
+  const [bestValueProducts, setBestValueProducts] = useState<Product[]>([])
+  const [bestValueLoading, setBestValueLoading] = useState(true)
+  const [upliftingProducts, setUpliftingProducts] = useState<Product[]>([])
+  const [upliftingLoading, setUpliftingLoading] = useState(true)
+  const [staffPicksProducts, setStaffPicksProducts] = useState<Product[]>([])
+  const [staffPicksLoading, setStaffPicksLoading] = useState(true)
   const [categoryCountsByApi, setCategoryCountsByApi] = useState<Record<string, number>>({})
   const [aiModeOpen, setAiModeOpen] = useState(forceAIMode)
   const [showFilterNav, setShowFilterNav] = useState(false)
   const [showFilterNavInAiMode, setShowFilterNavInAiMode] = useState(false)
   const [showLocationDropdown, setShowLocationDropdown] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [activeFilters, setActiveFilters] = useState<FacetedFilters>({})
   const [filterModalOpen, setFilterModalOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -578,7 +811,8 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const messageIdsRef = useRef<Set<string>>(new Set())
   const lastStoreInfoRef = useRef<{ id: string | null; ts: number }>({ id: null, ts: 0 })
   const lastSubmitRef = useRef<{ key: string; ts: number } | null>(null)
-  const bestSellerPrefetchReqIdRef = useRef(0)
+  const feedPrefetchReqIdRef = useRef(0)
+  const homeFeedCatalogRef = useRef<Product[]>([])
   const [isListening, setIsListening] = useState(false)
   // Web Speech API types aren't always included in TS lib config; keep this as `any`.
   const recognitionRef = useRef<any>(null)
@@ -599,42 +833,227 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     requestId: string | null
   }>({ active: false, store: null, requestId: null })
 
-  // Prefetch best sellers so we can render a native masonry feed under prompts.
   useEffect(() => {
-    const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID
-    if (!venueId) return
+    setMounted(true)
+  }, [])
+
+  // Lock body scroll while the location modal is open (prevents scrolling the sticky header/page behind it).
+  useEffect(() => {
+    if (!showLocationDropdown) return
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [showLocationDropdown])
+
+  const getCreatedTs = (p: Product) => {
+    const raw: any =
+      (p as any)?.createdAt ??
+      (p as any)?.created ??
+      (p as any)?.updatedAt ??
+      (p as any)?.updated ??
+      (p as any)?.publishedAt
+    if (typeof raw === 'number') return raw
+    if (typeof raw === 'string') {
+      const t = Date.parse(raw)
+      return Number.isFinite(t) ? t : 0
+    }
+    return 0
+  }
+
+  const getTotalSold = (p: Product) => {
+    const n = (p as any)?.totalSold
+    return typeof n === 'number' ? n : 0
+  }
+
+  const getCannabisType = (p: Product) => `${(p as any)?.cannabisType || ''}`.toUpperCase()
+
+  const dedupeProducts = (arr: Product[]) => {
+    const byId = new Map<string, Product>()
+    arr.forEach((p) => {
+      if (p?.id) byId.set(p.id, p)
+    })
+    return Array.from(byId.values())
+  }
+
+  const deriveFeedFromCatalog = (feedId: FeedId, catalog: Product[]): Product[] => {
+    const list = catalog || []
+
+    if (feedId === 'best-sellers') {
+      return [...list].sort((a, b) => getTotalSold(b) - getTotalSold(a))
+    }
+
+    if (feedId === 'trending') {
+      return [...list].sort((a, b) => getCreatedTs(b) - getCreatedTs(a))
+    }
+
+    if (feedId === 'easy-picks') {
+      const easy = list.filter((p) => {
+        const productType = getProductType(p)
+        // Check both productType and also check if category matches (fallback)
+        const categoryLower = (p.category || '').toLowerCase()
+        const isPreRollCategory = /pre[\s-]?roll/.test(categoryLower)
+        const isVapeCategory = /vape|vaporizer/.test(categoryLower)
+        const isPreRoll =
+          productType === 'preRoll' ||
+          p.type === ProductType.PRE_ROLLS ||
+          isPreRollCategory
+        const isVape =
+          productType === 'vape' ||
+          p.type === ProductType.VAPORIZERS ||
+          isVapeCategory
+        
+        return isPreRoll || isVape
+      })
+      return [...easy].sort((a, b) => getTotalSold(b) - getTotalSold(a))
+    }
+
+    if (feedId === 'calm-unwind') {
+      const calm = list.filter((p) => {
+        const ct = getCannabisType(p)
+        return ct === 'INDICA' || ct === 'HYBRID_INDICA'
+      })
+      return [...calm].sort((a, b) => getTotalSold(b) - getTotalSold(a))
+    }
+
+    if (feedId === 'uplifting-daytime') {
+      const up = list.filter((p) => {
+        const ct = getCannabisType(p)
+        return ct === 'SATIVA' || ct === 'HYBRID_SATIVA'
+      })
+      return [...up].sort((a, b) => getTotalSold(b) - getTotalSold(a))
+    }
+
+    if (feedId === 'best-value') {
+      const discounted = list.filter((p: any) => getDiscountPercent(p) > 0)
+      return [...discounted].sort((a: any, b: any) => getDiscountPercent(b) - getDiscountPercent(a))
+    }
+
+    if (feedId === 'staff-picks') {
+      const featured = list.filter((p: any) => p?.featured)
+      if (featured.length > 0) return featured
+      const seed = new Date().toISOString().slice(0, 10)
+      return [...list].sort((a: any, b: any) => {
+        const ha = hashStringToInt(`${seed}:${a?.id || ''}`)
+        const hb = hashStringToInt(`${seed}:${b?.id || ''}`)
+        return ha - hb
+      })
+    }
+
+    return list
+  }
+
+  const fetchFeedProducts = async (
+    feedId: FeedId,
+    options?: { signal?: AbortSignal }
+  ): Promise<Product[]> => {
+    const signal = options?.signal
+    const cached = homeFeedCatalogRef.current
+    if (cached.length > 0) {
+      return deriveFeedFromCatalog(feedId, cached)
+    }
+
+    // Fallback: single request, then derive locally (avoids 429 bursts).
+    const res = await listDispenseProducts<Product>(
+      { limit: 120, quantityMin: 1 },
+      signal ? { signal } : undefined
+    )
+    const catalog = res.data || []
+    homeFeedCatalogRef.current = catalog
+    return deriveFeedFromCatalog(feedId, catalog)
+  }
+
+  // Prefetch a single "home feed catalog" and derive all sections locally (prevents 429 bursts).
+  useEffect(() => {
     if (!showPrePrompts || showResults || chatMessages.length > 0) return
-    if (bestSellerProducts.length > 0) return
 
     const controller = new AbortController()
-    const reqId = ++bestSellerPrefetchReqIdRef.current
-    setBestSellerLoading(true)
-    productService
-      .list({
-        venueId,
-        limit: 30,
-        sort: '-totalSold',
-        quantityMin: 1,
-      }, { signal: controller.signal })
-      .then((res) => {
-        if (reqId !== bestSellerPrefetchReqIdRef.current) return
-        setBestSellerProducts(res.data || [])
-      })
-      .catch((err) => {
-        if (reqId !== bestSellerPrefetchReqIdRef.current) return
-        if (err?.name === 'AbortError') return
-        console.error('Error prefetching best sellers:', err)
-        setBestSellerProducts([])
-      })
-      .finally(() => {
-        if (reqId !== bestSellerPrefetchReqIdRef.current) return
-        setBestSellerLoading(false)
-      })
+    const reqId = ++feedPrefetchReqIdRef.current
 
-    return () => {
-      controller.abort()
+    const run = async () => {
+      try {
+        setBestSellerLoading(true)
+        setTrendingLoading(true)
+        setEasyPicksLoading(true)
+        setCalmUnwindLoading(true)
+        setBestValueLoading(true)
+        setUpliftingLoading(true)
+        setStaffPicksLoading(true)
+
+        // Two small requests (sequential) to seed the catalog with both "popular" and "new".
+        const topSold = await listDispenseProducts<Product>(
+          { limit: 120, sort: '-totalSold', quantityMin: 1 },
+          { signal: controller.signal }
+        )
+        const recent = await listDispenseProducts<Product>(
+          { limit: 120, sort: '-created', quantityMin: 1 },
+          { signal: controller.signal }
+        )
+        const seedCatalog = dedupeProducts([...(topSold.data || []), ...(recent.data || [])])
+
+        if (reqId !== feedPrefetchReqIdRef.current) return
+
+        homeFeedCatalogRef.current = seedCatalog
+
+        // Avoid repeating the same products across sections where possible.
+        const used = new Set<string>()
+        const excludeUsed = (arr: Product[], limit: number) => {
+          const out: Product[] = []
+          for (const p of arr) {
+            if (!p?.id) continue
+            if (used.has(p.id)) continue
+            used.add(p.id)
+            out.push(p)
+            if (out.length >= limit) break
+          }
+          return out
+        }
+
+        const bestSellers = deriveFeedFromCatalog('best-sellers', seedCatalog)
+        const trending = deriveFeedFromCatalog('trending', seedCatalog)
+        const easy = deriveFeedFromCatalog('easy-picks', seedCatalog)
+        const calm = deriveFeedFromCatalog('calm-unwind', seedCatalog)
+        const value = deriveFeedFromCatalog('best-value', seedCatalog)
+        const uplifting = deriveFeedFromCatalog('uplifting-daytime', seedCatalog)
+        const staff = deriveFeedFromCatalog('staff-picks', seedCatalog)
+
+        setBestSellerProducts(excludeUsed(bestSellers || [], 30))
+        setTrendingProducts(excludeUsed(trending || [], 30))
+        setEasyPicksProducts(excludeUsed(easy || [], 30))
+        setCalmUnwindProducts(excludeUsed(calm || [], 30))
+        setBestValueProducts(excludeUsed(value || [], 50))
+        setUpliftingProducts(excludeUsed(uplifting || [], 30))
+        setStaffPicksProducts(excludeUsed(staff || [], 30))
+      } catch (err: any) {
+        if (reqId !== feedPrefetchReqIdRef.current) return
+        if (err?.name === 'AbortError') return
+        console.error('Error prefetching feeds:', err)
+      } finally {
+        if (reqId !== feedPrefetchReqIdRef.current) return
+        setBestSellerLoading(false)
+        setTrendingLoading(false)
+        setEasyPicksLoading(false)
+        setCalmUnwindLoading(false)
+        setBestValueLoading(false)
+        setUpliftingLoading(false)
+        setStaffPicksLoading(false)
+      }
     }
-  }, [bestSellerProducts.length, chatMessages.length, showPrePrompts, showResults])
+
+    run()
+    return () => controller.abort()
+  }, [
+    chatMessages.length,
+    showPrePrompts,
+    showResults,
+    trendingProducts.length,
+    easyPicksProducts.length,
+    calmUnwindProducts.length,
+    bestValueProducts.length,
+    upliftingProducts.length,
+    staffPicksProducts.length,
+  ])
 
   const filterPills = useMemo<FilterPill[]>(() => {
     const pills: FilterPill[] = []
@@ -707,18 +1126,20 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     recognitionRef.current = recog
   }, [])
 
+  // Load full catalog for facets ONLY when the filter UI is opened.
+  // This prevents a big burst of requests on initial page load (429 rate limits).
   useEffect(() => {
+    if (!showFilterNavInAiMode && !showFilterNav && !filterModalOpen) return
+    if (allProductsGlobal.length > 0) return
+
     let cancelled = false
     const loadAll = async () => {
       try {
         // Fetch full catalog (no quantityMin) so facets reflect all inventory
-        let res = await fetchAllProducts({
-          venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
-        })
+        let res = await fetchAllProducts({})
         // Fallback to in-stock only if empty
-        if ((!res || res.length === 0) && process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID) {
+        if (!res || res.length === 0) {
           res = await fetchAllProducts({
-            venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
             quantityMin: 1,
           })
         }
@@ -737,47 +1158,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     return () => {
       cancelled = true
     }
-  }, [])
-
-  // Fetch category counts using same API pattern as CategoryGrid
-  useEffect(() => {
-    let cancelled = false
-    const fetchCategoryCounts = async () => {
-      const counts: Record<string, number> = {}
-      try {
-        await Promise.all(
-          CATEGORY_DEFS.map(async (cat) => {
-            try {
-              // Fetch with higher limit to get accurate count, same as CategoryGrid pattern
-              const res = await productService.list({
-                venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
-                categoryId: cat.id,
-                limit: 200, // Fetch enough to get accurate count
-                quantityMin: 1,
-              })
-              // Use data length as count (API may paginate, but we get what's available)
-              const count = res.data?.length || 0
-              // Check for pagination info if available
-              const total = (res as any)?.total || (res as any)?.count || count
-              counts[cat.name] = total
-            } catch (err) {
-              console.warn(`Failed to fetch count for ${cat.name}`, err)
-              counts[cat.name] = 0
-            }
-          })
-        )
-        if (!cancelled) {
-          setCategoryCountsByApi(counts)
-        }
-      } catch (err) {
-        console.warn('Failed to fetch category counts', err)
-      }
-    }
-    fetchCategoryCounts()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  }, [allProductsGlobal.length, baseProducts.length, filterModalOpen, showFilterNav, showFilterNavInAiMode])
 
   const appendUserMessage = (content: string, requestId: string) => {
     const msgKey = `user-${requestId}`
@@ -871,7 +1252,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       // Build API params - fetch ALL products, filter client-side
       // Don't use categoryId filters as they might conflict with productType filtering
       const params: any = {
-        venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
         quantityMin: 1, // Only in-stock
         limit: 200, // Fetch more products initially
       }
@@ -888,7 +1268,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       } catch (err) {
         // If pagination fails, try single request
         console.warn('Pagination failed, trying single request:', err)
-        const res = await productService.list(params)
+        const res = await listDispenseProducts<Product>(params)
         allProducts = res.data || []
       }
       
@@ -896,7 +1276,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       if (allProducts.length === 0 && presetId !== 'pre-rolls-ready') {
         const fallbackParams = { ...params }
         delete fallbackParams.quantityMin
-        const res = await productService.list(fallbackParams)
+        const res = await listDispenseProducts<Product>(fallbackParams)
         allProducts = res.data || []
       }
 
@@ -1007,64 +1387,31 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
 
   // Call OpenAI API for chat responses
   const callOpenAI = async (userMessage: string, concise: boolean = false, requestId?: string): Promise<string> => {
-    const apiKey = process.env.NEXT_PUBLIC_OPENAI_API_KEY
-    if (!apiKey) {
-      throw new Error('OpenAI API key is not configured')
-    }
-    const systemPrompt = concise
-      ? `You are a helpful assistant for a cannabis dispensary called "Just A Little Higher" (JALH) in New York. Provide concise, educational answers (2-4 sentences maximum). Be friendly, knowledgeable, and compliant with cannabis regulations. Keep responses brief and to the point.
-
-About JALH: ${about.summary}
-
-Available Locations:
-${stores.map(s => `- ${s.name}: ${s.address || `${s.addressLine1}, ${s.addressLine2}`}${s.status === 'coming_soon' ? ' (Coming Soon)' : ''}${s.phone ? ` | Phone: ${s.phone}` : ''}${s.hoursDisplay ? ` | Hours: ${s.hoursDisplay}` : ''}`).join('\n')}
-
-If asked about specific products, you can mention that the customer can search for them using the product search feature. If asked about store locations, hours, or contact info, provide accurate information from the list above.`
-      : `You are a helpful assistant for a cannabis dispensary called "Just A Little Higher" (JALH) in New York. You help customers with questions about cannabis products, effects, usage, and general information. Be friendly, knowledgeable, and compliant with cannabis regulations.
-
-About JALH: ${about.summary}
-
-Available Locations:
-${stores.map(s => `- ${s.name}: ${s.address || `${s.addressLine1}, ${s.addressLine2}`}${s.status === 'coming_soon' ? ' (Coming Soon)' : ''}${s.phone ? ` | Phone: ${s.phone}` : ''}${s.hoursDisplay ? ` | Hours: ${s.hoursDisplay}` : ''}`).join('\n')}
-
-If asked about specific products, you can mention that the customer can search for them using the product search feature. If asked about store locations, hours, or contact info, provide accurate information from the list above.`
-    
     try {
       log('openai-call', { requestId, userMessage, concise })
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'content-type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            ...chatMessages.map(msg => ({
-              role: msg.role,
-              content: msg.content
-            })),
-            {
-              role: 'user',
-              content: userMessage
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.7,
+          userMessage,
+          concise,
+          requestId,
+          messages: chatMessages.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          })),
         }),
       })
 
       if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`)
+        throw new Error(`AI API error: ${response.statusText}`)
       }
 
       const data = await response.json()
-      log('openai-response', { requestId, usage: data?.usage })
-      return data.choices[0]?.message?.content || 'Sorry, I could not generate a response.'
+      log('openai-response', { requestId })
+      return data?.content || 'Sorry, I could not generate a response.'
     } catch (error) {
       console.error('Error calling OpenAI:', error)
       return 'Sorry, I encountered an error. Please try again.'
@@ -1218,6 +1565,9 @@ If asked about specific products, you can mention that the customer can search f
     if (!userQuery.trim()) return { products: [], summary: '' }
 
     const rid = requestId || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`
+    // Skip strain filtering for "best vapes for beginners" to show all vapes
+    const isVapesForBeginners = userQuery.toLowerCase().includes('best vapes for beginners') || 
+                                 userQuery.toLowerCase().includes('vapes for beginners')
     if (inFlightRequestIds.current.has(rid)) {
       log('skip-inflight', { requestId: rid, query: userQuery })
       return { products: [], summary: '' }
@@ -1266,7 +1616,6 @@ If asked about specific products, you can mention that the customer can search f
 
       // Build search params (server-side filtering where possible)
       const params: any = {
-        venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
         limit: 200,
         quantityMin: 1,
       }
@@ -1333,11 +1682,11 @@ If asked about specific products, you can mention that the customer can search f
           allProducts = await fetchAllProducts(params)
         } catch (err) {
           console.warn('Pagination failed, falling back to single request:', err)
-          const res = await productService.list(params)
+          const res = await listDispenseProducts<Product>(params)
           allProducts = res.data || []
         }
       } else {
-        const res = await productService.list(params)
+        const res = await listDispenseProducts<Product>(params)
         allProducts = res.data || []
       }
 
@@ -1350,7 +1699,7 @@ If asked about specific products, you can mention that the customer can search f
       // that have strain info in name/description but not in structured fields
       // Check both filters.strainType (from intent router) and appliedFilters.strains (from FilterNav)
       const strainFiltersToCheck: string[] = []
-      if (filters.strainType) {
+      if (filters.strainType && !isVapesForBeginners) {
         strainFiltersToCheck.push(filters.strainType)
       }
       // Also check appliedFilters.strains if it exists (for when Hybrid is added via FilterNav)
@@ -1633,7 +1982,7 @@ If asked about specific products, you can mention that the customer can search f
         try {
           const fallbackParams = { ...params }
           delete fallbackParams.categoryId // Remove category filter
-          const fallbackRes = await productService.list(fallbackParams)
+          const fallbackRes = await listDispenseProducts<Product>(fallbackParams)
           const fallbackProducts = fallbackRes.data || []
           log('effect-filter-fallback-fetch', { 
             requestId: rid, 
@@ -1808,7 +2157,7 @@ If asked about specific products, you can mention that the customer can search f
       
       // Special handling: For sleep/relaxation queries, include both Indica and all Hybrid types in FilterNav
       let strainTypesToAdd: string[] = []
-      if (filters.strainType) {
+      if (filters.strainType && !isVapesForBeginners) {
         strainTypesToAdd.push(filters.strainType)
         
         // If it's a sleep/relaxation query with Indica, also include all Hybrid types
@@ -1856,9 +2205,9 @@ If asked about specific products, you can mention that the customer can search f
         brands: filters.brand 
           ? mergeFilterArray(activeFilters.brands, [filters.brand], normalizationFacets.brands)
           : activeFilters.brands || [],
-        strains: strainTypesToAdd.length > 0
+        strains: (strainTypesToAdd.length > 0 && !isVapesForBeginners)
           ? mergeFilterArray(activeFilters.strains, strainTypesToAdd, normalizationFacets.strains)
-          : activeFilters.strains || [],
+          : (isVapesForBeginners ? [] : activeFilters.strains || []),
         terpenes: filters.terpenes && filters.terpenes.length
           ? mergeFilterArray(activeFilters.terpenes, filters.terpenes, normalizationFacets.terpenes)
           : activeFilters.terpenes || [],
@@ -1887,11 +2236,9 @@ If asked about specific products, you can mention that the customer can search f
         const selectedCategories = CATEGORY_DEFS.filter((c) => appliedFilters.categories!.includes(c.name))
         if (selectedCategories.length > 0) {
           try {
-            const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!
             const lists = await Promise.all(
               selectedCategories.map((cat) =>
                 fetchAllProducts({
-                  venueId,
                   categoryId: cat.id,
                   quantityMin: 1,
                   // Include discount filter if specified - API expects "discounted" parameter
@@ -2568,11 +2915,9 @@ License: ${license}`
           // IMPORTANT: don't cap at 200. Multi-filtering (e.g. Flower + Sativa) can easily
           // miss matches if they aren't in the first page. Pull the full category set (paged)
           // then apply remaining filters client-side.
-          const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!
           const lists = await Promise.all(
             selectedCategories.map((cat) =>
               fetchAllProducts({
-                venueId,
                 categoryId: cat.id,
                 quantityMin: 1,
               })
@@ -2686,7 +3031,7 @@ License: ${license}`
   const hasFacetData = facetSource.length > 0
 
   // Handler for AI Mode prompt clicks
-  const handleAiModePrompt = async (prompt: typeof AI_MODE_PROMPTS[0]) => {
+  const handleAiModePrompt = async (prompt: AiPrompt) => {
     // Keep AI mode open - don't close it
     // Use label for display consistency, but query for actual search processing
     setQuery(prompt.label)
@@ -2731,17 +3076,10 @@ For specific details about earning rates and redemption options, please contact 
       }
       
       if (prompt.promptType === 'bestsellers') {
-        // Fetch bestselling products
         setLoading(true)
         setShowResults(true)
         try {
-          const res = await productService.list({
-            venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
-            limit: 50,
-            sort: '-totalSold',
-            quantityMin: 1,
-          })
-          const bestSellers = res.data || []
+          const bestSellers = await fetchFeedProducts('best-sellers')
           setProducts(bestSellers)
           setBaseProducts(bestSellers)
           if (bestSellers.length > 0) {
@@ -2755,6 +3093,33 @@ For specific details about earning rates and redemption options, please contact 
         } finally {
           setLoading(false)
         }
+        return
+      }
+
+      if (prompt.promptType === 'feed' && prompt.feedId) {
+        setLoading(true)
+        setShowResults(true)
+        try {
+          const list = await fetchFeedProducts(prompt.feedId)
+          setProducts(list)
+          setBaseProducts(list)
+          appendAssistantMessage(`Here are ${prompt.label.toLowerCase()}:`, requestId)
+        } catch (error) {
+          console.error('Error fetching feed:', error)
+          appendAssistantMessage(`Sorry, I couldn't load that section right now.`, requestId)
+        } finally {
+          setLoading(false)
+        }
+        return
+      }
+      
+      if (prompt.promptType === 'category' && prompt.categorySlug) {
+        // Navigate directly to category page
+        const storeId = getActiveStoreId()
+        const categoryPath = storeId 
+          ? `/stores/${storeId}/shop/${prompt.categorySlug}`
+          : `/shop/${prompt.categorySlug}`
+        router.push(categoryPath)
         return
       }
       
@@ -2781,16 +3146,26 @@ For specific details about earning rates and redemption options, please contact 
       // Default: handle as product shopping
       const intentResult = routeIntent(prompt.query)
       
+      // For "best vapes for beginners" prompt, remove strain filtering to show all vapes
+      let filtersToUse = intentResult.extracted
+      if (prompt.id === 'prompt-vapes-beginners') {
+        filtersToUse = {
+          ...intentResult.extracted,
+          strainType: undefined,
+          effectIntent: undefined,
+        }
+      }
+      
       if (intentResult.intent === 'PRODUCT_SHOPPING' || intentResult.intent === 'PRODUCT_INFO') {
         // Use label for display consistency, query for processing
         // The searchProductsWithFilters function will handle including hybrid for sleep/relaxation queries
-        await searchProductsWithFilters(intentResult.extracted, prompt.label, requestId)
+        await searchProductsWithFilters(filtersToUse, prompt.label, requestId)
       } else if (intentResult.intent === 'STORE_INFO') {
         handleStoreInfo(intentResult, prompt.label, requestId)
       } else {
         // Fallback for other intents
         // Use label for display consistency, query for processing
-        await searchProductsWithFilters(intentResult.extracted, prompt.label, requestId)
+        await searchProductsWithFilters(filtersToUse, prompt.label, requestId)
       }
     } catch (error) {
       console.error('Error processing AI mode prompt:', error)
@@ -2856,7 +3231,7 @@ For specific details about earning rates and redemption options, please contact 
         >
           <div className="max-w-2xl mx-auto">
             {/* Location modal */}
-            {showLocationDropdown && (
+            {mounted && showLocationDropdown && createPortal(
               <div className="fixed inset-0 z-[60] bg-white/95 backdrop-blur-sm">
                 <div className="max-w-2xl mx-auto h-full flex flex-col">
                   <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -2883,11 +3258,11 @@ For specific details about earning rates and redemption options, please contact 
                               router.push(`/stores/${store.id}`)
                             }
                           }}
-                        className={[
-                          'w-full text-left rounded-xl border px-4 py-3',
-                          'hover:bg-gray-50 transition',
-                          selectedLocation === store.id ? 'border-green-700 bg-gray-50' : 'border-gray-200 bg-white',
-                        ].join(' ')}
+                          className={[
+                            'w-full text-left rounded-xl border px-4 py-3',
+                            'hover:bg-gray-50 transition',
+                            selectedLocation === store.id ? 'border-green-700 bg-gray-50' : 'border-gray-200 bg-white',
+                          ].join(' ')}
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div>
@@ -2908,7 +3283,8 @@ For specific details about earning rates and redemption options, please contact 
                     </div>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
 
             {/* Filter modal (AI Mode) */}
@@ -3354,131 +3730,199 @@ For specific details about earning rates and redemption options, please contact 
 
             {/* Show prompts if no results yet and pre-prompts should be visible */}
             {showPrePrompts && !showResults && chatMessages.length === 0 && (
-              <div className="space-y-3">
-                {/* The 3 prompts - directly under the search box */}
-                {AI_MODE_PROMPTS.slice(0, 3).map((prompt) => (
-                  <div key={prompt.id}>
-                    <button
-                      onClick={() => handleAiModePrompt(prompt)}
-                      className="w-full flex items-center rounded-2xl overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
-                    >
-                      <div className="relative w-20 h-20 flex-shrink-0">
-                        <Image
-                          src={prompt.image}
-                          alt={prompt.label}
-                          fill
-                          className="object-cover"
-                          sizes="80px"
-                        />
-                      </div>
-                      <div className="flex-1 px-4 py-4">
-                        <p className="text-base font-medium bg-gradient-to-r from-pink-500 via-blue-500 to-pink-500 bg-clip-text text-transparent bg-[length:200%_100%] animate-gradient-x">
-                          {prompt.label}
-                        </p>
-                      </div>
-                      <div className="flex-shrink-0 pr-4">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          className="h-5 w-5"
-                          aria-hidden="true"
-                        >
-                          <defs>
-                            <linearGradient id={`promptStarGradient-${prompt.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
-                              <stop offset="0%" stopColor="#ec4899" />
-                              <stop offset="50%" stopColor="#3b82f6" />
-                              <stop offset="100%" stopColor="#ec4899" />
-                              <animateTransform
-                                attributeName="gradientTransform"
-                                type="translate"
-                                values="-100 0;100 0;-100 0"
-                                dur="3s"
-                                repeatCount="indefinite"
-                              />
-                            </linearGradient>
-                          </defs>
-                          <path
-                            fill={`url(#promptStarGradient-${prompt.id})`}
-                            d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
-                          />
-                        </svg>
-                      </div>
-                    </button>
-                  </div>
-                ))}
+              <div className="space-y-5">
+                {(() => {
+                  const byId = (id: string) => AI_MODE_PROMPTS.find((p) => p.id === id)
 
-                {/* Loyalty Program Banner - under the 3 prompts */}
-                <button
-                  onClick={() => {
-                    const loyaltyPrompt = {
-                      id: 'loyalty-program',
-                      label: 'How do I earn and redeem loyalty points?',
-                      query: 'how do I earn and redeem loyalty points',
-                      category: 'Loyalty Program',
-                      image: '/images/post-thumb-04.jpg',
-                      promptType: 'loyalty' as const,
-                    }
-                    handleAiModePrompt(loyaltyPrompt)
-                  }}
-                  className="w-full relative rounded-2xl overflow-hidden group cursor-pointer"
-                >
-                  <div className="relative h-24 sm:h-28">
-                    <Image
-                      src="/images/post-thumb-04.jpg"
-                      alt="Loyalty Program"
-                      fill
-                      className="object-cover"
-                      sizes="100vw"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-black/40" />
-                    <div className="absolute inset-0 flex flex-col justify-end items-start px-6 sm:px-8 pb-3 sm:pb-4 text-white">
-                      <h3 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg">
-                        How do I earn and redeem loyalty points?
-                      </h3>
-                      <p className="text-sm sm:text-base text-white/90 drop-shadow-md">
-                        Learn about our rewards program
-                      </p>
-                    </div>
-                  </div>
-                </button>
-
-                {/* Best sellers masonry grid - directly after the banner */}
-                {(bestSellerLoading || bestSellerProducts.length > 0) && (
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between px-1">
-                      <div className="text-sm font-semibold text-gray-900">Best sellers this week</div>
+                  const PromptCard = ({ prompt }: { prompt: AiPrompt }) => (
+                    <div key={prompt.id}>
                       <button
-                        type="button"
-                        onClick={() => {
-                          const p = AI_MODE_PROMPTS.find((x) => x.id === 'best-sellers')
-                          if (p) handleAiModePrompt(p)
-                        }}
-                        className="text-sm font-medium text-pink-600 hover:text-pink-700 transition"
+                        onClick={() => handleAiModePrompt(prompt)}
+                        className="w-full flex items-center rounded-2xl overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
                       >
-                        View all
+                        <div className="relative w-20 h-20 flex-shrink-0">
+                          <Image src={prompt.image} alt={prompt.label} fill className="object-cover" sizes="80px" />
+                        </div>
+                        <div className="flex-1 px-4 py-4">
+                          <p className="text-base font-medium bg-gradient-to-r from-pink-500 via-blue-500 to-pink-500 bg-clip-text text-transparent bg-[length:200%_100%] animate-gradient-x">
+                            {prompt.label}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0 pr-4">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+                            <defs>
+                              <linearGradient id={`promptStarGradient-${prompt.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#ec4899" />
+                                <stop offset="50%" stopColor="#3b82f6" />
+                                <stop offset="100%" stopColor="#ec4899" />
+                                <animateTransform attributeName="gradientTransform" type="translate" values="-100 0;100 0;-100 0" dur="3s" repeatCount="indefinite" />
+                              </linearGradient>
+                            </defs>
+                            <path
+                              fill={`url(#promptStarGradient-${prompt.id})`}
+                              d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                            />
+                          </svg>
+                        </div>
                       </button>
                     </div>
+                  )
 
-                    {bestSellerLoading ? (
-                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                          <div
-                            key={`bestseller-skeleton-${i}`}
-                            className="h-40 rounded-2xl bg-gray-100 animate-pulse"
-                          />
-                        ))}
+                  const renderMany = (ids: string[]) =>
+                    ids
+                      .map((id) => byId(id))
+                      .filter(Boolean)
+                      .map((p) => <PromptCard key={(p as AiPrompt).id} prompt={p as AiPrompt} />)
+
+                  const FeedSection = ({
+                    title,
+                    viewAllPromptId,
+                    loading,
+                    items,
+                  }: {
+                    title: string
+                    viewAllPromptId: string
+                    loading: boolean
+                    items: Product[]
+                  }) => (
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between px-1">
+                        <div className="text-sm font-semibold text-gray-900">{title}</div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const p = byId(viewAllPromptId)
+                            if (p) handleAiModePrompt(p as AiPrompt)
+                          }}
+                          className="text-sm font-medium text-pink-600 hover:text-pink-700 transition"
+                        >
+                          View all
+                        </button>
                       </div>
-                    ) : (
-                      <div className="mt-3 columns-2 sm:columns-3 gap-3">
-                        {bestSellerProducts.slice(0, 12).map((product, i) => (
-                          <div key={product.id} className="mb-3 break-inside-avoid">
-                            <BestSellerMasonryTile product={product} index={i} />
+
+                      {loading ? (
+                        <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={`${title}-skeleton-${i}`} className="h-40 rounded-2xl bg-gray-100 animate-pulse" />
+                          ))}
+                        </div>
+                      ) : items.length === 0 ? (
+                        <div className="mt-3 px-1 text-sm text-gray-500">No products available right now.</div>
+                      ) : (
+                        <div className="mt-3 grid grid-cols-2 gap-3 sm:block sm:columns-3 sm:gap-3">
+                          {items.slice(0, 12).map((product, i) => (
+                            <div key={product.id} className="sm:mb-3 sm:break-inside-avoid">
+                              <BestSellerMasonryTile product={product} index={i} />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+
+                  return (
+                    <>
+                      {/* 3 prompts */}
+                      {renderMany(['recommend-deals', 'recommend-calm-flower', 'store-info'])}
+
+                      {/* Banner */}
+                      <button
+                        onClick={() => {
+                          const loyaltyPrompt = { id: 'loyalty-program', label: 'How do I earn and redeem loyalty points?', query: 'how do I earn and redeem loyalty points', category: 'Loyalty Program', image: '/images/post-thumb-04.jpg', promptType: 'loyalty' as const }
+                          handleAiModePrompt(loyaltyPrompt)
+                        }}
+                        className="w-full relative rounded-2xl overflow-hidden group cursor-pointer mt-3"
+                      >
+                        <div className="relative h-24 sm:h-28">
+                          <Image src="/images/post-thumb-04.jpg" alt="Loyalty Program" fill className="object-cover" sizes="100vw" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-black/40" />
+                          <div className="absolute inset-0 flex flex-col justify-end items-start px-6 sm:px-8 pb-3 sm:pb-4 text-white">
+                            <h3 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg">
+                              How do I earn and redeem loyalty points?
+                            </h3>
+                            <p className="text-sm sm:text-base text-white/90 drop-shadow-md">
+                              Learn about our rewards program
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                        </div>
+                      </button>
+
+                      {/* Best selling this week */}
+                      <FeedSection
+                        title="Best selling this week"
+                        viewAllPromptId="feed-best-sellers"
+                        loading={bestSellerLoading}
+                        items={bestSellerProducts}
+                      />
+
+                      {/* 2 prompts */}
+                      {renderMany(['prompt-edibles-low-dose', 'prompt-concentrates-flavor'])}
+
+                      {/* Trending Right Now */}
+                      <FeedSection
+                        title="Trending Right Now"
+                        viewAllPromptId="feed-trending"
+                        loading={trendingLoading}
+                        items={trendingProducts}
+                      />
+
+                      {/* 2 prompts */}
+                      {renderMany(['prompt-beverages', 'prompt-balanced-1-1'])}
+
+                      {/* Easy Picks for First Timers */}
+                      <FeedSection
+                        title="Easy Picks for First Timers"
+                        viewAllPromptId="feed-easy-picks"
+                        loading={easyPicksLoading}
+                        items={easyPicksProducts}
+                      />
+
+                      {/* 2 prompts */}
+                      {renderMany(['prompt-pre-roll-under-25', 'prompt-vapes-beginners'])}
+
+                      {/* Calm & Unwind Favorites */}
+                      <FeedSection
+                        title="Calm & Unwind Favorites"
+                        viewAllPromptId="feed-calm-unwind"
+                        loading={calmUnwindLoading}
+                        items={calmUnwindProducts}
+                      />
+
+                      {/* 1 prompt */}
+                      {renderMany(['prompt-sleep-edible'])}
+
+                      {/* Best Value Right Now */}
+                      <FeedSection
+                        title="Best Value Right Now"
+                        viewAllPromptId="feed-best-value"
+                        loading={bestValueLoading}
+                        items={bestValueProducts}
+                      />
+
+                      {/* 1 prompt */}
+                      {renderMany(['prompt-bundle-under-80'])}
+
+                      {/* Uplifting & Daytime Picks */}
+                      <FeedSection
+                        title="Uplifting & Daytime Picks"
+                        viewAllPromptId="feed-uplifting-daytime"
+                        loading={upliftingLoading}
+                        items={upliftingProducts}
+                      />
+
+                      {/* 1 prompt */}
+                      {renderMany(['prompt-daytime-vape'])}
+
+                      {/* Staff Picks */}
+                      <FeedSection
+                        title="Staff Picks"
+                        viewAllPromptId="feed-staff-picks"
+                        loading={staffPicksLoading}
+                        items={staffPicksProducts}
+                      />
+                    </>
+                  )
+                })()}
               </div>
             )}
           </div>
