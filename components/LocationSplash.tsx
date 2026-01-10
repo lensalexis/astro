@@ -110,6 +110,7 @@ export default function LocationSplash() {
   // - keep videos muted + playsInline (required for iOS autoplay)
   // - imperatively call play() on the active video (some browsers ignore autoPlay attr)
   // - retry when tab becomes visible
+  // - special handling for mobile to ensure video loads before playing
   useEffect(() => {
     const syncAndPlayActive = async () => {
       const v = videoRefs.current[currentMediaIndex]
@@ -117,6 +118,7 @@ export default function LocationSplash() {
       
       // Always keep volume at 50% (muted controls whether you hear it)
       v.volume = 0.5
+      // CRITICAL: On mobile, video MUST be muted for autoplay to work
       v.muted = !soundEnabled
       v.playsInline = true
       
@@ -127,13 +129,57 @@ export default function LocationSplash() {
         // ignore
       }
       
+      // On mobile, ensure video is loaded before playing
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+      
+      if (isMobile && v.readyState < 2) {
+        // Video not loaded yet, wait for it
+        await new Promise<void>((resolve) => {
+          const onCanPlay = () => {
+            v.removeEventListener('canplay', onCanPlay)
+            resolve()
+          }
+          v.addEventListener('canplay', onCanPlay)
+          // Force load if needed
+          if (v.readyState === 0) {
+            v.load()
+          }
+          // Timeout after 2 seconds to prevent hanging
+          setTimeout(() => resolve(), 2000)
+        })
+      }
+      
       // Play the video - ensure it actually plays
       try {
-        await v.play()
+        const playPromise = v.play()
+        if (playPromise !== undefined) {
+          await playPromise
+        }
       } catch (err) {
         // Autoplay can still be blocked (power saver / data saver / user settings).
-        // If blocked, we keep the background element; user interaction will usually allow play.
-        console.warn('Video autoplay blocked:', err)
+        // Retry after a short delay on mobile
+        if (isMobile) {
+          setTimeout(async () => {
+            try {
+              // Ensure muted for mobile autoplay
+              v.muted = true
+              await v.play()
+            } catch (retryErr) {
+              console.warn('Video autoplay blocked after retry:', retryErr)
+              // Final retry after another delay
+              setTimeout(async () => {
+                try {
+                  v.muted = true
+                  await v.play()
+                } catch (finalErr) {
+                  console.warn('Video autoplay blocked after final retry:', finalErr)
+                }
+              }, 300)
+            }
+          }, 100)
+        } else {
+          console.warn('Video autoplay blocked:', err)
+        }
       }
     }
 
@@ -146,15 +192,22 @@ export default function LocationSplash() {
       }
     })
 
-    // Play the active video
-    syncAndPlayActive()
+    // Small delay to ensure video element is ready, especially on mobile
+    // Mobile devices need more time for video element to be ready after transition
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+    const delay = isMobile ? 150 : 50
+    const timeoutId = setTimeout(() => {
+      syncAndPlayActive()
+    }, delay)
 
     // Retry when tab becomes visible
     const onVis = () => {
       if (document.visibilityState === 'visible') syncAndPlayActive()
     }
     document.addEventListener('visibilitychange', onVis)
+    
     return () => {
+      clearTimeout(timeoutId)
       document.removeEventListener('visibilitychange', onVis)
     }
   }, [currentMediaIndex, soundEnabled])
