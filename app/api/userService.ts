@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { User } from '@/types/user'
 import { RequestOptions, request } from './dispenseApiClient'
 

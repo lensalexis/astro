@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/ui/ProductCard";
-import productService from "@/lib/productService";
+import { listDispenseProducts } from "@/utils/dispenseClient";
 
 const FLOWER_CATEGORY = {
   name: "Flower",
@@ -33,8 +33,7 @@ function CheckoutFinalContent() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const res = await productService.list({
-          venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+        const res = await listDispenseProducts({
           categoryId: FLOWER_CATEGORY.id,
           limit: 3,
           quantityMin: 1,

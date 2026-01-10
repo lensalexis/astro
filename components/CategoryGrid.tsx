@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
-import productService from '@/lib/productService'
 import UniversalProductSlider from '@/components/home/UniversalProductSlider'
 import classNames from 'classnames'
 import type { Product } from '@/types/product'
+import { listDispenseProducts } from '@/utils/dispenseClient'
 
 const categories = [
   { name: 'Flower', slug: 'flower', id: '1af917cd40ce027b', icon: '/images/icon-cannabis-flower.png' },
@@ -35,8 +35,7 @@ export default function CategoryGrid() {
   useEffect(() => {
     async function fetchProducts() {
       try {
-        const res = await productService.list({
-          venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+        const res = await listDispenseProducts<Product>({
           categoryId: activeCategory.id,
           limit: 12,
           quantityMin: 1, // ✅ only in-stock

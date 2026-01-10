@@ -19,11 +19,10 @@ export default function LoginPage() {
     setMessage("Logging in...");
 
     try {
-      const res = await fetch("https://api.dispenseapp.com/2023-03/auth/login", {
+      const res = await fetch("/api/dispense/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dispense-api-key": process.env.NEXT_PUBLIC_DISPENSE_API_KEY!,
         },
         body: JSON.stringify({ username, password }),
       });
@@ -61,11 +60,10 @@ export default function LoginPage() {
 
     setMessage("Creating account...");
     try {
-      const res = await fetch("https://api.dispenseapp.com/2023-03/auth/register", {
+      const res = await fetch("/api/dispense/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-dispense-api-key": process.env.NEXT_PUBLIC_DISPENSE_API_KEY!,
         },
         body: JSON.stringify({
           email: username,
@@ -103,10 +101,9 @@ export default function LoginPage() {
     setMessage("Fetching orders...");
 
     try {
-      const res = await fetch("https://api.dispenseapp.com/2023-03/orders", {
+      const res = await fetch("/api/dispense/orders", {
         headers: {
           Authorization: `Bearer ${token}`,
-          "x-dispense-api-key": process.env.NEXT_PUBLIC_DISPENSE_API_KEY!,
         },
       });
 

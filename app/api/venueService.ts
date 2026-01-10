@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { Venue } from '@/types/venue'
 import { RequestOptions, request } from './dispenseApiClient'
 import { queryClientUtils, QueryClientKey } from '@/utils/queryClient'

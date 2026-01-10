@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const payload: Record<string, any> = {
-      venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
       items,
     };
 

@@ -5,12 +5,12 @@ import Image from 'next/image'
 import { useRouter, useParams } from 'next/navigation'
 import { MapPinIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
-import productService from '@/lib/productService'
 import ProductCard from '@/components/ui/ProductCard'
 import type { Product } from '@/types/product'
 import FilterNav from '@/components/ui/FilterNav'
 import { stores } from '@/lib/stores'
 import { routeIntent } from '@/lib/intentRouter'
+import { listDispenseProducts } from '@/utils/dispenseClient'
 import {
   CATEGORY_DEFS,
   applyProductFilters,
@@ -109,14 +109,9 @@ export default function AIModePage() {
     let cancelled = false
     const loadAll = async () => {
       try {
-        let res = await productService.list({
-          venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
-        })
-        if ((!res || res.data?.length === 0) && process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID) {
-          res = await productService.list({
-            venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
-            quantityMin: 1,
-          })
+        let res = await listDispenseProducts<Product>({ limit: 200 })
+        if ((!res || res.data?.length === 0)) {
+          res = await listDispenseProducts<Product>({ limit: 200, quantityMin: 1 })
         }
         if (!cancelled) {
           setAllProductsGlobal(res.data || [])
@@ -168,10 +163,10 @@ export default function AIModePage() {
         const categories = CATEGORY_DEFS.filter((c) => selectedCategories.includes(c.name))
         const lists = await Promise.all(
           categories.map((cat) =>
-            productService.list({
-              venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+            listDispenseProducts<Product>({
               categoryId: cat.id,
               quantityMin: 1,
+              limit: 200,
             })
           )
         )

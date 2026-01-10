@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import productService from "@/lib/productService";
 import type { Product } from "@/types/product";
 import { ProductType } from "@/types/product";
+import { getDispenseProductById, listDispenseProducts } from "@/utils/dispenseClient";
 import ProductCard, {
   pickPrimaryImage,
   pickDisplayNode,
@@ -37,8 +37,6 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedTierId, setSelectedTierId] = useState<string | null>(null);
 
-  const venueId = process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!;
-
   useEffect(() => {
     let mounted = true;
 
@@ -46,7 +44,7 @@ export default function ProductDetailPage() {
       if (!productId) return;
       setLoading(true);
       try {
-        const data = await productService.getById({ id: productId, venueId });
+        const data = await getDispenseProductById<Product>(productId);
         if (!mounted) return;
         setProduct(data);
         if (data?.tiers?.length) {
@@ -67,7 +65,7 @@ export default function ProductDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [productId, venueId]);
+  }, [productId]);
 
   useEffect(() => {
     const loadRelated = async () => {
@@ -77,8 +75,7 @@ export default function ProductDetailPage() {
       if (!matchingCategory) return;
 
       try {
-        const res = await productService.list({
-          venueId,
+        const res = await listDispenseProducts<Product>({
           categoryId: matchingCategory,
           limit: 8,
           quantityMin: 1,
@@ -92,7 +89,7 @@ export default function ProductDetailPage() {
     };
 
     loadRelated();
-  }, [product, categorySlug, venueId]);
+  }, [product, categorySlug]);
 
   const tierOptions: TierOption[] = useMemo(() => {
     if (!product?.tiers?.length) return [];

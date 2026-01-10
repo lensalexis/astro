@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import productService from '@/lib/productService'
 import { Product } from '@/types/product'
 import Image from 'next/image'
+import { listDispenseProducts } from '@/utils/dispenseClient'
 
 const DEALS_CATEGORY_ID = 'aeebb7e2a7f046e9'
 
@@ -13,9 +13,8 @@ export default function DealsSection() {
   useEffect(() => {
     const fetchDeals = async () => {
       try {
-        const res = await productService.list({
-          venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
-          category: DEALS_CATEGORY_ID,
+        const res = await listDispenseProducts<Product>({
+          categoryId: DEALS_CATEGORY_ID,
           limit: 10,
           sort: '-created',
         })

@@ -9,10 +9,10 @@ export async function GET(req: Request) {
     const limit = Number(searchParams.get("limit")) || 3;
 
     const res = await productService.list({
-      venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
       discounted: discounted === "true",
       limit,
-    });
+    }, { next: { revalidate: 30, tags: ['dispense:products'] } });
 
     const products = (res.data || []).map((p: any) => ({
       id: p.id,

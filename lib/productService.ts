@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { ListProductsParams, ProductsResponse, Product } from '@/types/product'
 import { RequestOptions, request } from '../app/api/dispenseApiClient'
 

@@ -4,11 +4,11 @@ import ProductCard from '@/components/ui/ProductCard'
 
 export default async function DealsProducts() {
   const res = await productService.list({
-    venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+    venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
     discounted: true,   // ✅ pulls only products with active discounts
     sort: '-created',   // newest deals first
     limit: 12,
-  })
+  }, { next: { revalidate: 30, tags: ['dispense:products'] } })
 
   const products = res.data || []
 

@@ -1,3 +1,4 @@
+import 'server-only'
 import DispenseError from './dispenseError'
 
 type RequestMethod = 'GET' | 'POST' | 'DELETE' | 'PUT' | 'PATCH'
@@ -17,6 +18,14 @@ type RequestConfig = Omit<RequestInit, 'body'> & {
   body?: Record<string, any>
 } & RequestOptions
 
+const DISPENSE_BASE_URL =
+  process.env.DISPENSE_BASE_URL ?? process.env.NEXT_PUBLIC_DISPENSE_BASE_URL
+const DISPENSE_API_KEY =
+  process.env.DISPENSE_API_KEY ?? process.env.NEXT_PUBLIC_DISPENSE_API_KEY
+
+// Coalesce identical in-flight GETs (server-side spike protection).
+const inFlightGetRequests = new Map<string, Promise<unknown>>()
+
 export async function request<T extends any>({
   method,
   path,
@@ -30,7 +39,7 @@ export async function request<T extends any>({
 
   const url = new URL(
     joinUrl(
-      process.env.NEXT_PUBLIC_DISPENSE_BASE_URL!,
+      DISPENSE_BASE_URL!,
       (path as URL)?.toString() ?? path
     )
   )
@@ -55,10 +64,10 @@ export async function request<T extends any>({
 
   const headers = new Headers(options.headers)
   headers.append('content-type', 'application/json')
-  headers.append(
-    'x-dispense-api-key',
-    process.env.NEXT_PUBLIC_DISPENSE_API_KEY!
-  )
+  if (!DISPENSE_API_KEY) {
+    throw new Error('Dispense API key is not configured (DISPENSE_API_KEY).')
+  }
+  headers.append('x-dispense-api-key', DISPENSE_API_KEY)
 
   const config: {
     headers: Headers
@@ -79,22 +88,76 @@ export async function request<T extends any>({
     options.cache ??
     (method === 'GET' && options.next?.revalidate === undefined ? 'no-store' : undefined)
 
-  const response = await fetch(url, {
-    ...config,
-    cache,
-    body,
-  })
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+  const maxRetries = 2
+  let attempt = 0
+  let response: Response
 
-  if (!response.ok) {
-    if (response.status === 429) {
-      throw new Error('Too many requests, please try again later.')
+  const doFetch = async () => {
+    while (true) {
+      response = await fetch(url, {
+        ...config,
+        cache,
+        body,
+      })
+
+      if (response.ok) break
+
+      if (response.status === 429 && attempt < maxRetries) {
+        attempt += 1
+        const retryAfter = response.headers.get('retry-after')
+        const retryAfterMs = retryAfter
+          ? Number.parseInt(retryAfter, 10) * 1000
+          : NaN
+        const base = Number.isFinite(retryAfterMs)
+          ? retryAfterMs
+          : 500 * Math.pow(2, attempt - 1)
+        const jitter = Math.floor(Math.random() * 250)
+        await sleep(base + jitter)
+        continue
+      }
+
+      break
     }
 
-    const responseBody = await response.json()
-
-    throw new Error(getErrorFromApiResponse(responseBody))
+    return response!
   }
 
+  // Only coalesce GETs without a caller-provided AbortSignal (signals shouldn't cancel shared work).
+  const isCoalescableGet = method === 'GET' && !options.signal
+  const inFlightKey = isCoalescableGet ? `${method}:${url.toString()}` : null
+  if (inFlightKey && inFlightGetRequests.has(inFlightKey)) {
+    return (await inFlightGetRequests.get(inFlightKey)!) as T
+  }
+
+  const run = async () => {
+    const res = await doFetch()
+    if (!res.ok) {
+      if (res.status === 429) {
+        throw new Error('Too many requests, please try again later.')
+      }
+      const responseBody = await res.json().catch(() => null)
+      throw new DispenseError(
+        getErrorFromApiResponse(responseBody)?.message ??
+          getErrorFromApiResponse(responseBody) ??
+          'Error',
+        res.status
+      )
+    }
+
+    const responseBody = res.status === 204 ? {} : await res.json()
+    return responseBody as T
+  }
+
+  const promise = run()
+  if (inFlightKey) inFlightGetRequests.set(inFlightKey, promise as Promise<unknown>)
+  try {
+    return await promise
+  } finally {
+    if (inFlightKey) inFlightGetRequests.delete(inFlightKey)
+  }
+
+  /* istanbul ignore next */
   if (!response.ok) {
     const responseBody = await response.json()
 
@@ -104,15 +167,18 @@ export async function request<T extends any>({
     )
   }
 
+  /* istanbul ignore next */
   const responseBody = response.status === 204 ? {} : await response.json()
-
+  /* istanbul ignore next */
   return responseBody as Promise<T>
 }
 
 function getErrorFromApiResponse(response: any) {
   if (!response) return null
 
-  console.log(response)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(response)
+  }
 
   if (response.errors && response.errors.length)
     return response.errors[0].message || response.errors[0]

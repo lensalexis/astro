@@ -2,14 +2,11 @@ import cookie from 'js-cookie'
 
 import {
   CartCreateData,
-  Cart,
   AddToCartData,
   CartWithItemProducts,
 } from '@/types/cart'
-import { RequestOptions, request } from './dispenseApiClient'
 import { QueryClientKey, queryClientUtils } from '@/utils/queryClient'
 import { ProductPriceType, ProductType } from '@/types/product'
-import venueService from './venueService'
 
 const CART_ITEMS_KEY = 'highscore_cart_items'
 
@@ -21,8 +18,7 @@ class CartService {
       quantity,
       purchaseWeight,
       priceTierData,
-    }: AddToCartData,
-    options?: RequestOptions
+    }: AddToCartData
   ): Promise<CartWithItemProducts | null> {
     const cart = getCartFromStore()
     const items = cart?.items ?? []
@@ -70,8 +66,7 @@ class CartService {
             purchaseWeight: priceTierData ? undefined : purchaseWeight,
           },
         ],
-      },
-      options
+      }
     )
 
     return result
@@ -79,10 +74,8 @@ class CartService {
 
   async create(
     data: CartCreateData,
-    options?: RequestOptions
   ): Promise<CartWithItemProducts | null> {
     const previousCart = getCartFromStore()
-    const venue = venueService.getCurrentVenue()
 
     if (!data.items?.length) {
       this.clearCart()
@@ -104,22 +97,12 @@ class CartService {
         console.log('✨ Creating new cart')
       }
 
-      // Cart operations require Organization API key, not venue key
-      // Use direct fetch with org API key (same pattern as add-upsell route)
-      const baseUrl = process.env.NEXT_PUBLIC_DISPENSE_BASE_URL || 'https://api.dispenseapp.com/2023-03'
-      const orgApiKey = process.env.DISPENSE_ORG_API_KEY || process.env.NEXT_PUBLIC_DISPENSE_API_KEY
-      
-      if (!orgApiKey) {
-        throw new Error('DISPENSE_ORG_API_KEY is required for cart operations')
-      }
-
       console.log('🛒 Cart request body:', JSON.stringify(body, null, 2))
 
-      const response = await fetch(`${baseUrl}/carts`, {
+      const response = await fetch(`/api/cart`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-dispense-api-key': orgApiKey,
         },
         body: JSON.stringify(body),
       })
@@ -154,14 +137,11 @@ class CartService {
   }
 
   async getById(
-    id: string,
-    options?: RequestOptions
+    id: string
   ): Promise<CartWithItemProducts | null> {
-    return request<CartWithItemProducts>({
-      method: 'GET',
-      path: `/carts/${id}`,
-      options,
-    })
+    const res = await fetch(`/api/cart/${encodeURIComponent(id)}`)
+    if (!res.ok) return null
+    return (await res.json()) as CartWithItemProducts
   }
 
   async getOrCreate(venueId: string): Promise<CartWithItemProducts | null> {

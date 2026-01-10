@@ -457,8 +457,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const dropdownRef = useRef<HTMLDivElement>(null)
   const aiModeInputRef = useRef<HTMLInputElement>(null)
   const enablePresetDropdown = !!customChips
-  const [phraseIndex, setPhraseIndex] = useState(0)
-  const phrases = ['vape', 'pre roll', 'edible', 'concentrate', 'brand', 'tincture']
   const CATEGORY_CHIPS = [
     { id: 'cat-flower', label: 'Flower', category: 'flower' },
     { id: 'cat-vapes', label: 'Vaporizers', category: 'vaporizers' },
@@ -1213,14 +1211,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
 
   // Auto-scroll disabled - users can manually scroll to see messages
   // Removed auto-scroll to prevent unwanted page movement after prompts
-
-  // Rotate title phrases
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPhraseIndex((prev) => (prev + 1) % phrases.length)
-    }, 2200)
-    return () => clearInterval(interval)
-  }, [phrases.length])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -3820,9 +3810,9 @@ For specific details about earning rates and redemption options, please contact 
                       ) : items.length === 0 ? (
                         <div className="mt-3 px-1 text-sm text-gray-500">No products available right now.</div>
                       ) : (
-                        <div className="mt-3 grid grid-cols-2 gap-2 sm:block sm:columns-3 sm:gap-2">
+                        <div className="mt-3 columns-2 sm:columns-3" style={{ columnGap: 12 }}>
                           {items.slice(0, 12).map((product, i) => (
-                            <div key={product.id} className="sm:mb-2 sm:break-inside-avoid">
+                            <div key={product.id} className="mb-3 break-inside-avoid">
                               <BestSellerMasonryTile product={product} index={i} />
                             </div>
                           ))}

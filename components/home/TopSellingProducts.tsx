@@ -3,10 +3,10 @@ import TopSellingProductsClient from './TopSellingProductsClient'
 
 export default async function TopSellingProducts() {
   const res = await productService.list({
-    venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+    venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
     limit: 12,
     sort: '-totalSold',
-  })
+  }, { next: { revalidate: 30, tags: ['dispense:products'] } })
 
   const products = res.data || []
 
