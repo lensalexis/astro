@@ -745,13 +745,15 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
         href={`/shop/${getCategorySlugForProduct(product)}/${product.id}`}
         className="block rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition border border-gray-200"
       >
-        <div className="relative w-full bg-gray-100" style={{ height: imgHeight }}>
-          <img
+        <div className="relative w-full bg-gray-100 overflow-hidden" style={{ height: imgHeight }}>
+          <Image
             src={image}
             alt={product.name}
+            fill
+            sizes="(max-width: 640px) 50vw, 33vw"
+            className="object-cover"
             loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover transform-gpu"
+            unoptimized={image.startsWith('http')}
           />
         </div>
         <div className="p-3">
@@ -3740,8 +3742,17 @@ For specific details about earning rates and redemption options, please contact 
                         onClick={() => handleAiModePrompt(prompt)}
                         className="w-full flex items-center rounded-2xl overflow-hidden bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
                       >
-                        <div className="relative w-20 h-20 flex-shrink-0">
-                          <Image src={prompt.image} alt={prompt.label} fill className="object-cover" sizes="80px" />
+                        <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden">
+                          <Image 
+                            src={prompt.image} 
+                            alt={prompt.label} 
+                            fill 
+                            className="object-cover" 
+                            sizes="80px"
+                            priority={false}
+                            loading="lazy"
+                            unoptimized={prompt.image.startsWith('http')}
+                          />
                         </div>
                         <div className="flex-1 px-4 py-4">
                           <p className="text-base font-medium bg-gradient-to-r from-pink-500 via-blue-500 to-pink-500 bg-clip-text text-transparent bg-[length:200%_100%] animate-gradient-x">
@@ -3809,9 +3820,9 @@ For specific details about earning rates and redemption options, please contact 
                       ) : items.length === 0 ? (
                         <div className="mt-3 px-1 text-sm text-gray-500">No products available right now.</div>
                       ) : (
-                        <div className="mt-3 grid grid-cols-2 gap-3 sm:block sm:columns-3 sm:gap-3">
+                        <div className="mt-3 grid grid-cols-2 gap-2 sm:block sm:columns-3 sm:gap-2">
                           {items.slice(0, 12).map((product, i) => (
-                            <div key={product.id} className="sm:mb-3 sm:break-inside-avoid">
+                            <div key={product.id} className="sm:mb-2 sm:break-inside-avoid">
                               <BestSellerMasonryTile product={product} index={i} />
                             </div>
                           ))}
