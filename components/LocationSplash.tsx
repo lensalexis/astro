@@ -258,7 +258,7 @@ export default function LocationSplash() {
               ref={(el) => {
                 videoRefs.current[idx] = el
               }}
-              className="h-full w-full object-cover object-top"
+              className="h-full w-full object-cover"
               autoPlay
               muted
               // Helps iOS/Safari treat it as an inline element and allow autoplay when muted.
