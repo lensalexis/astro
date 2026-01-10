@@ -219,11 +219,19 @@ export default function ProductCard({ product }: { product: Product }) {
   const terpenes = getTopTerpenes(product)
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-md hover:shadow-lg transition text-black flex flex-col gap-3 h-full relative">
+    <div className="bg-white rounded-2xl p-3 md:p-4 shadow-md hover:shadow-lg transition text-black flex flex-col gap-2 md:gap-3 h-full relative">
       {/* Image with Add to Cart button */}
-      <div className="w-full h-48 flex rounded-2xl items-center justify-center overflow-hidden relative">
+      <div className="w-full h-48 flex rounded-2xl items-center justify-center overflow-hidden relative bg-gray-100">
         <Link href={`/shop/${getCategorySlug(product)}/${product.id}`}>
-          <img src={image} alt={product.name} className="w-full h-full object-cover" />
+          <Image 
+            src={image} 
+            alt={product.name} 
+            fill
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover"
+            loading="lazy"
+            unoptimized={image.startsWith('http')}
+          />
         </Link>
 
         {/* Add to Cart */}
@@ -245,21 +253,21 @@ export default function ProductCard({ product }: { product: Product }) {
       )}
 
       {/* Name */}
-      <h3 className="text-base font-semibold leading-tight">{product.name}</h3>
+      <h3 className="text-sm md:text-base font-semibold leading-tight line-clamp-2">{product.name}</h3>
 
       {/* Size */}
-      {product.size && <p className="text-sm text-gray-500">{product.size}</p>}
+      {product.size && <p className="text-xs md:text-sm text-gray-500">{product.size}</p>}
 
       {/* Strain + Cannabinoids */}
       {(strain || thc || cbd) && (
-        <div className="flex items-center gap-4 text-sm font-medium flex-wrap">
+        <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm font-medium flex-wrap">
           {strain && (
-            <div className="flex items-center gap-2">
-              {strainIcon && <Image src={strainIcon} width={20} height={20} alt={strain} />}
+            <div className="flex items-center gap-1.5 md:gap-2">
+              {strainIcon && <Image src={strainIcon} width={16} height={16} alt={strain} className="md:w-5 md:h-5" />}
               <span className="capitalize text-gray-600">{strain}</span>
             </div>
           )}
-          <div className="flex items-center gap-2 text-sm font-medium">
+          <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm font-medium">
             {thc && <span className="text-gray-600">{thc}</span>}
             {cbd && <span className="text-gray-600">{cbd}</span>}
           </div>
@@ -278,14 +286,14 @@ export default function ProductCard({ product }: { product: Product }) {
       )} */}
 
       {/* Price */}
-      <div className="mt-1">
+      <div className="mt-auto">
         {hasDiscount ? (
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 line-through">${basePrice.toFixed(2)}</span>
-            <span className="text-red-500 font-bold text-lg">${finalPrice.toFixed(2)}</span>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <span className="text-xs md:text-sm text-gray-400 line-through">${basePrice.toFixed(2)}</span>
+            <span className="text-red-500 font-bold text-base md:text-lg">${finalPrice.toFixed(2)}</span>
           </div>
         ) : (
-          <p className="text-indigo-600 font-bold text-lg">${basePrice.toFixed(2)}</p>
+          <p className="text-indigo-600 font-bold text-base md:text-lg">${basePrice.toFixed(2)}</p>
         )}
       </div>
     </div>

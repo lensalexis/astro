@@ -2,8 +2,8 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import productService from "@/lib/productService";
 import ShopProductCard from "@/components/ui/ShopProductCard";
+import { listDispenseProducts } from "@/utils/dispenseClient";
 
 // Map step-1 slugs to category IDs from API
 const categoryMap: Record<string, string> = {
@@ -45,8 +45,7 @@ function ShopResultsContent() {
       try {
         const strainFilter = effect ? effectToStrainMap[effect] : null;
 
-        const res = await productService.list({
-          venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+        const res = await listDispenseProducts({
           categoryId: categoryMap[category] || "",
           limit: 20,
           quantityMin: 1, // ✅ only show in-stock
@@ -90,7 +89,7 @@ function ShopResultsContent() {
       ) : products.length === 0 ? (
         <p className="text-gray-500">No products found. Try a different filter.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
           {products.map((product: any) => (
             <ShopProductCard key={product.id} product={product} effect={effect || null} />
           ))}

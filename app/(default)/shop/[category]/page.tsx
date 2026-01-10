@@ -4,10 +4,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
-import productService from "@/lib/productService";
 import ProductCard from "@/components/ui/ProductCard";
 import FilterNav from "@/components/ui/FilterNav";
 import AIProductSearch from "@/components/AIProductSearch";
+import { listDispenseProducts } from "@/utils/dispenseClient";
 import {
   CATEGORY_DEFS,
   applyProductFilters,
@@ -77,8 +77,7 @@ export default function CategoryPage() {
       if (!selectedCategory) return;
       setLoading(true);
       try {
-        const res = await productService.list({
-          venueId: process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+        const res = await listDispenseProducts({
           categoryId: selectedCategory.id,
           limit: 100,
           quantityMin: 1,
@@ -164,7 +163,7 @@ export default function CategoryPage() {
       ) : filteredProducts.length === 0 ? (
         <p className="text-gray-500">No products found with these filters.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
