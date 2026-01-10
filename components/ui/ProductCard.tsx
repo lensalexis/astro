@@ -220,9 +220,9 @@ export default function ProductCard({ product }: { product: Product }) {
 
   return (
     <div className="bg-white rounded-2xl p-3 md:p-4 shadow-md hover:shadow-lg transition text-black flex flex-col gap-2 md:gap-3 h-full relative">
-      {/* Image with Add to Cart button */}
-      <div className="w-full h-48 flex rounded-2xl items-center justify-center overflow-hidden relative bg-gray-100">
-        <Link href={`/shop/${getCategorySlug(product)}/${product.id}`}>
+      {/* Image with Add to Cart button - fixed dimensions prevent layout shifts on mobile */}
+      <div className="w-full rounded-2xl overflow-hidden relative bg-gray-100" style={{ height: '192px', width: '100%', contain: 'layout style paint' }}>
+        <Link href={`/shop/${getCategorySlug(product)}/${product.id}`} className="absolute inset-0 block">
           <Image 
             src={image} 
             alt={product.name} 

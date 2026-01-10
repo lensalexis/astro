@@ -85,11 +85,21 @@ function ShopResultsContent() {
 
       {/* Products */}
       {loading ? (
-        <p className="text-gray-500">Loading products...</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 md:gap-2 lg:gap-3">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={`skeleton-${i}`} className="bg-white rounded-2xl p-3 md:p-4 shadow-md flex flex-col gap-2 md:gap-3">
+              <div className="w-full rounded-2xl bg-gray-200 animate-pulse" style={{ height: '192px' }} />
+              <div className="h-3 w-1/3 bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-full bg-gray-200 rounded animate-pulse" />
+              <div className="h-4 w-2/3 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-1/2 bg-gray-200 rounded animate-pulse mt-auto" />
+            </div>
+          ))}
+        </div>
       ) : products.length === 0 ? (
         <p className="text-gray-500">No products found. Try a different filter.</p>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 md:gap-2 lg:gap-3">
           {products.map((product: any) => (
             <ShopProductCard key={product.id} product={product} effect={effect || null} />
           ))}
