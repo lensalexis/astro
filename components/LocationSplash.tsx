@@ -83,11 +83,11 @@ export default function LocationSplash() {
     setStoreStatuses(statuses)
   }, [])
 
-  // Rotate background media with smooth crossfade
+  // Rotate background media - each video plays for at least 12 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentMediaIndex((prev) => (prev + 1) % ROTATING_VIDEOS.length)
-    }, 11000)
+    }, 12000) // 12 seconds minimum
     return () => clearInterval(interval)
   }, [])
 
@@ -106,26 +106,34 @@ export default function LocationSplash() {
     }
   }, [soundEnabled])
 
-  // Best-effort autoplay on all devices:
+  // Autoplay on all devices - ensure next video plays after transition
   // - keep videos muted + playsInline (required for iOS autoplay)
   // - imperatively call play() on the active video (some browsers ignore autoPlay attr)
   // - retry when tab becomes visible
   useEffect(() => {
-    const active = videoRefs.current[currentMediaIndex]
-
-    const syncAndPlayActive = () => {
+    const syncAndPlayActive = async () => {
       const v = videoRefs.current[currentMediaIndex]
       if (!v) return
+      
       // Always keep volume at 50% (muted controls whether you hear it)
       v.volume = 0.5
       v.muted = !soundEnabled
       v.playsInline = true
-      const p = v.play()
-      if (p && typeof (p as Promise<void>).catch === 'function') {
-        ;(p as Promise<void>).catch(() => {
-          // Autoplay can still be blocked (power saver / data saver / user settings).
-          // If blocked, we keep the background element; user interaction will usually allow play.
-        })
+      
+      // Reset to start before playing
+      try {
+        v.currentTime = 0
+      } catch {
+        // ignore
+      }
+      
+      // Play the video - ensure it actually plays
+      try {
+        await v.play()
+      } catch (err) {
+        // Autoplay can still be blocked (power saver / data saver / user settings).
+        // If blocked, we keep the background element; user interaction will usually allow play.
+        console.warn('Video autoplay blocked:', err)
       }
     }
 
@@ -138,17 +146,10 @@ export default function LocationSplash() {
       }
     })
 
-    if (active) {
-      // Reset to the start for a clean crossfade loop on rotation
-      try {
-        active.currentTime = 0
-      } catch {
-        // ignore
-      }
-    }
-
+    // Play the active video
     syncAndPlayActive()
 
+    // Retry when tab becomes visible
     const onVis = () => {
       if (document.visibilityState === 'visible') syncAndPlayActive()
     }
@@ -248,9 +249,10 @@ export default function LocationSplash() {
         {ROTATING_VIDEOS.map((src, idx) => (
           <div
             key={src}
-            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-              idx === currentMediaIndex ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 ${
+              idx === currentMediaIndex ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
+            style={{ transition: 'opacity 0.3s' }}
           >
             <video
               ref={(el) => {
@@ -265,7 +267,7 @@ export default function LocationSplash() {
               // Avoids mobile UI overlays
               controls={false}
               disablePictureInPicture
-              preload={idx === 0 ? 'auto' : 'metadata'}
+              preload="auto"
             >
               <source src={src} />
             </video>
