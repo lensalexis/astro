@@ -23,7 +23,7 @@ function rateLimit(req: Request) {
   return { ok: true }
 }
 
-export async function GET(req: Request, ctx: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!rateLimit(req).ok) {
     return NextResponse.json(
       { error: 'Too many requests' },
@@ -43,7 +43,7 @@ export async function GET(req: Request, ctx: { params: { id: string } }) {
     )
   }
 
-  const { id } = ctx.params
+  const { id } = await params
   if (!id) {
     return NextResponse.json({ error: 'id is required' }, { status: 400 })
   }
