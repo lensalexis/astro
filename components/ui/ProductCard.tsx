@@ -196,7 +196,14 @@ function getCategorySlug(p: Product) {
 // Component
 // ----------------------
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({
+  product,
+  imageHeight,
+}: {
+  product: Product
+  /** Optional fixed image height (px) for masonry layouts */
+  imageHeight?: number
+}) {
   const image = pickPrimaryImage(product)
 
   const { basePrice, discountType, discountAmountFinal, discountValueFinal, discounts } =
@@ -212,90 +219,77 @@ export default function ProductCard({ product }: { product: Product }) {
 
   const rawStrain = product.strain ?? product.cannabisType
   const strain = formatStrainType(rawStrain)
-  const strainIcon = getStrainIcon(rawStrain)
 
   const thc = getCannabinoidLabel(product, "thc")
   const cbd = getCannabinoidLabel(product, "cbd")
-  const terpenes = getTopTerpenes(product)
+  const metaLabel = product.brand?.name || (product.category as any) || null
+  const imgH = imageHeight ?? 192
 
   return (
-    <div className="bg-white rounded-2xl p-3 md:p-4 shadow-md hover:shadow-lg transition text-black flex flex-col gap-2 md:gap-3 h-full relative">
-      {/* Image with Add to Cart button - fixed dimensions prevent layout shifts on mobile */}
-      <div className="w-full rounded-2xl overflow-hidden relative bg-gray-100" style={{ height: '192px', width: '100%', contain: 'layout style paint' }}>
-        <Link href={`/shop/${getCategorySlug(product)}/${product.id}`} className="absolute inset-0 block">
-          <Image 
-            src={image} 
-            alt={product.name} 
-            fill
-            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover"
-            loading="lazy"
-            unoptimized={image.startsWith('http')}
-          />
-        </Link>
-
-        {/* Add to Cart */}
-        {/* <button
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            addToCart({ id: product.id, name: product.name, price: finalPrice, quantity: 1 })
-          }}
-          className="absolute top-2 right-2 bg-indigo-600 text-white p-2 rounded-full shadow hover:bg-indigo-700"
-        >
-          🛒
-        </button> */}
+    <Link
+      href={`/shop/${getCategorySlug(product)}/${product.id}`}
+      className="block rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition border border-gray-200 text-black"
+    >
+      <div
+        className="relative w-full bg-gray-100 overflow-hidden"
+        style={{ height: `${imgH}px`, width: "100%", contain: "layout style paint" }}
+      >
+        <Image
+          src={image}
+          alt={product.name}
+          fill
+          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          className="object-cover"
+          loading="lazy"
+          unoptimized={image.startsWith("http")}
+        />
       </div>
 
-      {/* Brand */}
-      {product.brand?.name && (
-        <p className="text-xs uppercase text-gray-500 font-semibold">{product.brand.name}</p>
-      )}
-
-      {/* Name */}
-      <h3 className="text-sm md:text-base font-semibold leading-tight line-clamp-2">{product.name}</h3>
-
-      {/* Size */}
-      {product.size && <p className="text-xs md:text-sm text-gray-500">{product.size}</p>}
-
-      {/* Strain + Cannabinoids */}
-      {(strain || thc || cbd) && (
-        <div className="flex items-center gap-2 md:gap-4 text-xs md:text-sm font-medium flex-wrap">
-          {strain && (
-            <div className="flex items-center gap-1.5 md:gap-2">
-              {strainIcon && <Image src={strainIcon} width={16} height={16} alt={strain} className="md:w-5 md:h-5" />}
-              <span className="capitalize text-gray-600">{strain}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5 md:gap-2 text-xs md:text-sm font-medium">
-            {thc && <span className="text-gray-600">{thc}</span>}
-            {cbd && <span className="text-gray-600">{cbd}</span>}
+      <div className="p-3">
+        {metaLabel ? (
+          <div className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold truncate">
+            {metaLabel}
           </div>
-        </div>
-      )}
+        ) : null}
 
-      {/* Terpenes */}
-      {/* {terpenes.length > 0 && (
-        <div className="flex gap-2 flex-wrap text-xs text-gray-500">
-          {terpenes.map((t) => (
-            <span key={t} className="bg-gray-100 px-2 py-1 rounded-full">
-              {t}
+        <div className="mt-0.5 text-sm font-semibold text-gray-900 truncate leading-tight">
+          {product.name}
+        </div>
+
+        {(strain || thc || cbd) ? (
+          <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+            {strain ? (
+              <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-700">
+                {strain}
+              </span>
+            ) : null}
+            {thc || cbd ? (
+              <span className="min-w-0 truncate text-[11px] text-gray-600 leading-tight">
+                {thc ? thc : "THC —"}
+                <span className="mx-1 text-gray-400">|</span>
+                {cbd ? cbd : "CBD —"}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mt-1.5 flex items-baseline gap-2">
+          {hasDiscount ? (
+            <>
+              <span className="text-xs text-gray-400 line-through">
+                ${basePrice.toFixed(2)}
+              </span>
+              <span className="text-sm font-bold text-red-500">
+                ${finalPrice.toFixed(2)}
+              </span>
+            </>
+          ) : (
+            <span className="text-sm font-bold text-indigo-600">
+              ${basePrice.toFixed(2)}
             </span>
-          ))}
+          )}
         </div>
-      )} */}
-
-      {/* Price */}
-      <div className="mt-auto">
-        {hasDiscount ? (
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <span className="text-xs md:text-sm text-gray-400 line-through">${basePrice.toFixed(2)}</span>
-            <span className="text-red-500 font-bold text-base md:text-lg">${finalPrice.toFixed(2)}</span>
-          </div>
-        ) : (
-          <p className="text-indigo-600 font-bold text-base md:text-lg">${basePrice.toFixed(2)}</p>
-        )}
       </div>
-    </div>
+    </Link>
   )
 }

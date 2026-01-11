@@ -553,9 +553,17 @@ export default function AIModePage() {
 
           {showResults && !loading && products.length > 0 && (
             <div className="mb-6">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
+              <div
+                className="columns-2 sm:columns-3"
+                style={{ columnGap: 12, columnFill: 'balance' as any }}
+              >
+                {products.map((product, i) => (
+                  <div key={product.id} className="mb-3 inline-block w-full break-inside-avoid">
+                    <ProductCard
+                      product={product}
+                      imageHeight={(Math.abs(product.id?.length || 0) + i) % 2 === 0 ? 208 : 192}
+                    />
+                  </div>
                 ))}
               </div>
             </div>

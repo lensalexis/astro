@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
-import ProductCard, { computeFinalPrice, pickDisplayNode, pickPrimaryImage } from '@/components/ui/ProductCard'
+import ProductCard, { pickPrimaryImage } from '@/components/ui/ProductCard'
 import type { Product } from '@/types/product'
 import { ProductType } from '@/types/product'
 import FilterNav from '@/components/ui/FilterNav'
@@ -721,59 +721,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     const first = (p as any)?.discounts?.[0]?.value
     if (typeof first === 'number' && first > 0) return first
     return 0
-  }
-
-  const BestSellerMasonryTile = ({ product, index }: { product: Product; index: number }) => {
-    const image = pickPrimaryImage(product)
-    const { basePrice, discountType, discountAmountFinal, discountValueFinal, discounts } =
-      pickDisplayNode(product)
-    const finalPrice = computeFinalPrice(
-      basePrice,
-      discountType,
-      discountAmountFinal,
-      discountValueFinal,
-      discounts
-    )
-    const hasDiscount = finalPrice < basePrice - 0.001
-    // Deterministic heights prevent visual "shuffle" if ordering changes.
-    const imgHeight = getDeterministicTileHeight(product.id) || (index % 2 === 0 ? 208 : 192)
-
-    return (
-      <Link
-        href={`/shop/${getCategorySlugForProduct(product)}/${product.id}`}
-        className="block rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition border border-gray-200"
-      >
-        <div className="relative w-full bg-gray-100 overflow-hidden" style={{ height: imgHeight }}>
-          <Image
-            src={image}
-            alt={product.name}
-            fill
-            sizes="(max-width: 640px) 50vw, 33vw"
-            className="object-cover"
-            loading="lazy"
-            unoptimized={image.startsWith('http')}
-          />
-        </div>
-        <div className="p-3">
-          {(product.brand?.name || product.category) && (
-            <div className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold truncate">
-              {product.brand?.name || product.category}
-            </div>
-          )}
-          <div className="mt-1 text-sm font-semibold text-gray-900 truncate">{product.name}</div>
-          <div className="mt-2 flex items-baseline gap-2">
-            {hasDiscount ? (
-              <>
-                <span className="text-xs text-gray-400 line-through">${basePrice.toFixed(2)}</span>
-                <span className="text-sm font-bold text-red-500">${finalPrice.toFixed(2)}</span>
-              </>
-            ) : (
-              <span className="text-sm font-bold text-indigo-600">${basePrice.toFixed(2)}</span>
-            )}
-          </div>
-        </div>
-      </Link>
-    )
   }
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isChatMode, setIsChatMode] = useState(false)
@@ -3692,9 +3639,17 @@ For specific details about earning rates and redemption options, please contact 
 
             {showResults && !loading && products.length > 0 && (
               <div className="mb-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
-                  {products.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                <div
+                  className="columns-2 sm:columns-3"
+                  style={{ columnGap: 12, columnFill: 'balance' as any }}
+                >
+                  {products.map((product, i) => (
+                    <div key={product.id} className="mb-3 inline-block w-full break-inside-avoid">
+                      <ProductCard
+                        product={product}
+                        imageHeight={getDeterministicTileHeight(product.id) || (i % 2 === 0 ? 208 : 192)}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -3816,7 +3771,10 @@ For specific details about earning rates and redemption options, please contact 
                         >
                           {items.slice(0, 12).map((product, i) => (
                             <div key={product.id} className="mb-3 inline-block w-full break-inside-avoid">
-                              <BestSellerMasonryTile product={product} index={i} />
+                              <ProductCard
+                                product={product}
+                                imageHeight={getDeterministicTileHeight(product.id) || (i % 2 === 0 ? 208 : 192)}
+                              />
                             </div>
                           ))}
                         </div>
