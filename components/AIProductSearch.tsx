@@ -3810,9 +3810,12 @@ For specific details about earning rates and redemption options, please contact 
                       ) : items.length === 0 ? (
                         <div className="mt-3 px-1 text-sm text-gray-500">No products available right now.</div>
                       ) : (
-                        <div className="mt-3 columns-2 sm:columns-3" style={{ columnGap: 12 }}>
+                        <div
+                          className="mt-3 columns-2 sm:columns-3"
+                          style={{ columnGap: 12, columnFill: 'balance' as any }}
+                        >
                           {items.slice(0, 12).map((product, i) => (
-                            <div key={product.id} className="mb-3 break-inside-avoid">
+                            <div key={product.id} className="mb-3 inline-block w-full break-inside-avoid">
                               <BestSellerMasonryTile product={product} index={i} />
                             </div>
                           ))}
