@@ -343,16 +343,16 @@ export default function LocationSplash() {
               alt="Just a Little Higher" 
               width={200} 
               height={60} 
-              className="h-8 sm:h-10 w-auto drop-shadow-lg" 
+              className="h-8 sm:h-10 w-auto" 
             />
           </div>
 
           {/* Title and subtitle */}
           <div className="text-center space-y-1 sm:space-y-2 mb-4 sm:mb-5">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white drop-shadow-2xl">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white">
               Ready to Get a Little Higher?
             </h1>
-            <p className="text-sm sm:text-lg md:text-xl text-gray-200 drop-shadow-lg">
+            <p className="text-sm sm:text-lg md:text-xl text-gray-200">
               Your Destination for Recreational Cannabis in New York
             </p>
           </div>

@@ -3492,10 +3492,10 @@ For specific details about earning rates and redemption options, please contact 
                 <div className="pb-0">
                   <div className="flex flex-col items-start text-left gap-4">
                     <div className="w-full flex flex-col items-start gap-2">
-                      <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
+                      <h1 className="text-[2.3em] sm:text-6xl font-extrabold tracking-tight text-white">
                         Find your next <RotatingWord />
                       </h1>
-                      <p className="max-w-3xl mt-2 text-base sm:text-lg text-white/90 drop-shadow-[0_2px_14px_rgba(0,0,0,0.5)]">
+                      <p className="max-w-3xl mt-2 text-base sm:text-lg text-white/90">
                         Search Maywood’s premier cannabis destination for curated selections.
                       </p>
                       {dispenseError ? (
@@ -3823,7 +3823,7 @@ For specific details about earning rates and redemption options, please contact 
                   <div className="relative p-5 sm:p-8">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-950">
+                        <h1 className="text-[2.3em] sm:text-4xl font-extrabold tracking-tight text-gray-950">
                           Find your next <RotatingWord />
                         </h1>
                         <p className="mt-2 text-sm sm:text-base text-gray-700">
@@ -4528,10 +4528,10 @@ For specific details about earning rates and redemption options, please contact 
                           <Image src="/images/post-thumb-04.jpg" alt="Loyalty Program" fill className="object-cover" sizes="100vw" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/60 to-black/40" />
                           <div className="absolute inset-0 flex flex-col justify-end items-start px-6 sm:px-8 pb-3 sm:pb-4 text-white">
-                            <h3 className="text-xl sm:text-2xl font-bold mb-1 drop-shadow-lg">
+                            <h3 className="text-xl sm:text-2xl font-bold mb-1">
                               How do I earn and redeem loyalty points?
                             </h3>
-                            <p className="text-sm sm:text-base text-white/90 drop-shadow-md">
+                            <p className="text-sm sm:text-base text-white/90">
                               Learn about our rewards program
                             </p>
                           </div>
