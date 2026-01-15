@@ -19,15 +19,16 @@ export function generateStaticParams() {
   return strains.map((s) => ({ strainSlug: s.slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { strainSlug: string };
-}): Metadata {
-  const strain = bySlug(strains, params.strainSlug);
+  params: Promise<{ strainSlug: string }>;
+}): Promise<Metadata> {
+  const { strainSlug } = await params;
+  const strain = bySlug(strains, strainSlug);
   if (!strain) {
     return buildMetadata({
-      pathname: `/strains/${params.strainSlug}`,
+      pathname: `/strains/${strainSlug}`,
       title: "Strain not found",
       description: "This strain page does not exist.",
       noIndex: true,
@@ -40,8 +41,13 @@ export function generateMetadata({
   });
 }
 
-export default function StrainPage({ params }: { params: { strainSlug: string } }) {
-  const strain = bySlug(strains, params.strainSlug);
+export default async function StrainPage({
+  params,
+}: {
+  params: Promise<{ strainSlug: string }>;
+}) {
+  const { strainSlug } = await params;
+  const strain = bySlug(strains, strainSlug);
   if (!strain) return notFound();
 
   const terpLinks = strain.dominantTerpenes

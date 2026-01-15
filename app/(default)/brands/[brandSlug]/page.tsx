@@ -11,15 +11,16 @@ export function generateStaticParams() {
   return brands.map((b) => ({ brandSlug: b.slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { brandSlug: string };
-}): Metadata {
-  const brand = bySlug(brands, params.brandSlug);
+  params: Promise<{ brandSlug: string }>;
+}): Promise<Metadata> {
+  const { brandSlug } = await params;
+  const brand = bySlug(brands, brandSlug);
   if (!brand) {
     return buildMetadata({
-      pathname: `/brands/${params.brandSlug}`,
+      pathname: `/brands/${brandSlug}`,
       title: "Brand not found",
       description: "This brand page does not exist.",
       noIndex: true,
@@ -33,8 +34,13 @@ export function generateMetadata({
   });
 }
 
-export default function BrandPage({ params }: { params: { brandSlug: string } }) {
-  const brand = bySlug(brands, params.brandSlug);
+export default async function BrandPage({
+  params,
+}: {
+  params: Promise<{ brandSlug: string }>;
+}) {
+  const { brandSlug } = await params;
+  const brand = bySlug(brands, brandSlug);
   if (!brand) return notFound();
 
   const carriedFormats = brand.carriedFormats

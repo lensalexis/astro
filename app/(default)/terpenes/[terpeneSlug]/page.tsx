@@ -11,15 +11,16 @@ export function generateStaticParams() {
   return terpenes.map((t) => ({ terpeneSlug: t.slug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { terpeneSlug: string };
-}): Metadata {
-  const terp = bySlug(terpenes, params.terpeneSlug);
+  params: Promise<{ terpeneSlug: string }>;
+}): Promise<Metadata> {
+  const { terpeneSlug } = await params;
+  const terp = bySlug(terpenes, terpeneSlug);
   if (!terp) {
     return buildMetadata({
-      pathname: `/terpenes/${params.terpeneSlug}`,
+      pathname: `/terpenes/${terpeneSlug}`,
       title: "Terpene not found",
       description: "This terpene page does not exist.",
       noIndex: true,
@@ -32,8 +33,13 @@ export function generateMetadata({
   });
 }
 
-export default function TerpenePage({ params }: { params: { terpeneSlug: string } }) {
-  const terp = bySlug(terpenes, params.terpeneSlug);
+export default async function TerpenePage({
+  params,
+}: {
+  params: Promise<{ terpeneSlug: string }>;
+}) {
+  const { terpeneSlug } = await params;
+  const terp = bySlug(terpenes, terpeneSlug);
   if (!terp) return notFound();
 
   const strainLinks = terp.commonInStrains

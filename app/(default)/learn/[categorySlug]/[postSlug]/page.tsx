@@ -29,17 +29,18 @@ export function generateStaticParams() {
   }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { categorySlug: string; postSlug: string };
-}): Metadata {
+  params: Promise<{ categorySlug: string; postSlug: string }>;
+}): Promise<Metadata> {
+  const { categorySlug, postSlug } = await params;
   const post = learnPosts.find(
-    (p) => p.categorySlug === params.categorySlug && p.slug === params.postSlug
+    (p) => p.categorySlug === categorySlug && p.slug === postSlug
   );
   if (!post) {
     return buildMetadata({
-      pathname: `/learn/${params.categorySlug}/${params.postSlug}`,
+      pathname: `/learn/${categorySlug}/${postSlug}`,
       title: "Article not found",
       description: "This article does not exist.",
       noIndex: true,
@@ -52,12 +53,12 @@ export function generateMetadata({
   });
 }
 
-export default function LearnPostPage({
+export default async function LearnPostPage({
   params,
 }: {
-  params: { categorySlug: string; postSlug: string };
+  params: Promise<{ categorySlug: string; postSlug: string }>;
 }) {
-  const { categorySlug, postSlug } = params;
+  const { categorySlug, postSlug } = await params;
 
   if (!learnCategorySlugs.includes(categorySlug as any)) return notFound();
 

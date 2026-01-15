@@ -30,26 +30,31 @@ export function generateStaticParams() {
   return Array.from(unique).map((formatSlug) => ({ formatSlug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { formatSlug: string };
-}): Metadata {
-  const f = bySlug(formats, params.formatSlug);
-  const name = f?.name ?? titleFromSlug(params.formatSlug);
+  params: Promise<{ formatSlug: string }>;
+}): Promise<Metadata> {
+  const { formatSlug } = await params;
+  const f = bySlug(formats, formatSlug);
+  const name = f?.name ?? titleFromSlug(formatSlug);
   const description =
     f?.description ??
     "Educational guide: what this format is, timing basics, and beginner-friendly shopping tips.";
 
   return buildMetadata({
-    pathname: `/formats/${params.formatSlug}`,
+    pathname: `/formats/${formatSlug}`,
     title: `${name} guide`,
     description,
   });
 }
 
-export default function FormatPage({ params }: { params: { formatSlug: string } }) {
-  const formatSlug = params.formatSlug;
+export default async function FormatPage({
+  params,
+}: {
+  params: Promise<{ formatSlug: string }>;
+}) {
+  const { formatSlug } = await params;
   const f = bySlug(formats, formatSlug);
 
   // Only allow known starters + JSON formats (avoid infinite SEO surface).

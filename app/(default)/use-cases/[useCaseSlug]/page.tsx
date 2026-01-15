@@ -18,29 +18,34 @@ export function generateStaticParams() {
   return Array.from(useCaseSlugs).map((useCaseSlug) => ({ useCaseSlug }));
 }
 
-export function generateMetadata({
+export async function generateMetadata({
   params,
 }: {
-  params: { useCaseSlug: string };
-}): Metadata {
-  if (!useCaseSlugs.includes(params.useCaseSlug as any)) {
+  params: Promise<{ useCaseSlug: string }>;
+}): Promise<Metadata> {
+  const { useCaseSlug } = await params;
+  if (!useCaseSlugs.includes(useCaseSlug as any)) {
     return buildMetadata({
-      pathname: `/use-cases/${params.useCaseSlug}`,
+      pathname: `/use-cases/${useCaseSlug}`,
       title: "Use-case not found",
       description: "This use-case page does not exist.",
       noIndex: true,
     });
   }
-  const name = titleFromSlug(params.useCaseSlug);
+  const name = titleFromSlug(useCaseSlug);
   return buildMetadata({
-    pathname: `/use-cases/${params.useCaseSlug}`,
+    pathname: `/use-cases/${useCaseSlug}`,
     title: `For ${name}: a helpful guide`,
     description: `Educational, non-medical guide for ${name}: what people look for, terpene considerations, and format considerations.`,
   });
 }
 
-export default function UseCasePage({ params }: { params: { useCaseSlug: string } }) {
-  const useCaseSlug = params.useCaseSlug;
+export default async function UseCasePage({
+  params,
+}: {
+  params: Promise<{ useCaseSlug: string }>;
+}) {
+  const { useCaseSlug } = await params;
   if (!useCaseSlugs.includes(useCaseSlug as any)) return notFound();
 
   const name = titleFromSlug(useCaseSlug);
