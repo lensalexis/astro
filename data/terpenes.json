@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Myrcene",
+    "slug": "myrcene",
+    "aroma": "Earthy, herbal, musky",
+    "description": "Myrcene is a common terpene with an earthy aroma often found across many classic cultivars.",
+    "commonInStrains": ["og-kush", "wedding-cake", "gelato"]
+  },
+  {
+    "name": "Limonene",
+    "slug": "limonene",
+    "aroma": "Citrus, bright, zesty",
+    "description": "Limonene is known for a citrus-forward aroma that shows up in many upbeat, flavorful profiles.",
+    "commonInStrains": ["blue-dream", "sour-diesel", "gelato"]
+  },
+  {
+    "name": "Caryophyllene",
+    "slug": "caryophyllene",
+    "aroma": "Peppery, spicy, woody",
+    "description": "Caryophyllene brings a peppery edge and is a frequent contributor to bold, gassy profiles.",
+    "commonInStrains": ["wedding-cake", "og-kush"]
+  },
+  {
+    "name": "Pinene",
+    "slug": "pinene",
+    "aroma": "Pine, fresh, resinous",
+    "description": "Pinene has a fresh pine aroma and is common in bright, botanical terpene blends.",
+    "commonInStrains": ["blue-dream", "sour-diesel"]
+  },
+  {
+    "name": "Linalool",
+    "slug": "linalool",
+    "aroma": "Floral, lavender",
+    "description": "Linalool is a floral terpene that can add a soft, aromatic note to a strain’s overall profile.",
+    "commonInStrains": ["gelato", "wedding-cake"]
+  }
+]
+

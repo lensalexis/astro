@@ -29,6 +29,12 @@ export async function listDispenseProducts<T = any>(
     headers: { accept: 'application/json' },
   })
   if (!res.ok) {
+    const contentType = res.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      const body = (await res.json().catch(() => null)) as any
+      const msg = body?.error || body?.message
+      if (msg) throw new Error(`Products request failed (${res.status}): ${msg}`)
+    }
     const text = await res.text().catch(() => '')
     throw new Error(`Products request failed (${res.status}): ${text || 'Unknown error'}`)
   }
@@ -45,6 +51,12 @@ export async function getDispenseProductById<T = any>(
     headers: { accept: 'application/json' },
   })
   if (!res.ok) {
+    const contentType = res.headers.get('content-type') || ''
+    if (contentType.includes('application/json')) {
+      const body = (await res.json().catch(() => null)) as any
+      const msg = body?.error || body?.message
+      if (msg) throw new Error(`Product request failed (${res.status}): ${msg}`)
+    }
     const text = await res.text().catch(() => '')
     throw new Error(`Product request failed (${res.status}): ${text || 'Unknown error'}`)
   }

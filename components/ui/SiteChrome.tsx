@@ -13,6 +13,7 @@ import {
 import { useUser } from '@/components/UserContext'
 import { stores } from '@/lib/stores'
 import FloatingCartButton from '@/components/ui/FloatingCartButton'
+import MobileBreadcrumbsBar from '@/components/seo/MobileBreadcrumbsBar'
 
 export default function SiteChrome() {
   const [mounted, setMounted] = useState(false)
@@ -27,8 +28,7 @@ export default function SiteChrome() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
-  const hasStoreContext = pathname.startsWith('/stores/')
-  const showChrome = pathname !== '/' && !hasStoreContext
+  const showChrome = true
   const AGE_SESSION_KEY = 'jalh_age_verified_session'
   const [modalQuery, setModalQuery] = useState('')
 
@@ -141,7 +141,7 @@ export default function SiteChrome() {
   return (
     <>
       {!mounted || !showChrome ? null : (
-        <div className="fixed top-0 left-0 right-0 z-40 bg-transparent px-4 py-3">
+        <div className="fixed top-0 left-0 right-0 z-[80] bg-white px-4 py-2 border-b border-black/5">
           <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
             <div className="flex items-center gap-2">
               {/* Menu pill */}
@@ -149,7 +149,7 @@ export default function SiteChrome() {
                 <button
                   type="button"
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <Bars3Icon className="h-5 w-5" />
                   <span>Menu</span>
@@ -168,9 +168,65 @@ export default function SiteChrome() {
                       <li>
                         <button
                           className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/shop/flower')}
+                          onClick={() => handleMenuSelect('/shop')}
                         >
-                          Shop All
+                          Shop
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="w-full text-left px-4 py-2 hover:bg-white/10"
+                          onClick={() => handleMenuSelect('/brands')}
+                        >
+                          Brands
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="w-full text-left px-4 py-2 hover:bg-white/10"
+                          onClick={() => handleMenuSelect('/strains')}
+                        >
+                          Strains
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="w-full text-left px-4 py-2 hover:bg-white/10"
+                          onClick={() => handleMenuSelect('/terpenes')}
+                        >
+                          Terpenes
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="w-full text-left px-4 py-2 hover:bg-white/10"
+                          onClick={() => handleMenuSelect('/formats')}
+                        >
+                          Formats
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="w-full text-left px-4 py-2 hover:bg-white/10"
+                          onClick={() => handleMenuSelect('/learn')}
+                        >
+                          Learn
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="w-full text-left px-4 py-2 hover:bg-white/10"
+                          onClick={() => handleMenuSelect('/astro')}
+                        >
+                          Astro
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          className="w-full text-left px-4 py-2 hover:bg-white/10"
+                          onClick={() => handleMenuSelect('/store-info')}
+                        >
+                          Store info
                         </button>
                       </li>
                       <li>
@@ -189,6 +245,15 @@ export default function SiteChrome() {
                           Contact
                         </button>
                       </li>
+                      <li>
+                        <a
+                          href="/menu"
+                          className="block w-full px-4 py-2 hover:bg-white/10"
+                          onClick={() => setMenuOpen(false)}
+                        >
+                          Live menu
+                        </a>
+                      </li>
                     </ul>
                   </div>
                 )}
@@ -198,7 +263,7 @@ export default function SiteChrome() {
               <button
                 type="button"
                 onClick={openSearch}
-                className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -258,7 +323,7 @@ export default function SiteChrome() {
                   setLocationOpen((v) => !v)
                   setAccountOpen(false)
                 }}
-                className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm font-semibold text-white hover:bg-white/10"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/10"
               >
                 <MapPinIcon className="h-5 w-5" />
                 <span className="hidden sm:inline">
@@ -349,6 +414,10 @@ export default function SiteChrome() {
                 </div>
               )}
             </div>
+          </div>
+          {/* Mobile breadcrumb bar (driven by PageShell) */}
+          <div className="mx-auto w-full max-w-6xl">
+            <MobileBreadcrumbsBar />
           </div>
         </div>
       )}

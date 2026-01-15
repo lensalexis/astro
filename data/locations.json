@@ -1,0 +1,17 @@
+[
+  {
+    "name": "Maywood, NJ",
+    "slug": "maywood-nj",
+    "intro": "Kine Buds Dispensary is located in Maywood, NJ—easy to reach from across Bergen County.",
+    "distanceNotes": "Convenient for nearby towns and quick errands.",
+    "nearbyTowns": ["Hackensack", "Paramus", "Lodi", "Rochelle Park"]
+  },
+  {
+    "name": "Hackensack, NJ",
+    "slug": "hackensack-nj",
+    "intro": "Searching for a dispensary near Hackensack? Kine Buds in Maywood is a short drive away.",
+    "distanceNotes": "Typically a quick drive depending on traffic.",
+    "nearbyTowns": ["Maywood", "Teaneck", "Ridgefield Park"]
+  }
+]
+

@@ -1,0 +1,69 @@
+[
+  {
+    "title": "Cannabis 101: A beginner-friendly guide",
+    "slug": "cannabis-101-beginner-guide",
+    "categorySlug": "beginners",
+    "excerpt": "New to shopping? Start here for simple terms, formats, and how to pick a good first product.",
+    "content": "## Cannabis 101\\n\\nThis beginner guide covers the basics: formats, labels, and how to shop with confidence.\\n\\n### Quick tips\\n- Start low and go slow\\n- Prefer clear labeling\\n- Choose a format that matches your timeline\\n",
+    "relatedStrains": ["blue-dream", "wedding-cake"],
+    "relatedTerpenes": ["myrcene", "limonene"],
+    "relatedBrands": ["garden-greens"],
+    "publishedAt": "2026-01-10"
+  },
+  {
+    "title": "How terpenes shape aroma and experience",
+    "slug": "how-terpenes-shape-experience",
+    "categorySlug": "how-it-works",
+    "excerpt": "Terpenes are aromatic compounds that help explain why strains smell different—and why they can feel different, too.",
+    "content": "## Terpenes 101\\n\\nTerpenes are aromatic compounds found in many plants. In cannabis, they contribute to smell and flavor.\\n\\n### What to look for\\n- Aroma you enjoy\\n- Consistent terpene profiles\\n- Product freshness\\n",
+    "relatedStrains": ["gelato", "sour-diesel"],
+    "relatedTerpenes": ["limonene", "caryophyllene", "pinene"],
+    "relatedBrands": ["kind-tree"],
+    "publishedAt": "2026-01-09"
+  },
+  {
+    "title": "Choosing a format: flower vs vapes vs edibles",
+    "slug": "choosing-a-format-flower-vapes-edibles",
+    "categorySlug": "beginners",
+    "excerpt": "Pick a format based on timing, convenience, and your comfort level—not hype.",
+    "content": "## Choosing a format\\n\\nDifferent formats have different timelines. This guide helps you match format to your plan.\\n\\n### Fast vs slow\\n- Inhaled formats tend to feel faster\\n- Edibles tend to take longer and last longer\\n",
+    "relatedStrains": ["blue-dream", "og-kush"],
+    "relatedTerpenes": ["myrcene"],
+    "relatedBrands": ["select"],
+    "publishedAt": "2026-01-08"
+  },
+  {
+    "title": "Relaxation: building a simple shopping shortlist",
+    "slug": "relaxation-shopping-shortlist",
+    "categorySlug": "effects",
+    "excerpt": "A non-medical, educational approach to picking options people often explore for unwinding.",
+    "content": "## Relaxation shopping shortlist\\n\\nPeople often shop for relaxation by looking at aroma, terpene profile, and format timing.\\n\\n### Try this approach\\n- Choose a calming aroma\\n- Prefer a predictable format\\n- Keep dosage consistent\\n",
+    "relatedStrains": ["wedding-cake", "og-kush"],
+    "relatedTerpenes": ["linalool", "myrcene"],
+    "relatedBrands": ["garden-greens", "select"],
+    "publishedAt": "2026-01-07"
+  },
+  {
+    "title": "Focus-friendly shopping: what to look for",
+    "slug": "focus-friendly-shopping-what-to-look-for",
+    "categorySlug": "effects",
+    "excerpt": "Many shoppers aim for a clear-headed experience—here are common ways they filter options.",
+    "content": "## Focus-friendly shopping\\n\\nThis article is educational only. Consider aroma, terpene profile, and timing when building a shortlist.\\n",
+    "relatedStrains": ["blue-dream", "sour-diesel"],
+    "relatedTerpenes": ["pinene", "limonene"],
+    "relatedBrands": ["kind-tree"],
+    "publishedAt": "2026-01-06"
+  },
+  {
+    "title": "New Jersey cannabis shopping basics (2026)",
+    "slug": "new-jersey-cannabis-shopping-basics-2026",
+    "categorySlug": "industry",
+    "excerpt": "A high-level look at shopping basics, ID requirements, and what to expect at checkout.",
+    "content": "## NJ cannabis shopping basics\\n\\nBring a valid ID, plan your visit, and ask questions. This is a general educational overview.\\n",
+    "relatedStrains": [],
+    "relatedTerpenes": [],
+    "relatedBrands": [],
+    "publishedAt": "2026-01-05"
+  }
+]
+

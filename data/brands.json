@@ -1,0 +1,39 @@
+[
+  {
+    "name": "Garden Greens",
+    "slug": "garden-greens",
+    "description": "Garden Greens is known for consistent cultivars and approachable options across flower-forward formats.",
+    "website": "https://example.com/garden-greens",
+    "socials": {
+      "instagram": "https://instagram.com/example"
+    },
+    "carriedFormats": ["flower", "pre-rolls", "vapes"],
+    "featuredStrains": ["blue-dream", "wedding-cake"],
+    "featuredTerpenes": ["myrcene", "limonene"]
+  },
+  {
+    "name": "Kind Tree",
+    "slug": "kind-tree",
+    "description": "Kind Tree focuses on terpene-forward profiles and a wide range of strain types.",
+    "website": "https://example.com/kind-tree",
+    "socials": {
+      "instagram": "https://instagram.com/example"
+    },
+    "carriedFormats": ["flower", "vapes", "concentrates"],
+    "featuredStrains": ["gelato", "sour-diesel"],
+    "featuredTerpenes": ["caryophyllene", "pinene"]
+  },
+  {
+    "name": "Select",
+    "slug": "select",
+    "description": "Select offers convenient, format-first options designed for everyday shopping and consistent experiences.",
+    "website": "https://example.com/select",
+    "socials": {
+      "instagram": "https://instagram.com/example"
+    },
+    "carriedFormats": ["vapes", "edibles", "tinctures"],
+    "featuredStrains": ["og-kush"],
+    "featuredTerpenes": ["linalool", "limonene"]
+  }
+]
+

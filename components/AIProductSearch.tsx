@@ -5,8 +5,9 @@ import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
+import GoogleReviewSummary from '@/components/GoogleReviewSummary'
 import ProductCard, { pickPrimaryImage } from '@/components/ui/ProductCard'
 import type { Product } from '@/types/product'
 import { ProductType } from '@/types/product'
@@ -30,6 +31,96 @@ import {
   isOnSale,
   type FacetedFilters,
 } from '@/lib/catalog'
+
+const HERO_ROTATING_WORDS = ['favorite', 'go-to', 'flower', 'vape', 'edible', 'pre-roll'] as const
+
+function RotatingWord({
+  words = HERO_ROTATING_WORDS,
+  holdMs = 2600,
+  transitionMs = 220,
+  className = '',
+}: {
+  words?: readonly string[]
+  holdMs?: number
+  transitionMs?: number
+  className?: string
+}) {
+  const [idx, setIdx] = useState(0)
+  const maxChars = Math.max(0, ...(words || []).map((w) => (w || '').length))
+  const [phase, setPhase] = useState<'idle' | 'out' | 'in'>('idle')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    if (mq?.matches) return
+    if (!words?.length) return
+    if (words.length <= 1) return
+
+    let cancelled = false
+    let holdTimer: number | undefined
+    let outTimer: number | undefined
+    let inRaf: number | undefined
+
+    const cycle = () => {
+      holdTimer = window.setTimeout(() => {
+        if (cancelled) return
+        setPhase('out')
+
+        outTimer = window.setTimeout(() => {
+          if (cancelled) return
+          setIdx((v) => (v + 1) % words.length)
+          setPhase('in')
+
+          inRaf = window.requestAnimationFrame(() => {
+            if (cancelled) return
+            setPhase('idle')
+            cycle()
+          })
+        }, transitionMs)
+      }, holdMs)
+    }
+
+    cycle()
+
+    return () => {
+      cancelled = true
+      if (holdTimer) window.clearTimeout(holdTimer)
+      if (outTimer) window.clearTimeout(outTimer)
+      if (inRaf) window.cancelAnimationFrame(inRaf)
+    }
+  }, [holdMs, transitionMs, words])
+
+  const word = (words && words[idx]) || words?.[0] || ''
+
+  return (
+    <span
+      className={['relative inline-flex items-baseline overflow-hidden leading-none', className]
+        .filter(Boolean)
+        .join(' ')}
+      style={{ width: `${Math.max(1, maxChars + 1)}ch` }}
+      aria-label={word}
+    >
+      <span
+        key={word}
+        className={[
+          'inline-block whitespace-nowrap leading-none',
+          'transition-[transform,opacity] duration-[220ms] ease-out',
+        ].join(' ')}
+        style={{
+          opacity: phase === 'out' ? 0 : phase === 'in' ? 0 : 1,
+          transform:
+            phase === 'out'
+              ? 'translateY(-35%)'
+              : phase === 'in'
+                ? 'translateY(35%)'
+                : 'translateY(0%)',
+        }}
+      >
+        {word}
+      </span>
+    </span>
+  )
+}
 
 // ============================================================================
 // ALPINE IQ SCHEMA FIELD ACCESSORS
@@ -437,10 +528,27 @@ type AIProductSearchProps = {
   currentStoreId?: string
   /** If true, AI mode is always open and storefront view is hidden */
   forceAIMode?: boolean
+  /**
+   * If true (typically with `forceAIMode`), render only the hero/search header.
+   * Useful for the homepage where we want Klook-style sections below the hero.
+   */
+  heroOnly?: boolean
+  /** Homepage hero styling variant */
+  heroVariant?: 'default' | 'viator'
+  /** If set, portal homepage results into this element id */
+  homeResultsPortalId?: string
 }
 
 export default function AIProductSearch(props: AIProductSearchProps = {}): ReactElement {
-  const { onResultsVisibleChange, customChips, currentStoreId, forceAIMode = false } = props
+  const {
+    onResultsVisibleChange,
+    customChips,
+    currentStoreId,
+    forceAIMode = false,
+    heroOnly = false,
+    heroVariant = 'default',
+    homeResultsPortalId,
+  } = props
   const { user } = useUser()
   const router = useRouter()
   const params = useParams<{ storeId?: string }>()
@@ -749,6 +857,21 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const [mounted, setMounted] = useState(false)
   const [activeFilters, setActiveFilters] = useState<FacetedFilters>({})
   const [filterModalOpen, setFilterModalOpen] = useState(false)
+  const [dispenseError, setDispenseError] = useState<string | null>(null)
+  // Homepage hero (Airbnb-style) dropdown state
+  const [heroCategory, setHeroCategory] = useState<string>('')
+  const [heroStrain, setHeroStrain] = useState<string>('')
+  const [heroCategoryOpen, setHeroCategoryOpen] = useState(false)
+  const [heroStrainOpen, setHeroStrainOpen] = useState(false)
+  const [heroShowMoreFilters, setHeroShowMoreFilters] = useState(false)
+  const heroCategoryBtnRef = useRef<HTMLButtonElement | null>(null)
+  const heroStrainBtnRef = useRef<HTMLButtonElement | null>(null)
+  const [heroDropdownPos, setHeroDropdownPos] = useState<{
+    which: 'categories' | 'strains'
+    top: number
+    left: number
+    width: number
+  } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const aiModeScrollRef = useRef<HTMLDivElement>(null)
@@ -783,6 +906,116 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  const safeFetchAllProducts = async (params: any) => {
+    try {
+      setDispenseError(null)
+      return await fetchAllProducts(params)
+    } catch (err: any) {
+      setDispenseError(err?.message || 'Failed to fetch products.')
+      return [] as Product[]
+    }
+  }
+
+  const safeListDispenseProducts = async <T,>(
+    params: Record<string, any>,
+    opts?: { signal?: AbortSignal }
+  ) => {
+    try {
+      setDispenseError(null)
+      return await listDispenseProducts<T>(params, opts)
+    } catch (err: any) {
+      setDispenseError(err?.message || 'Failed to fetch products.')
+      return { data: [], nextCursor: null } as any
+    }
+  }
+
+  // Homepage hero: load full catalog facets when the hero dropdown opens.
+  // (Same data source as the store-page FilterNav popup.)
+  useEffect(() => {
+    const shouldLoad =
+      forceAIMode &&
+      heroOnly &&
+      heroVariant === 'viator' &&
+      (heroCategoryOpen || heroStrainOpen)
+    if (!shouldLoad) return
+    if (allProductsGlobal.length > 0) return
+
+    let cancelled = false
+    const loadAll = async () => {
+      try {
+        let res = await safeFetchAllProducts({})
+        if (!res || res.length === 0) {
+          res = await safeFetchAllProducts({ quantityMin: 1 })
+        }
+        if (!cancelled) {
+          setAllProductsGlobal(res || [])
+          if (!baseProducts.length && res?.length) setBaseProducts(res)
+        }
+      } catch (err) {
+        console.warn('Failed to load all products for homepage facets', err)
+      }
+    }
+    loadAll()
+    return () => {
+      cancelled = true
+    }
+  }, [
+    allProductsGlobal.length,
+    baseProducts.length,
+    forceAIMode,
+    heroCategoryOpen,
+    heroOnly,
+    heroStrainOpen,
+    heroVariant,
+  ])
+
+  // Homepage hero: compute dropdown position + keep it in sync on scroll/resize.
+  useEffect(() => {
+    const open = !!heroDropdownPos
+    const which = heroDropdownPos?.which
+    if (!open || !which) return
+
+    const update = () => {
+      setHeroDropdownPos((prev) => {
+        if (!prev) return prev
+        const btn = prev.which === 'categories' ? heroCategoryBtnRef.current : heroStrainBtnRef.current
+        if (!btn) return prev
+        const rect = btn.getBoundingClientRect()
+        const top = rect.bottom + 8
+        const left = rect.left
+        const width = rect.width
+        if (prev.top === top && prev.left === left && prev.width === width) return prev
+        return { ...prev, top, left, width }
+      })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  })
+
+  // Close hero dropdown on outside click
+  useEffect(() => {
+    if (!heroDropdownPos) return
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node
+      const isInBtn =
+        heroCategoryBtnRef.current?.contains(t) || heroStrainBtnRef.current?.contains(t)
+      const portalEl = document.querySelector('[data-home-hero-dropdown]')
+      const isInPortal = portalEl ? portalEl.contains(t) : false
+      if (!isInBtn && !isInPortal) {
+        setHeroDropdownPos(null)
+        setHeroCategoryOpen(false)
+        setHeroStrainOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [heroDropdownPos])
 
   // Lock body scroll while the location modal is open (prevents scrolling the sticky header/page behind it).
   useEffect(() => {
@@ -902,7 +1135,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     }
 
     // Fallback: single request, then derive locally (avoids 429 bursts).
-    const res = await listDispenseProducts<Product>(
+    const res = await safeListDispenseProducts<Product>(
       { limit: 120, quantityMin: 1 },
       signal ? { signal } : undefined
     )
@@ -913,6 +1146,8 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
 
   // Prefetch a single "home feed catalog" and derive all sections locally (prevents 429 bursts).
   useEffect(() => {
+    // Homepage hero doesn't render these sections; don't prefetch feeds there.
+    if (forceAIMode && heroOnly) return
     if (!showPrePrompts || showResults || chatMessages.length > 0) return
 
     const controller = new AbortController()
@@ -929,11 +1164,11 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
         setStaffPicksLoading(true)
 
         // Two small requests (sequential) to seed the catalog with both "popular" and "new".
-        const topSold = await listDispenseProducts<Product>(
+        const topSold = await safeListDispenseProducts<Product>(
           { limit: 120, sort: '-totalSold', quantityMin: 1 },
           { signal: controller.signal }
         )
-        const recent = await listDispenseProducts<Product>(
+        const recent = await safeListDispenseProducts<Product>(
           { limit: 120, sort: '-created', quantityMin: 1 },
           { signal: controller.signal }
         )
@@ -1083,10 +1318,10 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     const loadAll = async () => {
       try {
         // Fetch full catalog (no quantityMin) so facets reflect all inventory
-        let res = await fetchAllProducts({})
+        let res = await safeFetchAllProducts({})
         // Fallback to in-stock only if empty
         if (!res || res.length === 0) {
-          res = await fetchAllProducts({
+          res = await safeFetchAllProducts({
             quantityMin: 1,
           })
         }
@@ -1203,11 +1438,11 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       // Fetch products (try pagination, but if it fails, use single request)
       let allProducts: Product[] = []
       try {
-        allProducts = await fetchAllProducts(params)
+        allProducts = await safeFetchAllProducts(params)
       } catch (err) {
         // If pagination fails, try single request
         console.warn('Pagination failed, trying single request:', err)
-        const res = await listDispenseProducts<Product>(params)
+        const res = await safeListDispenseProducts<Product>(params)
         allProducts = res.data || []
       }
       
@@ -1215,7 +1450,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       if (allProducts.length === 0 && presetId !== 'pre-rolls-ready') {
         const fallbackParams = { ...params }
         delete fallbackParams.quantityMin
-        const res = await listDispenseProducts<Product>(fallbackParams)
+        const res = await safeListDispenseProducts<Product>(fallbackParams)
         allProducts = res.data || []
       }
 
@@ -1618,14 +1853,14 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       let allProducts: Product[] = []
       if (useFullCatalog) {
         try {
-          allProducts = await fetchAllProducts(params)
+          allProducts = await safeFetchAllProducts(params)
         } catch (err) {
           console.warn('Pagination failed, falling back to single request:', err)
-          const res = await listDispenseProducts<Product>(params)
+          const res = await safeListDispenseProducts<Product>(params)
           allProducts = res.data || []
         }
       } else {
-        const res = await listDispenseProducts<Product>(params)
+        const res = await safeListDispenseProducts<Product>(params)
         allProducts = res.data || []
       }
 
@@ -1921,7 +2156,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
         try {
           const fallbackParams = { ...params }
           delete fallbackParams.categoryId // Remove category filter
-          const fallbackRes = await listDispenseProducts<Product>(fallbackParams)
+          const fallbackRes = await safeListDispenseProducts<Product>(fallbackParams)
           const fallbackProducts = fallbackRes.data || []
           log('effect-filter-fallback-fetch', { 
             requestId: rid, 
@@ -2177,7 +2412,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
           try {
             const lists = await Promise.all(
               selectedCategories.map((cat) =>
-                fetchAllProducts({
+                safeFetchAllProducts({
                   categoryId: cat.id,
                   quantityMin: 1,
                   // Include discount filter if specified - API expects "discounted" parameter
@@ -2811,7 +3046,13 @@ License: ${license}`
   }, [facetCounts.categories, categoryCountsByApi])
   
   // Always show all official categories in order
-  const categoryOptions = CATEGORY_DEFS.map((c) => c.name)
+  const categoryOptions = useMemo(() => {
+    const base = CATEGORY_DEFS.map((c) => c.name)
+    // Some parts of the site surface Topicals; include it if not in the core list.
+    if (!base.some((c) => c.toLowerCase() === 'topicals')) base.push('Topicals')
+    return base
+  }, [])
+  const strainOptions = facets.strains
   
   // Merge counts with API-fetched category counts
   const finalFacetCounts = {
@@ -2856,7 +3097,7 @@ License: ${license}`
           // then apply remaining filters client-side.
           const lists = await Promise.all(
             selectedCategories.map((cat) =>
-              fetchAllProducts({
+              safeFetchAllProducts({
                 categoryId: cat.id,
                 quantityMin: 1,
               })
@@ -3152,7 +3393,7 @@ For specific details about earning rates and redemption options, please contact 
         key="ai-mode-overlay"
         className={
           forceAIMode
-            ? "min-h-[100dvh] bg-transparent flex flex-col"
+            ? (heroOnly ? "bg-transparent" : "min-h-[100dvh] bg-transparent flex flex-col")
             : "fixed inset-0 z-50 bg-white flex flex-col overflow-hidden"
         }
       >
@@ -3160,15 +3401,19 @@ For specific details about earning rates and redemption options, please contact 
         <div
           className={
             forceAIMode
-              ? "sticky top-0 z-40 bg-white/0 backdrop-blur px-4 pb-4 border-b border-gray-200/60"
+              ? (heroOnly
+                  ? "pb-0"
+                  : "sticky top-20 z-30 bg-white/0 backdrop-blur px-4 pb-6")
               : "px-4 pb-4 border-b border-gray-200"
           }
           style={{
             // Prevent the top content from sitting under the notch/status bar on iOS
-            paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+            paddingTop: forceAIMode
+              ? (heroOnly ? '0px' : '16px')
+              : 'calc(env(safe-area-inset-top, 0px) + 16px)',
           }}
         >
-          <div className="max-w-2xl mx-auto">
+          <div className={forceAIMode ? "max-w-6xl mx-auto" : "max-w-2xl mx-auto"}>
             {/* Location modal */}
             {mounted && showLocationDropdown && createPortal(
               <div className="fixed inset-0 z-[60] bg-white/95 backdrop-blur-sm">
@@ -3242,209 +3487,693 @@ For specific details about earning rates and redemption options, please contact 
               onOpenChange={setShowFilterNavInAiMode}
             />
 
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault()
-                handleSubmit(e)
-              }} 
-              className="w-full"
-            >
-              <div className="flex items-center gap-2">
-                {/* Location icon (opens location modal) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLocationDropdown(true)
-                    setShowFilterNavInAiMode(false)
-                  }}
-                  className="flex items-center justify-center text-gray-700 hover:text-gray-900 transition"
-                  aria-label="Choose location"
-                >
-                  <MapPinIcon className="h-6 w-6" />
-                </button>
+            {forceAIMode ? (
+              heroVariant === 'viator' ? (
+                <div className="pb-0">
+                  <div className="flex flex-col items-start text-left gap-4">
+                    <div className="w-full flex flex-col items-start gap-2">
+                      <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-white drop-shadow-[0_2px_18px_rgba(0,0,0,0.55)]">
+                        Find your next <RotatingWord />
+                      </h1>
+                      <p className="max-w-3xl mt-2 text-base sm:text-lg text-white/90 drop-shadow-[0_2px_14px_rgba(0,0,0,0.5)]">
+                        Search Maywood’s premier cannabis destination for curated selections.
+                      </p>
+                      {dispenseError ? (
+                        <div className="mt-2 inline-flex max-w-3xl items-center rounded-2xl bg-black/40 px-4 py-2 text-left text-sm text-white ring-1 ring-white/15 backdrop-blur">
+                          <span className="font-semibold">Menu connection issue:</span>
+                          <span className="ml-2 truncate">
+                            {dispenseError.includes('not configured')
+                              ? 'Dispense API env is missing. Set DISPENSE_BASE_URL, DISPENSE_API_KEY, and DISPENSE_VENUE_ID.'
+                              : dispenseError}
+                          </span>
+                        </div>
+                      ) : null}
+                    </div>
 
-                {/* Search input */}
-                <div className="relative flex-1 flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
-                  <button
-                    type="submit"
-                    className="absolute left-4 transition"
-                    aria-label="Submit search"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      className="h-5 w-5"
-                      aria-hidden="true"
+                    {/* Airbnb-style search bar (2 dropdowns only) */}
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault()
+                        // Note: this hero is `heroOnly`, so we just apply filters to the AI search state.
+                        // (If you want this to navigate to a results page later, we can wire that next.)
+                        const next: FacetedFilters = {
+                          categories: heroCategory ? [heroCategory] : undefined,
+                          strains: heroStrain ? [heroStrain] : undefined,
+                        }
+                        setShowFilterNavInAiMode(false)
+                        setShowLocationDropdown(false)
+                        await handleFiltersChange(next)
+                        setHeroShowMoreFilters(true)
+                        if (homeResultsPortalId && typeof window !== 'undefined') {
+                          window.dispatchEvent(
+                            new CustomEvent('home:startHereMode', { detail: { mode: 'results' } })
+                          )
+                        }
+                      }}
+                      className="mt-6 w-full"
                     >
-                      <defs>
-                        <linearGradient id="searchStarGradient-ai-mode" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#ec4899" />
-                          <stop offset="50%" stopColor="#3b82f6" />
-                          <stop offset="100%" stopColor="#ec4899" />
-                          <animateTransform
-                            attributeName="gradientTransform"
-                            type="translate"
-                            values="-100 0;100 0;-100 0"
-                            dur="3s"
-                            repeatCount="indefinite"
-                          />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        fill="url(#searchStarGradient-ai-mode)"
-                        d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                      {/* Keep the navbar anchor/input alive (used by SiteChrome to jump/focus). */}
+                      <input
+                        id="ai-search-input"
+                        ref={aiModeInputRef}
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        className="sr-only"
+                        aria-hidden="true"
+                        tabIndex={-1}
                       />
-                    </svg>
-                  </button>
-                  <input
-                    id="ai-search-input-ai-mode"
-                    ref={aiModeInputRef}
-                    type="text"
-                    value={query}
-                    onFocus={() => {
-                      if (enablePresetDropdown) setShowDropdown(true)
-                    }}
-                    placeholder="Search by mood, products, or preference"
-                    className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gradient-animated rounded-full focus:outline-none focus-visible:outline-none"
-                    onChange={(e) => {
-                      const newValue = e.target.value
-                      setHasInteracted(true)
-                      setQuery(newValue)
-                    }}
-                    onKeyDown={(e) => {
-                      // Prevent form submission on Enter if user is still typing
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        // Allow default form submission
-                      }
-                    }}
-                  />
+
+                      <div className="w-full max-w-5xl overflow-visible rounded-3xl bg-white/95 shadow-[0_18px_50px_rgba(0,0,0,0.35)] ring-1 ring-black/10 backdrop-blur sm:rounded-full">
+                        <div className="p-3 sm:p-0">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0">
+                            {/* Browse (mobile: full-width field) */}
+                            <div className="relative overflow-hidden rounded-2xl border border-black/10 bg-white sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+                              <button
+                                type="button"
+                                ref={heroCategoryBtnRef}
+                                onClick={() => {
+                                  const rect = heroCategoryBtnRef.current?.getBoundingClientRect()
+                                  if (!rect) return
+                                  const nextOpen = !heroCategoryOpen
+                                  setHeroCategoryOpen(nextOpen)
+                                  setHeroStrainOpen(false)
+                                  setHeroDropdownPos(
+                                    nextOpen
+                                      ? { which: 'categories', top: rect.bottom + 8, left: rect.left, width: rect.width }
+                                      : null
+                                  )
+                                }}
+                                className="flex w-full items-center justify-between gap-4 px-5 py-3.5 text-left sm:px-5 sm:py-3.5"
+                                aria-haspopup="listbox"
+                                aria-expanded={heroCategoryOpen}
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-[12px] font-semibold text-gray-900">Browse</div>
+                                  <div
+                                    className={[
+                                      'mt-0.5 truncate text-[14px]',
+                                      heroCategory
+                                        ? 'font-medium text-gray-800'
+                                        : 'animate-gradient-x bg-[linear-gradient(to_right,#ec4899,#a855f7,#ec4899)] bg-[length:200%_auto] bg-clip-text font-light text-transparent',
+                                    ].join(' ')}
+                                  >
+                                    {heroCategory || 'Flower, vapes, edibles and more'}
+                                  </div>
+                                </div>
+                                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                              </button>
+                            </div>
+
+                            {/* Desktop divider */}
+                            <div className="hidden sm:block w-px my-3 bg-gray-200" />
+
+                            {/* Strain (mobile: full-width field) */}
+                            <div className="relative overflow-hidden rounded-2xl border border-black/10 bg-white sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+                              <button
+                                type="button"
+                                ref={heroStrainBtnRef}
+                                onClick={() => {
+                                  const rect = heroStrainBtnRef.current?.getBoundingClientRect()
+                                  if (!rect) return
+                                  const nextOpen = !heroStrainOpen
+                                  setHeroStrainOpen(nextOpen)
+                                  setHeroCategoryOpen(false)
+                                  setHeroDropdownPos(
+                                    nextOpen
+                                      ? { which: 'strains', top: rect.bottom + 8, left: rect.left, width: rect.width }
+                                      : null
+                                  )
+                                }}
+                                className="flex w-full items-center justify-between gap-4 px-5 py-3.5 text-left sm:px-5 sm:py-3.5"
+                                aria-haspopup="listbox"
+                                aria-expanded={heroStrainOpen}
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-[12px] font-semibold text-gray-900">Strain</div>
+                                  <div
+                                    className={[
+                                      'mt-0.5 truncate text-[14px]',
+                                      heroStrain
+                                        ? 'font-medium text-gray-800'
+                                        : 'animate-gradient-x bg-[linear-gradient(to_right,#ec4899,#a855f7,#ec4899)] bg-[length:200%_auto] bg-clip-text font-light text-transparent',
+                                    ].join(' ')}
+                                  >
+                                    {heroStrain || 'Indica, Sativa or Hybrid'}
+                                  </div>
+                                </div>
+                                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                              </button>
+                            </div>
+
+                            {/* Desktop search icon (right) */}
+                            <div className="hidden sm:flex sm:items-center sm:justify-center sm:p-2">
+                              <button
+                                type="submit"
+                                aria-label="Search"
+                                className="inline-flex h-[52px] w-[52px] items-center justify-center rounded-full bg-emerald-700 text-white shadow-md hover:bg-emerald-800"
+                              >
+                                <svg
+                                  className="h-6 w-6"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  aria-hidden="true"
+                                >
+                                  <path
+                                    d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  />
+                                  <path
+                                    d="M16.2 16.2 21 21"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Mobile search action (Booking.com-style) */}
+                          <div className="mt-2 sm:hidden">
+                            <button
+                              type="submit"
+                              aria-label="Search"
+                              className="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-md hover:bg-emerald-800"
+                            >
+                              <svg
+                                className="h-6 w-6"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                aria-hidden="true"
+                              >
+                                <path
+                                  d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                />
+                                <path
+                                  d="M16.2 16.2 21 21"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Dropdown menus (ported to body so they never get clipped) */}
+                      {heroDropdownPos && mounted && typeof document !== 'undefined'
+                        ? createPortal(
+                            <div
+                              data-home-hero-dropdown
+                              style={{
+                                position: 'fixed',
+                                top: heroDropdownPos.top,
+                                left: heroDropdownPos.left,
+                                width: heroDropdownPos.width,
+                                zIndex: 200,
+                              }}
+                            >
+                              <div className="overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/10">
+                                <div className="max-h-80 overflow-auto p-2">
+                                  <button
+                                    type="button"
+                                    className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                    onClick={() => {
+                                      if (heroDropdownPos.which === 'categories') {
+                                        setHeroCategory('')
+                                        setHeroCategoryOpen(false)
+                                      } else {
+                                        setHeroStrain('')
+                                        setHeroStrainOpen(false)
+                                      }
+                                      setHeroDropdownPos(null)
+                                    }}
+                                  >
+                                    Any
+                                  </button>
+
+                                  {(heroDropdownPos.which === 'categories'
+                                    ? categoryOptions
+                                    : strainOptions
+                                  ).map((val) => (
+                                    <button
+                                      key={`${heroDropdownPos.which}-${val}`}
+                                      type="button"
+                                      className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                      onClick={() => {
+                                        if (heroDropdownPos.which === 'categories') {
+                                          setHeroCategory(val)
+                                          setHeroCategoryOpen(false)
+                                        } else {
+                                          setHeroStrain(val)
+                                          setHeroStrainOpen(false)
+                                        }
+                                        setHeroDropdownPos(null)
+                                      }}
+                                    >
+                                      <span className="flex items-center justify-between gap-3">
+                                        <span className="truncate">{val}</span>
+                                        {heroDropdownPos.which === 'categories' &&
+                                        finalFacetCounts.categories?.[val] ? (
+                                          <span className="shrink-0 text-xs font-semibold text-gray-500">
+                                            {finalFacetCounts.categories[val]}
+                                          </span>
+                                        ) : null}
+                                        {heroDropdownPos.which === 'strains' &&
+                                        finalFacetCounts.strains?.[val] ? (
+                                          <span className="shrink-0 text-xs font-semibold text-gray-500">
+                                            {finalFacetCounts.strains[val]}
+                                          </span>
+                                        ) : null}
+                                      </span>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>,
+                            document.body
+                          )
+                        : null}
+
+                    </form>
+
+                    {/* Prompts (quick filters) */}
+                    <div className="mt-4 w-full">
+                      <div className="w-full max-w-5xl">
+                        <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
+                          {[
+                            { id: 'good-deals', label: 'Good deals', mode: 'filters' as const, apply: { saleOnly: true } },
+                            { id: 'trending', label: 'Trending right now', mode: 'feed' as const, promptId: 'feed-best-sellers' },
+                            {
+                              id: 'non-smokable',
+                              label: 'Non smokable options',
+                              mode: 'filters' as const,
+                              // "All but flower, pre-roll, and vape"
+                              apply: {
+                                categories: ['Edibles', 'Beverages', 'Tinctures', 'Concentrates', 'Topicals'] as string[],
+                              },
+                            },
+                          ].map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={async () => {
+                                // These quick prompts should behave like "presets" (replace current filters)
+                                setHeroCategory('')
+                                setHeroStrain('')
+
+                                if (p.mode === 'feed') {
+                                  const prompt = AI_MODE_PROMPTS.find((x) => x.id === p.promptId)
+                                  if (prompt) {
+                                    await handleAiModePrompt(prompt)
+                                  }
+                                } else {
+                                  await handleFiltersChange(p.apply as FacetedFilters)
+                                }
+
+                                setHeroShowMoreFilters(true)
+                                if (homeResultsPortalId && typeof window !== 'undefined') {
+                                  window.dispatchEvent(
+                                    new CustomEvent('home:startHereMode', { detail: { mode: 'results' } })
+                                  )
+                                }
+                              }}
+                              className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-black/10 hover:bg-white"
+                            >
+                              <MagnifyingGlassIcon className="h-4 w-4 text-gray-600" />
+                              <span>{p.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative overflow-hidden rounded-[32px] border border-white/70 bg-white/70 shadow-[0_30px_90px_rgba(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-xl">
+                  <div className="pointer-events-none absolute -left-20 -top-24 h-72 w-72 rounded-full bg-fuchsia-300/30 blur-3xl" />
+                  <div className="pointer-events-none absolute -right-24 -bottom-24 h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl" />
+                  <div className="relative p-5 sm:p-8">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-950">
+                          Find your next <RotatingWord />
+                        </h1>
+                        <p className="mt-2 text-sm sm:text-base text-gray-700">
+                          Search Maywood’s premier cannabis destination for curated selections.
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        <GoogleReviewSummary />
+                      </div>
+                    </div>
+
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault()
+                        handleSubmit(e)
+                      }}
+                      className="mt-6"
+                    >
+                      <div className="rounded-full border border-white/60 bg-white/90 shadow-lg ring-1 ring-black/5 backdrop-blur-xl">
+                        <div className="flex flex-col gap-2 p-2 sm:flex-row sm:items-center">
+                          {/* Location segment */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowLocationDropdown(true)
+                              setShowFilterNavInAiMode(false)
+                            }}
+                            className="inline-flex w-full items-center justify-between gap-3 rounded-full px-4 py-3 text-left hover:bg-black/5 sm:w-auto"
+                            aria-label="Choose location"
+                          >
+                            <span className="inline-flex items-center gap-2">
+                              <MapPinIcon className="h-5 w-5 text-gray-700" />
+                              <span className="text-sm font-semibold text-gray-900">
+                                {stores.find((s) => s.id === getActiveStoreId())?.name || 'Choose a location'}
+                              </span>
+                            </span>
+                            <span className="text-xs font-semibold text-gray-600">Change</span>
+                          </button>
+
+                          <div className="hidden h-8 w-px bg-gray-200 sm:block" />
+
+                          {/* Filters segment */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowFilterNavInAiMode(true)
+                              setShowLocationDropdown(false)
+                            }}
+                            className="inline-flex w-full items-center justify-between gap-3 rounded-full px-4 py-3 text-left hover:bg-black/5 sm:w-auto"
+                            aria-label="Open filters"
+                          >
+                            <span className="inline-flex items-center gap-2">
+                              <FunnelIcon className="h-5 w-5 text-gray-700" />
+                              <span className="text-sm font-semibold text-gray-900">Filters</span>
+                            </span>
+                            {filterPills.length ? (
+                              <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-900 px-2 text-xs font-semibold text-white">
+                                {filterPills.length}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold text-gray-600">Any</span>
+                            )}
+                          </button>
+
+                          <div className="hidden h-8 w-px bg-gray-200 sm:block" />
+
+                          {/* Query segment */}
+                          <div className="relative flex-1">
+                            <button
+                              type="submit"
+                              className="absolute left-4 top-1/2 -translate-y-1/2"
+                              aria-label="Submit search"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5"
+                                aria-hidden="true"
+                              >
+                                <defs>
+                                  <linearGradient id="searchStarGradient-ai-mode" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stopColor="#ec4899" />
+                                    <stop offset="50%" stopColor="#3b82f6" />
+                                    <stop offset="100%" stopColor="#10b981" />
+                                    <animateTransform
+                                      attributeName="gradientTransform"
+                                      type="translate"
+                                      values="-100 0;100 0;-100 0"
+                                      dur="3s"
+                                      repeatCount="indefinite"
+                                    />
+                                  </linearGradient>
+                                </defs>
+                                <path
+                                  fill="url(#searchStarGradient-ai-mode)"
+                                  d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                                />
+                              </svg>
+                            </button>
+                            <input
+                              id="ai-search-input"
+                              ref={aiModeInputRef}
+                              type="text"
+                              value={query}
+                              onFocus={() => {
+                                if (enablePresetDropdown) setShowDropdown(true)
+                              }}
+                              placeholder="Search by mood, products, or preference"
+                              className="w-full rounded-full bg-transparent py-3 pl-12 pr-12 text-base font-semibold text-gray-900 placeholder:text-gray-500 focus:outline-none focus-visible:outline-none"
+                              onChange={(e) => {
+                                const newValue = e.target.value
+                                setHasInteracted(true)
+                                setQuery(newValue)
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (recognitionRef.current) {
+                                  try {
+                                    setIsListening(true)
+                                    recognitionRef.current.start()
+                                  } catch {
+                                    setIsListening(false)
+                                  }
+                                }
+                              }}
+                              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition"
+                              aria-label="Start voice input"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                                className="h-5 w-5"
+                              >
+                                <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2z" />
+                                <path d="M13 19.95a7.001 7.001 0 0 0 5.995-5.992L19 13h-2a5 5 0 0 1-9.995.217L7 13H5l.005.958A7.001 7.001 0 0 0 11 19.95V22h2v-2.05z" />
+                              </svg>
+                            </button>
+                          </div>
+
+                          <button
+                            type="submit"
+                            className="inline-flex w-full items-center justify-center rounded-full bg-gray-950 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-black sm:w-auto"
+                          >
+                            Search
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+
+                    {/* Category tiles and filter pills (AI Mode only) */}
+                    <div className="mt-5">
+                      <div className="overflow-x-auto scrollbar-hide">
+                        <div className="flex gap-3 px-1">
+                          {/* Active filter pills - shown first */}
+                          {filterPills.map((pill) => (
+                            <button
+                              key={`${pill.key}-${pill.value || 'sale'}`}
+                              onClick={() => handleRemovePill(pill)}
+                              className="flex-none inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 text-sm text-gray-700 px-3 py-1.5 hover:bg-gray-200 transition whitespace-nowrap"
+                            >
+                              <span>{pill.label}</span>
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                          ))}
+
+                          {/* Category tiles */}
+                          {CATEGORY_DEFS.map((cat) => {
+                            const selected = (activeFilters.categories || []).some(
+                              (v) => v.toLowerCase() === cat.name.toLowerCase()
+                            )
+                            const meta = CATEGORY_TILE_META[cat.slug] || {
+                              image: '/images/post-thumb-03.jpg',
+                              className: 'bg-gray-200 text-gray-900',
+                            }
+
+                            return (
+                              <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => toggleCategoryTile(cat.name)}
+                                className={[
+                                  'flex-none w-[170px] rounded-2xl border overflow-hidden text-left transition',
+                                  selected ? 'border-green-600 ring-2 ring-green-300/60' : 'border-gray-200/70 hover:border-gray-300',
+                                ].join(' ')}
+                              >
+                                <div className="flex items-center gap-3 p-3 bg-white/70">
+                                  <div className="relative h-10 w-10 overflow-hidden rounded-xl">
+                                    <Image src={meta.image} alt="" fill className="object-cover" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-semibold text-gray-900 truncate">{cat.name}</div>
+                                    <div className="text-xs text-gray-600 truncate">{selected ? 'Selected' : 'Tap to filter'}</div>
+                                  </div>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            ) : (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleSubmit(e)
+                }} 
+                className="w-full"
+              >
+                <div className="flex items-center gap-2">
+                  {/* Location icon (opens location modal) */}
                   <button
                     type="button"
                     onClick={() => {
-                      if (recognitionRef.current) {
-                        try {
-                          setIsListening(true)
-                          recognitionRef.current.start()
-                        } catch {
-                          setIsListening(false)
-                        }
-                      }
+                      setShowLocationDropdown(true)
+                      setShowFilterNavInAiMode(false)
                     }}
-                    className="absolute right-4 text-gray-500 hover:text-gray-700 transition"
-                    aria-label="Start voice input"
+                    className="flex items-center justify-center text-gray-700 hover:text-gray-900 transition"
+                    aria-label="Choose location"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
-                      <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2z"/>
-                      <path d="M13 19.95a7.001 7.001 0 0 0 5.995-5.992L19 13h-2a5 5 0 0 1-9.995.217L7 13H5l.005.958A7.001 7.001 0 0 0 11 19.95V22h2v-2.05z"/>
+                    <MapPinIcon className="h-6 w-6" />
+                  </button>
+
+                  {/* Search input */}
+                  <div className="relative flex-1 flex items-center bg-white rounded-full border border-gray-300 shadow-sm hover:shadow-md transition-shadow">
+                    <button
+                      type="submit"
+                      className="absolute left-4 transition"
+                      aria-label="Submit search"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5"
+                        aria-hidden="true"
+                      >
+                        <defs>
+                          <linearGradient id="searchStarGradient-ai-mode" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#ec4899" />
+                            <stop offset="50%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#ec4899" />
+                            <animateTransform
+                              attributeName="gradientTransform"
+                              type="translate"
+                              values="-100 0;100 0;-100 0"
+                              dur="3s"
+                              repeatCount="indefinite"
+                            />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          fill="url(#searchStarGradient-ai-mode)"
+                          d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
+                        />
+                      </svg>
+                    </button>
+                    <input
+                      id="ai-search-input"
+                      ref={aiModeInputRef}
+                      type="text"
+                      value={query}
+                      onFocus={() => {
+                        if (enablePresetDropdown) setShowDropdown(true)
+                      }}
+                      placeholder="Search by mood, products, or preference"
+                      className="w-full pl-12 pr-12 py-3 bg-transparent border-none text-base text-black placeholder-gradient-animated rounded-full focus:outline-none focus-visible:outline-none"
+                      onChange={(e) => {
+                        const newValue = e.target.value
+                        setHasInteracted(true)
+                        setQuery(newValue)
+                      }}
+                      onKeyDown={(e) => {
+                        // Prevent form submission on Enter if user is still typing
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          // Allow default form submission
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (recognitionRef.current) {
+                          try {
+                            setIsListening(true)
+                            recognitionRef.current.start()
+                          } catch {
+                            setIsListening(false)
+                          }
+                        }
+                      }}
+                      className="absolute right-4 text-gray-500 hover:text-gray-700 transition"
+                      aria-label="Start voice input"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" className="h-5 w-5">
+                        <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2z"/>
+                        <path d="M13 19.95a7.001 7.001 0 0 0 5.995-5.992L19 13h-2a5 5 0 0 1-9.995.217L7 13H5l.005.958A7.001 7.001 0 0 0 11 19.95V22h2v-2.05z"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  {/* Filter icon (opens filter modal) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowFilterNavInAiMode(true)
+                      setShowLocationDropdown(false)
+                    }}
+                    className="flex items-center justify-center text-gray-700 hover:text-gray-900 transition"
+                    aria-label="Open filters"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6">
+                      {/* Top horizontal line with circle */}
+                      <line x1="3" y1="9" x2="21" y2="9" strokeLinecap="round" />
+                      <circle cx="12" cy="9" r="2.5" fill="none" />
+                      {/* Bottom horizontal line with circle */}
+                      <line x1="3" y1="15" x2="21" y2="15" strokeLinecap="round" />
+                      <circle cx="12" cy="15" r="2.5" fill="none" />
                     </svg>
                   </button>
                 </div>
+              </form>
+            )}
 
-                {/* Filter icon (opens filter modal) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowFilterNavInAiMode(true)
-                    setShowLocationDropdown(false)
-                  }}
-                  className="flex items-center justify-center text-gray-700 hover:text-gray-900 transition"
-                  aria-label="Open filters"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-6 w-6">
-                    {/* Top horizontal line with circle */}
-                    <line x1="3" y1="9" x2="21" y2="9" strokeLinecap="round" />
-                    <circle cx="12" cy="9" r="2.5" fill="none" />
-                    {/* Bottom horizontal line with circle */}
-                    <line x1="3" y1="15" x2="21" y2="15" strokeLinecap="round" />
-                    <circle cx="12" cy="15" r="2.5" fill="none" />
-                  </svg>
-                </button>
-              </div>
-            </form>
-
-            {/* Category tiles and filter pills (AI Mode only) */}
-            <div className="mt-4">
-              <div className="overflow-x-auto scrollbar-hide">
-                <div className="flex gap-3 px-1">
-                  {/* Active filter pills - shown first */}
-                  {filterPills.map((pill) => (
-                    <button
-                      key={`${pill.key}-${pill.value || 'sale'}`}
-                      onClick={() => handleRemovePill(pill)}
-                      className="flex-none inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 text-sm text-gray-700 px-3 py-1.5 hover:bg-gray-200 transition whitespace-nowrap"
-                    >
-                      <span>{pill.label}</span>
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  ))}
-                  
-                  {/* Category tiles */}
-                  {CATEGORY_DEFS.map((cat) => {
-                    const selected = (activeFilters.categories || []).some(
-                      (v) => v.toLowerCase() === cat.name.toLowerCase()
-                    )
-                    const meta = CATEGORY_TILE_META[cat.slug] || {
-                      image: '/images/post-thumb-03.jpg',
-                      className: 'bg-gray-200 text-gray-900',
-                    }
-                    const lightText = meta.className.includes('text-white')
-
-                    return (
-                      <button
-                        key={cat.slug}
-                        type="button"
-                        onClick={() => toggleCategoryTile(cat.name)}
-                        className={[
-                          'flex-none',
-                          'rounded-2xl overflow-hidden',
-                          'flex items-center',
-                          'shadow-sm transition',
-                          'focus:outline-none focus-visible:ring-2 focus-visible:ring-black/30',
-                          meta.className,
-                          selected ? 'ring-2 ring-white/70 brightness-110' : 'opacity-90 hover:opacity-100',
-                        ].join(' ')}
-                        aria-pressed={selected}
-                      >
-                        {/* Image on left - touches edge */}
-                        <div className="relative w-12 h-12 flex-shrink-0">
-                          <Image 
-                            src={meta.image} 
-                            alt={cat.name} 
-                            fill
-                            className="object-cover"
-                            sizes="48px"
-                          />
-                        </div>
-                        {/* Text on right */}
-                        <span className="text-left px-3 py-1.5 whitespace-nowrap">
-                          <span className="block text-sm font-semibold leading-tight">{cat.name}</span>
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
+            {/* (forceAIMode renders pills/tiles inside the hero banner above) */}
           </div>
         </div>
 
         {/* Content area - shows prompts or results */}
-        <div 
-          ref={aiModeScrollRef}
-          className={forceAIMode ? "px-4 py-6" : "flex-1 overflow-y-auto overscroll-none px-4 py-6"}
-          style={
-            forceAIMode
-              ? undefined
-              : {
-                  // Prevent "scrolling past" the prompt list on mobile (rubber-banding / extra scroll)
-                  overscrollBehaviorY: 'none',
-                  WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-                  scrollBehavior: 'auto', // Prevent smooth scroll from interfering
-                  minHeight: 0, // Critical for flex children to allow scrolling
-                }
-          }
-        >
-          <div className="max-w-2xl mx-auto">
+        {(!forceAIMode || !heroOnly) && (
+          <div 
+            ref={aiModeScrollRef}
+            className={forceAIMode ? "px-4 py-6" : "flex-1 overflow-y-auto overscroll-none px-4 py-6"}
+            style={
+              forceAIMode
+                ? undefined
+                : {
+                    // Prevent "scrolling past" the prompt list on mobile (rubber-banding / extra scroll)
+                    overscrollBehaviorY: 'none',
+                    WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+                    scrollBehavior: 'auto', // Prevent smooth scroll from interfering
+                    minHeight: 0, // Critical for flex children to allow scrolling
+                  }
+            }
+          >
+            <div className="max-w-2xl mx-auto">
 
 
             {storeInfoPrompt.active && (
@@ -3887,14 +4616,103 @@ For specific details about earning rates and redemption options, please contact 
                 })()}
               </div>
             )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
   ) : null
 
+  const homeResultsPortal =
+    homeResultsPortalId && mounted && typeof document !== 'undefined'
+      ? (() => {
+          const el = document.getElementById(homeResultsPortalId)
+          if (!el) return null
+
+          // Only show results once we have an active selection/search.
+          const hasAnyFilters = !!(
+            activeFilters.categories?.length ||
+            activeFilters.strains?.length ||
+            activeFilters.brands?.length ||
+            activeFilters.terpenes?.length ||
+            activeFilters.weights?.length ||
+            activeFilters.effects?.length ||
+            activeFilters.saleOnly
+          )
+
+          return createPortal(
+            <section className="pt-1">
+              {hasAnyFilters ? (
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-semibold text-gray-700">Showing results</div>
+                    <div className="text-xs text-gray-500">
+                      {products.length ? `${products.length} items` : loading ? 'Loading…' : 'No matches'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Reset homepage back to campaigns
+                      setHeroShowMoreFilters(false)
+                      setHeroCategory('')
+                      setHeroStrain('')
+                      setActiveFilters({})
+                      setProducts([])
+                      setShowResults(false)
+                      if (typeof window !== 'undefined') {
+                        window.dispatchEvent(
+                          new CustomEvent('home:startHereMode', { detail: { mode: 'campaigns' } })
+                        )
+                      }
+                    }}
+                    className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-black/10 hover:bg-gray-50"
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : null}
+
+              {hasAnyFilters ? (
+                loading ? (
+                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-2 lg:grid-cols-4 lg:gap-3">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div
+                        key={`home-skel-${i}`}
+                        className="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-black/5"
+                      >
+                        <div className="h-48 w-full rounded-2xl bg-gray-200 animate-pulse" />
+                        <div className="mt-3 h-3 w-1/3 rounded bg-gray-200 animate-pulse" />
+                        <div className="mt-2 h-4 w-full rounded bg-gray-200 animate-pulse" />
+                        <div className="mt-2 h-4 w-2/3 rounded bg-gray-200 animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                ) : products.length === 0 ? (
+                  <div className="rounded-3xl bg-white p-6 text-sm text-gray-700 shadow-sm ring-1 ring-black/5">
+                    No products found for these filters. Try a different category or strain.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-2 lg:grid-cols-4 lg:gap-3">
+                    {products.map((p) => (
+                      <ProductCard key={p.id} product={p} />
+                    ))}
+                  </div>
+                )
+              ) : null}
+            </section>,
+            el
+          )
+        })()
+      : null
+
   // If forceAIMode is true, only render AI mode overlay (no storefront)
   if (forceAIMode) {
-    return <>{aiModeOverlay}</>
+    return (
+      <>
+        {aiModeOverlay}
+        {homeResultsPortal}
+      </>
+    )
   }
 
   return (

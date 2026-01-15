@@ -24,11 +24,12 @@ export default function DefaultLayout({
     });
   });
 
-  const showFooter = pathname !== "/";
+  // Klook-style homepage includes the footer.
+  const showFooter = true;
 
   return (
     <>
-      <main className="relative flex grow flex-col">{children}</main>
+      <main className="relative flex grow flex-col pt-12">{children}</main>
 
       {showFooter && <Footer />}
     </>

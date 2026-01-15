@@ -1,0 +1,48 @@
+[
+  {
+    "name": "Blue Dream",
+    "slug": "blue-dream",
+    "genetics": "Blueberry x Haze",
+    "description": "A classic, widely recognized strain with a bright aroma and a balanced profile many shoppers enjoy exploring.",
+    "dominantTerpenes": ["limonene", "pinene"],
+    "commonUseCases": ["creativity", "focus"],
+    "relatedBrands": ["garden-greens", "kind-tree"]
+  },
+  {
+    "name": "Wedding Cake",
+    "slug": "wedding-cake",
+    "genetics": "Triangle Kush x Animal Mints",
+    "description": "A dessert-leaning cultivar with a rich, layered aroma that’s often described as sweet and peppery.",
+    "dominantTerpenes": ["myrcene", "caryophyllene", "linalool"],
+    "commonUseCases": ["relaxation"],
+    "relatedBrands": ["garden-greens"]
+  },
+  {
+    "name": "Gelato",
+    "slug": "gelato",
+    "genetics": "Sunset Sherbet x Thin Mint GSC",
+    "description": "Gelato-style genetics are known for smooth, dessert-forward aroma notes and a well-rounded experience.",
+    "dominantTerpenes": ["myrcene", "limonene", "linalool"],
+    "commonUseCases": ["creativity", "relaxation"],
+    "relatedBrands": ["kind-tree"]
+  },
+  {
+    "name": "Sour Diesel",
+    "slug": "sour-diesel",
+    "genetics": "Unknown (classic diesel lineage)",
+    "description": "A well-known, fuel-forward profile with sharp citrus notes that many shoppers recognize instantly.",
+    "dominantTerpenes": ["limonene", "pinene"],
+    "commonUseCases": ["focus"],
+    "relatedBrands": ["kind-tree"]
+  },
+  {
+    "name": "OG Kush",
+    "slug": "og-kush",
+    "genetics": "Unknown (OG lineage)",
+    "description": "An iconic cultivar often associated with bold aroma and classic ‘OG’ character—earthy, piney, and gassy.",
+    "dominantTerpenes": ["myrcene", "caryophyllene"],
+    "commonUseCases": ["sleep", "relaxation"],
+    "relatedBrands": ["select"]
+  }
+]
+

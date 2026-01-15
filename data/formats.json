@@ -1,0 +1,51 @@
+[
+  {
+    "name": "Flower",
+    "slug": "flower",
+    "description": "Classic dried cannabis flower—smoked or vaporized in a dry herb device.",
+    "typicalOnset": "Minutes (varies by method)",
+    "duration": "1–3 hours (varies)",
+    "bestForUseCases": ["relaxation", "creativity", "focus"]
+  },
+  {
+    "name": "Pre-Rolls",
+    "slug": "pre-rolls",
+    "description": "Ready-to-use joints filled with ground flower for convenience.",
+    "typicalOnset": "Minutes",
+    "duration": "1–3 hours",
+    "bestForUseCases": ["relaxation", "social"]
+  },
+  {
+    "name": "Vapes",
+    "slug": "vapes",
+    "description": "Cartridges or disposable devices that vaporize cannabis oil for fast, convenient use.",
+    "typicalOnset": "Minutes",
+    "duration": "1–3 hours",
+    "bestForUseCases": ["focus", "relaxation", "creativity"]
+  },
+  {
+    "name": "Edibles",
+    "slug": "edibles",
+    "description": "Gummies, chocolates, and other edible formats with a slower onset and longer duration.",
+    "typicalOnset": "30–120 minutes",
+    "duration": "4–8 hours",
+    "bestForUseCases": ["sleep", "relaxation"]
+  },
+  {
+    "name": "Concentrates",
+    "slug": "concentrates",
+    "description": "Highly concentrated extracts designed for experienced shoppers and specific devices.",
+    "typicalOnset": "Minutes",
+    "duration": "1–3 hours",
+    "bestForUseCases": ["experienced", "relaxation"]
+  },
+  {
+    "name": "Nano Powders",
+    "slug": "nano-powders",
+    "description": "Fast-mix powders designed to dissolve into beverages—often with a quicker onset than traditional edibles.",
+    "typicalOnset": "15–45 minutes",
+    "duration": "3–6 hours",
+    "bestForUseCases": ["focus", "creativity", "social"]
+  }
+]
+
