@@ -34,11 +34,18 @@ export default function LearnHubPage() {
       related={
         <RelatedLinks
           title="Browse learn categories"
-          links={Array.from(learnCategorySlugs).map((c) => ({
-            href: `/learn/${c}`,
-            title: titleFromSlug(c),
-            description: `Articles in the ${titleFromSlug(c)} category.`,
-          }))}
+          links={[
+            ...Array.from(learnCategorySlugs).map((c) => ({
+              href: `/learn/${c}`,
+              title: titleFromSlug(c),
+              description: `Articles in the ${titleFromSlug(c)} category.`,
+            })),
+            {
+              href: "/learn/resources",
+              title: "Resources Center",
+              description: "Long-form, source-heavy cannabis articles.",
+            },
+          ]}
         />
       }
       browseNext={
@@ -48,6 +55,7 @@ export default function LearnHubPage() {
             { href: "/learn/effects", title: "Effects articles", kicker: "Learn" },
             { href: "/learn/how-it-works", title: "How it works", kicker: "Learn" },
             { href: "/learn/industry", title: "Industry basics", kicker: "Learn" },
+            { href: "/learn/resources", title: "Resources Center", kicker: "Learn" },
             { href: "/formats", title: "Formats", kicker: "Formats" },
             { href: "/terpenes", title: "Terpenes", kicker: "Terpenes" },
           ]}

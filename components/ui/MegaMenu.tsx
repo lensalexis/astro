@@ -24,7 +24,7 @@ export default function MegaMenu({
       ></div>
 
       {/* Panel */}
-      <div className="absolute right-0 top-0 h-full w-1/4 bg-white/90 backdrop-blur-xl shadow-lg p-8 rounded-l-2xl flex flex-col">
+      <div className="absolute right-0 top-0 h-full w-[92vw] max-w-md bg-white/90 backdrop-blur-xl shadow-lg p-6 sm:p-8 rounded-l-2xl flex flex-col">
         {/* Close button */}
         <button
           onClick={() => setIsOpen(false)}
@@ -38,9 +38,9 @@ export default function MegaMenu({
           {/* Logo */}
           <div>
             <img
-              src="/images/jalh-logo.png"
-              alt="Kine Buds Logo"
-              className="h-20 w-auto"
+              src="/images/kine-buds-logo.png"
+              alt="Kine Buds Dispensary"
+              className="h-16 w-auto"
             />
           </div>
 

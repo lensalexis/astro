@@ -7,9 +7,9 @@ import HomeStartHereContent from "@/components/home/HomeStartHereContent";
 import { stores } from "@/lib/stores";
 
 export const metadata: Metadata = {
-  title: "Just a Little Higher",
+  title: "Kine Buds Dispensary",
   description:
-    "Discover deals, explore categories, and search live inventory by mood, effects, brand, and price.",
+    "Shop live inventory in Maywood, NJ. Discover deals, explore categories, and search by mood, effects, brand, and price.",
 };
 
 type RailItem = {

@@ -523,7 +523,6 @@ const fetchAllProducts = async (params: any): Promise<Product[]> => {
 // COMPONENT
 // ============================================================================
 type AIProductSearchProps = {
-  onResultsVisibleChange?: (visible: boolean) => void
   customChips?: ReactNode
   currentStoreId?: string
   /** If true, AI mode is always open and storefront view is hidden */
@@ -537,17 +536,25 @@ type AIProductSearchProps = {
   heroVariant?: 'default' | 'viator'
   /** If set, portal homepage results into this element id */
   homeResultsPortalId?: string
+  /** Override hero headline (useful for category pages) */
+  heroTitle?: string
+  /** Hide the hero quick prompt chips under the search bar */
+  hideHeroQuickPrompts?: boolean
+  /** Preselect a category in the hero filters (expects category label like "Flower") */
+  initialHeroCategory?: string
 }
 
 export default function AIProductSearch(props: AIProductSearchProps = {}): ReactElement {
   const {
-    onResultsVisibleChange,
     customChips,
     currentStoreId,
     forceAIMode = false,
     heroOnly = false,
     heroVariant = 'default',
     homeResultsPortalId,
+    heroTitle,
+    hideHeroQuickPrompts = false,
+    initialHeroCategory,
   } = props
   const { user } = useUser()
   const router = useRouter()
@@ -864,6 +871,12 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   const [heroCategoryOpen, setHeroCategoryOpen] = useState(false)
   const [heroStrainOpen, setHeroStrainOpen] = useState(false)
   const [heroShowMoreFilters, setHeroShowMoreFilters] = useState(false)
+
+  // Allow category pages to preselect a hero category.
+  useEffect(() => {
+    if (!initialHeroCategory) return
+    setHeroCategory((prev) => (prev ? prev : initialHeroCategory))
+  }, [initialHeroCategory])
   const heroCategoryBtnRef = useRef<HTMLButtonElement | null>(null)
   const heroStrainBtnRef = useRef<HTMLButtonElement | null>(null)
   const [heroDropdownPos, setHeroDropdownPos] = useState<{
@@ -1385,11 +1398,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
         .slice(0, 2)
         .toUpperCase()
     : '👤'
-
-  // Notify parent when results visibility changes (for layout coordination)
-  useEffect(() => {
-    onResultsVisibleChange?.(showResults)
-  }, [showResults, onResultsVisibleChange])
 
   // Auto-scroll disabled - users can manually scroll to see messages
   // Removed auto-scroll to prevent unwanted page movement after prompts
@@ -3241,16 +3249,16 @@ License: ${license}`
         const loyaltyInfo = `Loyalty Program Information:
 
 Earn Points:
-• Make purchases at any JALH location
+• Make purchases at Kine Buds
 • Points are earned based on your purchase amount
 • Check with store staff for current point earning rates
 
 Redeem Points:
-• Visit any JALH location to redeem your points
+• Visit Kine Buds to redeem your points
 • Points can be used for discounts on future purchases
 • Speak with store staff to check your current point balance and redemption options
 
-For specific details about earning rates and redemption options, please contact your local JALH store or visit in person.`
+For specific details about earning rates and redemption options, please contact Kine Buds or visit in person.`
         appendAssistantMessage(loyaltyInfo, requestId)
         return
       }
@@ -3493,7 +3501,13 @@ For specific details about earning rates and redemption options, please contact 
                   <div className="flex flex-col items-start text-left gap-4">
                     <div className="w-full flex flex-col items-start gap-2">
                       <h1 className="text-[2.3em] sm:text-6xl font-extrabold tracking-tight text-white">
-                        Find your next <RotatingWord />
+                        {heroTitle ? (
+                          heroTitle
+                        ) : (
+                          <>
+                            Find your next <RotatingWord />
+                          </>
+                        )}
                       </h1>
                       <p className="max-w-3xl mt-2 text-base sm:text-lg text-white/90">
                         Search Maywood’s premier cannabis destination for curated selections.
@@ -3765,55 +3779,57 @@ For specific details about earning rates and redemption options, please contact 
                     </form>
 
                     {/* Prompts (quick filters) */}
-                    <div className="mt-4 w-full">
-                      <div className="w-full max-w-5xl">
-                        <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
-                          {[
-                            { id: 'good-deals', label: 'Good deals', mode: 'filters' as const, apply: { saleOnly: true } },
-                            { id: 'trending', label: 'Trending right now', mode: 'feed' as const, promptId: 'feed-best-sellers' },
-                            {
-                              id: 'non-smokable',
-                              label: 'Non smokable options',
-                              mode: 'filters' as const,
-                              // "All but flower, pre-roll, and vape"
-                              apply: {
-                                categories: ['Edibles', 'Beverages', 'Tinctures', 'Concentrates', 'Topicals'] as string[],
+                    {!hideHeroQuickPrompts ? (
+                      <div className="mt-4 w-full">
+                        <div className="w-full max-w-5xl">
+                          <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
+                            {[
+                              { id: 'good-deals', label: 'Good deals', mode: 'filters' as const, apply: { saleOnly: true } },
+                              { id: 'trending', label: 'Trending right now', mode: 'feed' as const, promptId: 'feed-best-sellers' },
+                              {
+                                id: 'non-smokable',
+                                label: 'Non smokable options',
+                                mode: 'filters' as const,
+                                // "All but flower, pre-roll, and vape"
+                                apply: {
+                                  categories: ['Edibles', 'Beverages', 'Tinctures', 'Concentrates', 'Topicals'] as string[],
+                                },
                               },
-                            },
-                          ].map((p) => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={async () => {
-                                // These quick prompts should behave like "presets" (replace current filters)
-                                setHeroCategory('')
-                                setHeroStrain('')
+                            ].map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={async () => {
+                                  // These quick prompts should behave like "presets" (replace current filters)
+                                  setHeroCategory('')
+                                  setHeroStrain('')
 
-                                if (p.mode === 'feed') {
-                                  const prompt = AI_MODE_PROMPTS.find((x) => x.id === p.promptId)
-                                  if (prompt) {
-                                    await handleAiModePrompt(prompt)
+                                  if (p.mode === 'feed') {
+                                    const prompt = AI_MODE_PROMPTS.find((x) => x.id === p.promptId)
+                                    if (prompt) {
+                                      await handleAiModePrompt(prompt)
+                                    }
+                                  } else {
+                                    await handleFiltersChange(p.apply as FacetedFilters)
                                   }
-                                } else {
-                                  await handleFiltersChange(p.apply as FacetedFilters)
-                                }
 
-                                setHeroShowMoreFilters(true)
-                                if (homeResultsPortalId && typeof window !== 'undefined') {
-                                  window.dispatchEvent(
-                                    new CustomEvent('home:startHereMode', { detail: { mode: 'results' } })
-                                  )
-                                }
-                              }}
-                              className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-black/10 hover:bg-white"
-                            >
-                              <MagnifyingGlassIcon className="h-4 w-4 text-gray-600" />
-                              <span>{p.label}</span>
-                            </button>
-                          ))}
+                                  setHeroShowMoreFilters(true)
+                                  if (homeResultsPortalId && typeof window !== 'undefined') {
+                                    window.dispatchEvent(
+                                      new CustomEvent('home:startHereMode', { detail: { mode: 'results' } })
+                                    )
+                                  }
+                                }}
+                                className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-black/10 hover:bg-white"
+                              >
+                                <MagnifyingGlassIcon className="h-4 w-4 text-gray-600" />
+                                <span>{p.label}</span>
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ) : null}
                   </div>
                 </div>
               ) : (
@@ -3824,7 +3840,13 @@ For specific details about earning rates and redemption options, please contact 
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h1 className="text-[2.3em] sm:text-4xl font-extrabold tracking-tight text-gray-950">
-                          Find your next <RotatingWord />
+                          {heroTitle ? (
+                            heroTitle
+                          ) : (
+                            <>
+                              Find your next <RotatingWord />
+                            </>
+                          )}
                         </h1>
                         <p className="mt-2 text-sm sm:text-base text-gray-700">
                           Search Maywood’s premier cannabis destination for curated selections.
@@ -4727,8 +4749,8 @@ For specific details about earning rates and redemption options, please contact 
           {/* Logo - positioned like Google */}
           <div className="flex justify-center mb-8">
             <img
-              src="/images/jalh-logo.png"
-              alt="Just a Little Higher"
+              src="/images/kine-buds-logo.png"
+              alt="Kine Buds Dispensary"
               className="h-16 sm:h-20 w-auto"
             />
           </div>

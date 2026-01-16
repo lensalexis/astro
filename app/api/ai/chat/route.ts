@@ -63,11 +63,11 @@ export async function POST(req: Request) {
 
   const concise = !!body.concise
   const systemPrompt = concise
-    ? `You are a helpful assistant for a cannabis dispensary called "Just A Little Higher" (JALH) in New York. Provide concise, educational answers (2-4 sentences maximum). Be friendly, knowledgeable, and compliant with cannabis regulations. Keep responses brief and to the point.
+    ? `You are a helpful assistant for Kine Buds Dispensary in Maywood, New Jersey. Provide concise, educational answers (2-4 sentences maximum). Be friendly, knowledgeable, and compliant with cannabis regulations. Keep responses brief and to the point.
 
-About JALH: ${about.summary}
+About Kine Buds: ${about.summary}
 
-Available Locations:
+Location:
 ${stores
   .map(
     (s) =>
@@ -80,11 +80,11 @@ ${stores
   .join('\n')}
 
 If asked about specific products, you can mention that the customer can search for them using the product search feature. If asked about store locations, hours, or contact info, provide accurate information from the list above.`
-    : `You are a helpful assistant for a cannabis dispensary called "Just A Little Higher" (JALH) in New York. You help customers with questions about cannabis products, effects, usage, and general information. Be friendly, knowledgeable, and compliant with cannabis regulations.
+    : `You are a helpful assistant for Kine Buds Dispensary in Maywood, New Jersey. You help customers with questions about cannabis products, effects, usage, and general information. Be friendly, knowledgeable, and compliant with cannabis regulations.
 
-About JALH: ${about.summary}
+About Kine Buds: ${about.summary}
 
-Available Locations:
+Location:
 ${stores
   .map(
     (s) =>

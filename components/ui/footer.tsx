@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { PhoneIcon, EnvelopeIcon, MapPinIcon, ShoppingBagIcon } from "@heroicons/react/24/outline";
 import { FaFacebookF, FaInstagram } from "react-icons/fa";
+import { site } from "@/lib/site";
 
 export default function Footer() {
   return (
@@ -10,8 +11,8 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col items-center gap-6">
         <div className="flex justify-center">
             <img
-              src="/images/jalh-logo.png"
-              alt="Kine Buds Logo"
+              src="/images/kine-buds-logo.png"
+              alt="Kine Buds Dispensary"
               className="h-20 w-auto"
             />
           </div>
@@ -26,7 +27,9 @@ export default function Footer() {
           </Link>
 
           <a
-            href="https://www.google.com/maps/dir/?api=1&destination=113+E+Passaic+St+Maywood+NJ+07607"
+            href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+              `${site.address.streetAddress}, ${site.address.addressLocality}, ${site.address.addressRegion} ${site.address.postalCode}`
+            )}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 bg-white text-black font-semibold rounded-full px-5 py-3 shadow-md hover:shadow-lg transition cursor-pointer"
@@ -36,7 +39,7 @@ export default function Footer() {
           </a>
 
           <a
-            href="tel:+12019568800"
+            href={`tel:${site.contact.phone}`}
             className="flex items-center gap-2 bg-white text-black font-semibold rounded-full px-5 py-3 shadow-md hover:shadow-lg transition cursor-pointer"
           >
             <PhoneIcon className="h-5 w-5" />
@@ -44,7 +47,7 @@ export default function Footer() {
           </a>
 
           <a
-            href="mailto:info@kinebudsdispensary.com"
+            href={`mailto:${site.contact.email}`}
             className="flex items-center gap-2 bg-white text-black font-semibold rounded-full px-5 py-3 shadow-md hover:shadow-lg transition cursor-pointer"
           >
             <EnvelopeIcon className="h-5 w-5" />
@@ -74,7 +77,7 @@ export default function Footer() {
 
         {/* Copyright */}
         <p className="text-sm text-gray-500 mt-4">
-          © {new Date().getFullYear()} Just a Little Higher · All Rights Reserved
+          © {new Date().getFullYear()} Kine Buds Dispensary · All Rights Reserved
         </p>
       </div>
     </footer>

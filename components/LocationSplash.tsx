@@ -16,17 +16,8 @@ dayjs.extend(timezone)
 
 const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
 
-// Videos for rotating splash background (only these are used)
-// NOTE: the StoryTelling filename contains a space; keep it URL-encoded.
-const ROTATING_VIDEOS = [
-  '/videos/StoryTelling%20video_6-720p.mov',
-  '/videos/fivio.mov',
-  '/videos/fab.mov',
-  '/videos/shoutout.MP4',
-  '/videos/uws.mov',
-  '/videos/show.mov',
-  '/videos/briarwood.MOV',
-]
+// Videos for rotating splash background (keep generic to Kine Buds branding).
+const ROTATING_VIDEOS = ['/videos/video.mp4']
 
 const getStoreStatus = (store: Store): boolean | null => {
   const now = dayjs().tz(store.timezone)
@@ -72,7 +63,7 @@ export default function LocationSplash() {
   const videoRefs = useRef<Array<HTMLVideoElement | null>>([])
   const [soundEnabled, setSoundEnabled] = useState(false)
   const [showLocationModal, setShowLocationModal] = useState(false)
-  const AGE_SESSION_KEY = 'jalh_age_verified_session'
+  const AGE_SESSION_KEY = 'kinebuds_age_verified_session'
   const router = useRouter()
 
   useEffect(() => {
@@ -240,7 +231,7 @@ export default function LocationSplash() {
       setAgeVerified(true)
     }
     // clean up any legacy long-term key
-    localStorage.removeItem('jalh_age_verified_until')
+    localStorage.removeItem('kinebuds_age_verified_until')
     
     // Allow reset via URL parameter for testing
     if (typeof window !== 'undefined' && window.location.search.includes('resetAge=true')) {
@@ -338,22 +329,22 @@ export default function LocationSplash() {
         <div className="flex-1 flex flex-col justify-end px-4 sm:px-6 pb-2 sm:pb-3">
           {/* Logo */}
           <div className="mb-3 sm:mb-4 flex justify-center">
-            <Image 
-              src="/images/jalh-logo.png" 
-              alt="Just a Little Higher" 
-              width={200} 
-              height={60} 
-              className="h-8 sm:h-10 w-auto" 
+            <Image
+              src="/images/kine-buds-logo.png"
+              alt="Kine Buds Dispensary"
+              width={200}
+              height={60}
+              className="h-8 sm:h-10 w-auto"
             />
           </div>
 
           {/* Title and subtitle */}
           <div className="text-center space-y-1 sm:space-y-2 mb-4 sm:mb-5">
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white">
-              Ready to Get a Little Higher?
+              Welcome to Kine Buds
             </h1>
             <p className="text-sm sm:text-lg md:text-xl text-gray-200">
-              Your Destination for Recreational Cannabis in New York
+              Recreational cannabis in Maywood, NJ
             </p>
           </div>
         </div>

@@ -2,18 +2,19 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Bars3Icon,
   ChevronDownIcon,
-  MapPinIcon,
   MagnifyingGlassIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
-import { stores } from '@/lib/stores'
+import { site } from '@/lib/site'
 import FloatingCartButton from '@/components/ui/FloatingCartButton'
 import MobileBreadcrumbsBar from '@/components/seo/MobileBreadcrumbsBar'
+import DiscoverMegaMenu from '@/components/ui/DiscoverMegaMenu'
 
 export default function SiteChrome() {
   const [mounted, setMounted] = useState(false)
@@ -24,13 +25,14 @@ export default function SiteChrome() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [menuRef, setMenuRef] = useState<HTMLDivElement | null>(null)
-  const [selectedLocation, setSelectedLocation] = useState<string>('')
   const [accountOpen, setAccountOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
   const showChrome = true
-  const AGE_SESSION_KEY = 'jalh_age_verified_session'
+  const AGE_SESSION_KEY = 'kinebuds_age_verified_session'
   const [modalQuery, setModalQuery] = useState('')
+
+  // Single-store experience (Kine Buds)
 
   useEffect(() => {
     setMounted(true)
@@ -51,20 +53,12 @@ export default function SiteChrome() {
     return () => window.removeEventListener('storage', onStorage)
   }, [mounted])
 
-  useEffect(() => {
-    if (pathname.startsWith('/stores/')) {
-      const parts = pathname.split('/')
-      setSelectedLocation(parts[2] || '')
-    }
-  }, [pathname])
-
   const scrollToSearch = () => {
     const el = document.getElementById('ai-search-anchor')
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else if (selectedLocation || stores[0]?.id) {
-      const target = selectedLocation || stores[0].id
-      router.push(`/stores/${target}#ai-search-anchor`)
+    } else {
+      router.push('/#ai-search-anchor')
     }
   }
 
@@ -97,8 +91,7 @@ export default function SiteChrome() {
   const handleMenuSelect = (path: string) => {
     setMenuOpen(false)
     if (path === 'home') {
-      const target = selectedLocation || stores[0]?.id || ''
-      if (target) router.push(`/stores/${target}`)
+      router.push('/')
       return
     }
     router.push(path)
@@ -141,9 +134,20 @@ export default function SiteChrome() {
   return (
     <>
       {!mounted || !showChrome ? null : (
-        <div className="fixed top-0 left-0 right-0 z-[80] bg-white px-4 py-2 border-b border-black/5">
+        <div className="fixed top-0 left-0 right-0 z-[80] bg-white px-4 border-b border-black/5">
           <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
             <div className="flex items-center gap-2">
+              <Link href="/" className="mr-1 inline-flex items-center">
+                <Image
+                  src="/images/kine-buds-logo.png"
+                  alt="Kine Buds"
+                  width={142}
+                  height={40}
+                  className="w-[142px] h-auto"
+                  priority
+                />
+              </Link>
+
               {/* Menu pill */}
               <div className="relative" ref={setMenuRef}>
                 <button
@@ -151,111 +155,30 @@ export default function SiteChrome() {
                   onClick={() => setMenuOpen((v) => !v)}
                   className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  <Bars3Icon className="h-5 w-5" />
-                  <span>Menu</span>
+                  <Bars3Icon className="h-5 w-5 sm:hidden" />
+                  <span>Discover</span>
+                  <ChevronDownIcon className="h-4 w-4 text-white/80" />
                 </button>
                 {menuOpen && (
-                  <div className="absolute left-0 top-full mt-2 w-40 rounded-2xl border border-gray-800 bg-black text-white shadow-xl">
-                    <ul className="py-2 text-sm">
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('home')}
-                        >
-                          Home
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/shop')}
-                        >
-                          Shop
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/brands')}
-                        >
-                          Brands
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/strains')}
-                        >
-                          Strains
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/terpenes')}
-                        >
-                          Terpenes
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/formats')}
-                        >
-                          Formats
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/learn')}
-                        >
-                          Learn
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/astro')}
-                        >
-                          Astro
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/store-info')}
-                        >
-                          Store info
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/about')}
-                        >
-                          About
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => handleMenuSelect('/contact')}
-                        >
-                          Contact
-                        </button>
-                      </li>
-                      <li>
-                        <a
-                          href="/menu"
-                          className="block w-full px-4 py-2 hover:bg-white/10"
-                          onClick={() => setMenuOpen(false)}
-                        >
-                          Live menu
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
+                  <>
+                    {/* Backdrop (click to close) */}
+                    <button
+                      type="button"
+                      aria-label="Close discover menu"
+                      className="fixed inset-0 z-[70] cursor-default bg-black/20 backdrop-blur-[1px]"
+                      onClick={() => setMenuOpen(false)}
+                    />
+
+                    {/* Panel */}
+                    <div className="hidden sm:block absolute left-0 top-full mt-3 z-[80]">
+                      <DiscoverMegaMenu onNavigate={() => setMenuOpen(false)} />
+                    </div>
+
+                    {/* Mobile: make it full width below navbar */}
+                    <div className="sm:hidden fixed left-0 right-0 top-[72px] z-[80] px-4 pb-6 max-h-[calc(100vh-72px)] overflow-auto">
+                      <DiscoverMegaMenu onNavigate={() => setMenuOpen(false)} />
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -285,14 +208,14 @@ export default function SiteChrome() {
                 </svg>
                 <span className="inline-flex items-center gap-1">
                   <span className="sm:hidden">Search</span>
-                  <span className="hidden sm:inline bg-gradient-to-r from-pink-500 via-fuchsia-500 to-green-400 bg-clip-text text-transparent">
+                  <span className="hidden sm:inline animate-gradient-x bg-[linear-gradient(to_right,#ec4899,#a855f7,#ec4899)] bg-[length:200%_auto] bg-clip-text text-transparent">
                     Find your next favorite
                   </span>
                 </span>
               </button>
             </div>
 
-            {/* User + location pill */}
+            {/* User + store pill */}
             <div
               id="nav-location-pill"
               className="relative inline-flex items-center gap-2 rounded-full bg-black px-2 py-1 text-white shadow-sm transition ml-auto"
@@ -320,14 +243,23 @@ export default function SiteChrome() {
               <button
                 type="button"
                 onClick={() => {
-                  setLocationOpen((v) => !v)
+                  // Keep location dropdown disabled (single store)
+                  setLocationOpen(false)
                   setAccountOpen(false)
                 }}
-                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-semibold text-white hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-left text-sm font-semibold text-white hover:bg-white/10"
               >
-                <MapPinIcon className="h-5 w-5" />
-                <span className="hidden sm:inline">
-                  {selectedLocation ? stores.find((s) => s.id === selectedLocation)?.name || 'Location' : 'Location'}
+                <span className="hidden sm:flex flex-col items-start leading-tight">
+                  <span className="text-sm font-semibold text-white">
+                    Kine Buds
+                  </span>
+                  <span className="text-[11px] font-medium text-white/75">
+                    {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion}{' '}
+                    {site.address.postalCode}
+                  </span>
+                </span>
+                <span className="sm:hidden">
+                  Kine Buds
                 </span>
                 <ChevronDownIcon className="h-4 w-4" />
               </button>
@@ -393,26 +325,7 @@ export default function SiteChrome() {
                 </div>
               )}
 
-              {locationOpen && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border border-gray-800 bg-black text-white shadow-xl">
-                  <ul className="max-h-64 overflow-auto py-2 text-sm">
-                    {stores.map((s) => (
-                      <li key={s.id}>
-                        <button
-                          className="w-full text-left px-4 py-2 hover:bg-white/10"
-                          onClick={() => {
-                            setSelectedLocation(s.id)
-                            setLocationOpen(false)
-                            router.push(`/stores/${s.id}`)
-                          }}
-                        >
-                          {s.name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {locationOpen ? null : null}
             </div>
           </div>
           {/* Mobile breadcrumb bar (driven by PageShell) */}

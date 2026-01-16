@@ -118,7 +118,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-slate-100 via-white to-rose-50 text-gray-900 bg-[url('/images/jalh-bg-mobile.png')] sm:bg-[url('/images/jalh-bg-desktop.png')] bg-cover bg-center">
+    <div className="relative min-h-screen bg-gradient-to-br from-slate-100 via-white to-rose-50 text-gray-900 bg-[url('/images/store-front.jpg')] bg-cover bg-center">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(34,121,64,0.12),transparent_30%),radial-gradient(circle_at_80%_30%,rgba(209,56,139,0.12),transparent_50%),radial-gradient(circle_at_50%_80%,rgba(34,121,64,0.08),transparent_50%)] blur-sm opacity-25" />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/8 via-white/24 to-white/10 backdrop-blur-sm" />
 

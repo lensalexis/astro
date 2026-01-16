@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react"
 import dayjs from "dayjs"
 import utc from "dayjs/plugin/utc"
 import timezone from "dayjs/plugin/timezone"
+import { stores as STORES } from "@/lib/stores"
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -36,92 +37,16 @@ export default function StoreLocator() {
     const [scrollLeft, setScrollLeft] = useState(0)
     const [storeStatuses, setStoreStatuses] = useState<Record<string, boolean | null>>({})
 
-    const stores: Store[] = [
-        {
-            id: 'upper-west-side',
-            name: 'JALH – Upper West Side',
-            address: '157 West 72nd St\nNew York NY, 10023',
-            phone: '646 476 4305',
-            timezone: 'America/New_York',
-            hours: {
-                sunday: { open: '09:00', close: '22:00' },
-                monday: { open: '09:00', close: '22:00' },
-                tuesday: { open: '09:00', close: '22:00' },
-                wednesday: { open: '09:00', close: '22:00' },
-                thursday: { open: '09:00', close: '22:00' },
-                friday: { open: '09:00', close: '23:30' },
-                saturday: { open: '09:00', close: '23:30' },
-            },
-            hoursDisplay: 'Sun-Thu: 9am-10pm\nFri-Sat: 9am-11:30pm',
-            image: '/images/store-front.jpg',
-        },
-        {
-            id: 'murray-hill',
-            name: 'JALH – Murray Hill',
-            address: '698 2nd Ave\nNew York NY 10016',
-            phone: '646-596-9779',
-            timezone: 'America/New_York',
-            hours: {
-                sunday: { open: '09:00', close: '22:00' },
-                monday: { open: '09:00', close: '22:00' },
-                tuesday: { open: '09:00', close: '22:00' },
-                wednesday: { open: '09:00', close: '22:00' },
-                thursday: { open: '09:00', close: '22:00' },
-                friday: { open: '09:00', close: '23:00' },
-                saturday: { open: '09:00', close: '23:00' },
-            },
-            hoursDisplay: 'Sunday-Thursday 9am-10pm\nFriday & Saturday 9am-11pm',
-            image: '/images/store-front.jpg',
-        },
-        {
-            id: 'briarwood',
-            name: 'JALH – Briarwood',
-            address: '138-72 Queens Blvd\nBriarwood NY 11435',
-            phone: null,
-            timezone: 'America/New_York',
-            hours: {
-                sunday: { open: '09:00', close: '22:00' },
-                monday: { open: '09:00', close: '22:00' },
-                tuesday: { open: '09:00', close: '22:00' },
-                wednesday: { open: '09:00', close: '22:00' },
-                thursday: { open: '09:00', close: '22:00' },
-                friday: { open: '09:00', close: '23:00' },
-                saturday: { open: '09:00', close: '23:00' },
-            },
-            hoursDisplay: 'Sunday-Thursday 9 AM-10 PM\nFriday-Saturday 9 AM-11 PM',
-            image: '/images/store-front.jpg',
-        },
-        {
-            id: 'troy',
-            name: 'JALH – Troy',
-            address: '740 Hoosick Rd\nTroy, NY 12180',
-            phone: '518-629-9511',
-            timezone: 'America/New_York',
-            hours: {
-                daily: { open: '09:00', close: '21:00' },
-            },
-            hoursDisplay: 'Open Daily: 9am – 9pm',
-            image: '/images/store-front.jpg',
-        },
-        {
-            id: 'queens-plaza',
-            name: 'JALH – Queens Plaza',
-            address: '2415 Queens Plz N, Unit NR1\nLong Island City, NY 11101',
-            phone: null,
-            timezone: 'America/New_York',
-            hours: {
-                sunday: { open: '11:00', close: '20:00' },
-                monday: { open: '11:00', close: '20:00' },
-                tuesday: { open: '11:00', close: '20:00' },
-                wednesday: { open: '11:00', close: '20:00' },
-                thursday: { open: '11:00', close: '20:00' },
-                friday: { open: '10:30', close: '23:00' },
-                saturday: { open: '10:30', close: '23:00' },
-            },
-            hoursDisplay: 'Sunday – Thursday: 11am-8pm\nFriday – Saturday: 10:30am-11pm',
-            image: '/images/store-front.jpg',
-        },
-    ]
+    const stores: Store[] = STORES.map((s) => ({
+        id: s.id,
+        name: s.name,
+        address: s.address || `${s.addressLine1}\n${s.addressLine2}`,
+        phone: s.phone ?? null,
+        timezone: s.timezone,
+        hours: s.hours,
+        hoursDisplay: s.hoursDisplay || 'See Hours page',
+        image: s.image || '/images/store-front.jpg',
+    }))
 
     const checkStoreStatus = (store: Store): boolean | null => {
         const now = dayjs().tz(store.timezone)

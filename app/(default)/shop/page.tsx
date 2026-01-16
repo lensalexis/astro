@@ -25,8 +25,8 @@ export default function ShopStep1() {
       {/* Logo fixed at top */}
       <div className="absolute top-6 left-1/2 -translate-x-1/2 md:hidden">
         <img
-          src="/images/jalh-logo.png"
-          alt="Kine Buds Logo"
+          src="/images/kine-buds-logo.png"
+          alt="Kine Buds Dispensary"
           className="h-16 w-auto"
         />
       </div>

@@ -53,7 +53,7 @@ export default function ProductSlider({
         {/* ✅ Always show See All card */}
         <div className="min-w-[250px] max-w-[250px] flex-shrink-0">
           <Link
-            href={`/shop/${categorySlug}`}
+            href={`/shop/${categorySlug}/all`}
             className="flex items-center justify-center h-full bg-white rounded-2xl shadow-md hover:shadow-lg transition text-lg font-semibold text-black cursor-pointer"
           >
             See All →
