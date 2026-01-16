@@ -132,42 +132,8 @@ export default function ResourceArticleLayout({
       </div>
 
       <div className="grid gap-8 lg:grid-cols-12">
-        {/* Left sticky TOC */}
-        <aside className="hidden lg:block lg:col-span-3">
-          <div className="sticky space-y-3" style={{ top: `${topOffset + 20}px` }}>
-            <div className="text-sm font-semibold text-gray-900">On this page</div>
-            <nav aria-label="Table of contents" className="text-sm">
-              <ul className="space-y-2">
-                {toc.map((t) => {
-                  const active = t.id === activeId
-                  return (
-                    <li key={t.id}>
-                      <a
-                        href={`#${t.id}`}
-                        className={[
-                          'block border-l-2 pl-3 transition',
-                          active
-                            ? 'border-emerald-700 text-gray-950 font-semibold'
-                            : 'border-transparent text-gray-600 hover:text-gray-900',
-                        ].join(' ')}
-                      >
-                        {t.title}
-                      </a>
-                    </li>
-                  )
-                })}
-              </ul>
-            </nav>
-            <div className="text-xs text-gray-500">
-              <Link href="#top" className="hover:text-gray-900">
-                Back to top
-              </Link>
-            </div>
-          </div>
-        </aside>
-
         {/* Main */}
-        <main className="lg:col-span-9">
+        <main className="min-w-0 lg:col-span-9">
           {/* Mobile TOC dropdown */}
           {toc.length ? (
             <div className="lg:hidden mb-4">
@@ -199,8 +165,44 @@ export default function ResourceArticleLayout({
             </div>
           ) : null}
 
-          <article ref={articleRef as any}>{children}</article>
+          <article ref={articleRef as any} className="min-w-0">
+            {children}
+          </article>
         </main>
+
+        {/* Right sticky TOC */}
+        <aside className="hidden lg:block min-w-0 lg:col-span-3">
+          <div className="sticky space-y-3" style={{ top: `${topOffset + 20}px` }}>
+            <div className="text-sm font-semibold text-gray-900">On this page</div>
+            <nav aria-label="Table of contents" className="text-sm">
+              <ul className="space-y-2">
+                {toc.map((t) => {
+                  const active = t.id === activeId
+                  return (
+                    <li key={t.id}>
+                      <a
+                        href={`#${t.id}`}
+                        className={[
+                          'block border-l-2 pl-3 transition',
+                          active
+                            ? 'border-emerald-700 text-gray-950 font-semibold'
+                            : 'border-transparent text-gray-600 hover:text-gray-900',
+                        ].join(' ')}
+                      >
+                        {t.title}
+                      </a>
+                    </li>
+                  )
+                })}
+              </ul>
+            </nav>
+            <div className="text-xs text-gray-500">
+              <Link href="#top" className="hover:text-gray-900">
+                Back to top
+              </Link>
+            </div>
+          </div>
+        </aside>
       </div>
     </>
   )

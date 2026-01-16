@@ -150,7 +150,7 @@ export default async function ResourceArticlePage({
               </div>
 
               <div className="mt-8">
-                <div className="prose prose-gray max-w-none prose-headings:scroll-mt-24 prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline">
+                <div className="prose prose-gray max-w-none break-words prose-headings:scroll-mt-24 prose-a:break-words prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline prose-pre:overflow-x-auto">
                   <Content />
                 </div>
               </div>
