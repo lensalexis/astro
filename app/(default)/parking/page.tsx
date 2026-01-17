@@ -41,7 +41,7 @@ export default function ParkingPage() {
             { href: "/formats/pre-rolls", title: "Pre-Rolls guide", kicker: "Formats" },
             { href: "/formats/vapes", title: "Vapes guide", kicker: "Formats" },
             { href: "/use-cases/relaxation", title: "Relaxation guide", kicker: "Use-cases" },
-            { href: "/learn/beginners", title: "Beginner guides", kicker: "Learn" },
+            { href: "/resources", title: "Resources Center", kicker: "Resources" },
           ]}
         />
       }

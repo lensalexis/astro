@@ -262,12 +262,12 @@ export default function Home() {
         </Section>
 
         {/* AmazingExperiences (Themes) */}
-        <Section title="Amazing experiences (without the guesswork)" href="/learn">
+        <Section title="Amazing experiences (without the guesswork)" href="/resources">
           <div className="grid gap-4 md:grid-cols-2">
             {[
               {
-                title: "Learning hub",
-                href: "/learn",
+                title: "Resources Center",
+                href: "/resources",
                 image: "/images/post-thumb-12.jpg",
               },
               {

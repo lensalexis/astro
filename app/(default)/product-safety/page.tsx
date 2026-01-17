@@ -39,8 +39,8 @@ export default function ProductSafetyPage() {
         <h2 className="text-xl font-semibold text-white">More help</h2>
         <p className="mt-2 text-indigo-200/70">
           If you’re new, start with{" "}
-          <Link className="text-white underline hover:no-underline" href="/learn/beginners">
-            beginner guides
+          <Link className="text-white underline hover:no-underline" href="/resources">
+            Resources Center
           </Link>{" "}
           or check the{" "}
           <Link className="text-white underline hover:no-underline" href="/faq">

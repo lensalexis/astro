@@ -118,7 +118,7 @@ export default async function FormatPage({
               { href: "/terpenes", title: "Terpenes hub" },
               { href: "/strains", title: "Strain guides" },
               { href: "/brands", title: "Brands" },
-              { href: "/learn", title: "Learn hub" },
+              { href: "/resources", title: "Resources Center" },
               { href: "/formats", title: "All formats" },
             ]}
           />

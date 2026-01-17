@@ -44,8 +44,8 @@ export default function LoyaltyPage() {
           <li>Ask about member-only deals and limited drops.</li>
           <li>
             New to shopping? Start with{" "}
-            <Link className="text-white underline hover:no-underline" href="/learn/beginners">
-              beginner guides
+            <Link className="text-white underline hover:no-underline" href="/resources">
+              Resources Center
             </Link>
             .
           </li>

@@ -51,14 +51,14 @@ export default function FAQPage() {
             { href: "/directions", title: "Directions" },
             { href: "/parking", title: "Parking" },
             { href: "/shop", title: "Shop hub" },
-            { href: "/learn", title: "Learn hub" },
+            { href: "/resources", title: "Resources Center" },
           ]}
         />
       }
       browseNext={
         <BrowseNext
           cards={[
-            { href: "/learn/beginners", title: "Beginner learn hub", kicker: "Learn" },
+            { href: "/resources", title: "Resources Center", kicker: "Resources" },
             { href: "/formats", title: "Formats deep dives", kicker: "Formats" },
             { href: "/terpenes", title: "Terpenes", kicker: "Terpenes" },
             { href: "/brands", title: "Brands", kicker: "Brands" },

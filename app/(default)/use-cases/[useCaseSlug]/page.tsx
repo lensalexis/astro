@@ -103,7 +103,7 @@ export default async function UseCasePage({
               { href: "/formats", title: "Formats hub" },
               { href: "/terpenes", title: "Terpenes hub" },
               { href: "/strains", title: "Strain guides" },
-              { href: "/learn/effects", title: "Effects articles" },
+              { href: "/resources", title: "Resources Center" },
               { href: "/use-cases", title: "All use-cases" },
             ]}
           />
@@ -126,8 +126,8 @@ export default async function UseCasePage({
           <li>Keep dosing consistent; adjust slowly.</li>
           <li>
             If you’re new, start with the{" "}
-            <Link className="underline hover:no-underline text-white" href="/learn/beginners">
-              beginner guides
+            <Link className="underline hover:no-underline text-white" href="/resources">
+              Resources Center
             </Link>
             .
           </li>

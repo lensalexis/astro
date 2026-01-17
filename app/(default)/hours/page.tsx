@@ -37,7 +37,7 @@ export default function HoursPage() {
         <BrowseNext
           cards={[
             { href: "/shop", title: "Shop hub", kicker: "Shop" },
-            { href: "/learn/beginners", title: "Beginner guides", kicker: "Learn" },
+            { href: "/resources", title: "Resources Center", kicker: "Resources" },
             { href: "/use-cases/sleep", title: "Sleep use-case guide", kicker: "Use-cases" },
             { href: "/formats/edibles", title: "Edibles guide", kicker: "Formats" },
             { href: "/formats/vapes", title: "Vapes guide", kicker: "Formats" },

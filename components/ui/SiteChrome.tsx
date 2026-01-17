@@ -31,12 +31,29 @@ export default function SiteChrome() {
   const showChrome = true
   const AGE_SESSION_KEY = 'kinebuds_age_verified_session'
   const [modalQuery, setModalQuery] = useState('')
+  const navRef = useRef<HTMLDivElement | null>(null)
+  const [navHeight, setNavHeight] = useState(72)
 
   // Single-store experience (Kine Buds)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Expose navbar height as a CSS variable for overlays/offsets.
+  useEffect(() => {
+    if (!mounted) return
+    const measure = () => {
+      const el = navRef.current
+      if (!el) return
+      const h = Math.max(48, Math.round(el.getBoundingClientRect().height || 0))
+      setNavHeight(h)
+      document.documentElement.style.setProperty('--site-nav-h', `${h}px`)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [mounted])
 
   // Track age verification from sessionStorage (shared with splash)
   useEffect(() => {
@@ -134,7 +151,12 @@ export default function SiteChrome() {
   return (
     <>
       {!mounted || !showChrome ? null : (
-        <div className="fixed top-0 left-0 right-0 z-[80] bg-white px-4 border-b border-black/5">
+        <div
+          id="site-navbar"
+          ref={navRef}
+          className="fixed top-0 left-0 right-0 z-[80] bg-white px-4 border-b border-black/5"
+          style={{ ['--site-nav-h' as any]: `${navHeight}px` }}
+        >
           <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
             <div className="flex items-center gap-2">
               <Link href="/" className="mr-1 inline-flex items-center">
@@ -175,7 +197,7 @@ export default function SiteChrome() {
                     </div>
 
                     {/* Mobile: make it full width below navbar */}
-                    <div className="sm:hidden fixed left-0 right-0 top-[72px] z-[80] px-4 pb-6 max-h-[calc(100vh-72px)] overflow-auto">
+                    <div className="sm:hidden fixed left-0 right-0 top-[var(--site-nav-h)] z-[80] px-4 pb-6 max-h-[calc(100vh-var(--site-nav-h))] overflow-auto">
                       <DiscoverMegaMenu onNavigate={() => setMenuOpen(false)} />
                     </div>
                   </>

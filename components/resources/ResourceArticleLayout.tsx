@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
 
@@ -16,8 +16,16 @@ function slugify(input: string) {
     .slice(0, 64)
 }
 
-function getNavbarOffsetPx() {
-  // SiteChrome uses `top-[72px]` for mobile flyouts, implying a 72px navbar height.
+function readNavbarOffsetPx() {
+  if (typeof window === 'undefined') return 72
+  const cssVar = window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue('--site-nav-h')
+    .trim()
+  const fromVar = cssVar ? Number.parseFloat(cssVar) : NaN
+  if (Number.isFinite(fromVar) && fromVar > 0) return Math.round(fromVar)
+  const el = document.getElementById('site-navbar')
+  if (el) return Math.round(el.getBoundingClientRect().height)
   return 72
 }
 
@@ -31,8 +39,14 @@ export default function ResourceArticleLayout({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [mobileTocOpen, setMobileTocOpen] = useState(false)
+  const [topOffset, setTopOffset] = useState(72)
 
-  const topOffset = useMemo(() => getNavbarOffsetPx(), [])
+  useEffect(() => {
+    const measure = () => setTopOffset(readNavbarOffsetPx())
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
 
   useEffect(() => {
     const el = articleRef.current

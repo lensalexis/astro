@@ -31,7 +31,7 @@ export default function BrandsHubPage() {
             { href: "/terpenes", title: "Terpenes hub" },
             { href: "/formats", title: "Formats hub" },
             { href: "/shop", title: "Shop hub" },
-            { href: "/learn", title: "Learn hub" },
+            { href: "/resources", title: "Resources Center" },
           ]}
         />
       }
@@ -42,7 +42,7 @@ export default function BrandsHubPage() {
             { href: "/strains/a-z", title: "Browse strains A–Z", kicker: "Strains" },
             { href: "/terpenes", title: "Terpenes hub", kicker: "Terpenes" },
             { href: "/formats", title: "Formats hub", kicker: "Formats" },
-            { href: "/learn/how-it-works", title: "How it works (Learn)", kicker: "Learn" },
+            { href: "/resources", title: "Resources Center", kicker: "Resources" },
             { href: "/shop/flower", title: "Shop Flower", kicker: "Shop" },
           ]}
         />

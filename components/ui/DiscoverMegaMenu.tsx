@@ -189,9 +189,9 @@ export default function DiscoverMegaMenu({
   // Keep "Resources" compact: 3 core links.
   const resources: MenuItem[] = [
     {
-      title: "Learn",
-      description: "Guides on strains, terpenes, and shopping basics.",
-      href: "/learn",
+      title: "Resources",
+      description: "Long-form, source-heavy cannabis education.",
+      href: "/resources",
       icon: AcademicCapIcon,
       accent: "sky",
     },

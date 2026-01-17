@@ -42,7 +42,7 @@ export default function StoreInfoPage() {
             { href: "/strains", title: "Strain guides", kicker: "Strains" },
             { href: "/terpenes", title: "Terpene knowledge base", kicker: "Terpenes" },
             { href: "/formats", title: "Formats deep dives", kicker: "Formats" },
-            { href: "/learn", title: "Learn hub", kicker: "Learn" },
+            { href: "/resources", title: "Resources Center", kicker: "Resources" },
           ]}
         />
       }
