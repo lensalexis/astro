@@ -3500,7 +3500,7 @@ For specific details about earning rates and redemption options, please contact 
                 <div className="pb-0">
                   <div className="flex flex-col items-start text-left gap-4">
                     <div className="w-full flex flex-col items-start gap-2">
-                      <h1 className="text-[2.3em] sm:text-6xl font-extrabold tracking-tight text-white">
+                      <h1 className="text-[26px] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight text-white whitespace-nowrap">
                         {heroTitle ? (
                           heroTitle
                         ) : (
@@ -3839,7 +3839,7 @@ For specific details about earning rates and redemption options, please contact 
                   <div className="relative p-5 sm:p-8">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <h1 className="text-[2.3em] sm:text-4xl font-extrabold tracking-tight text-gray-950">
+                        <h1 className="text-[26px] sm:text-4xl lg:text-[60px] font-extrabold tracking-tight text-gray-950 whitespace-nowrap">
                           {heroTitle ? (
                             heroTitle
                           ) : (
