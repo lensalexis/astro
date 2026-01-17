@@ -5,6 +5,10 @@ import AIProductSearch from "@/components/AIProductSearch";
 import HomeHeroCarousel from "@/components/home/HomeHeroCarousel";
 import HomeStartHereContent from "@/components/home/HomeStartHereContent";
 import { stores } from "@/lib/stores";
+import { getMarketingBannersForPlacement, toHomeStartHereItems } from "@/lib/banners";
+import { CATEGORY_DEFS } from "@/lib/catalog";
+import productService from "@/lib/productService";
+import ProductSlider from "@/components/ui/ProductSlider";
 
 export const metadata: Metadata = {
   title: "Kine Buds Dispensary",
@@ -22,11 +26,9 @@ type RailItem = {
 
 function Section({
   title,
-  href,
   children,
 }: {
   title: string;
-  href?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -37,21 +39,19 @@ function Section({
             {title}
           </h2>
         </div>
-        {href ? (
-          <Link
-            href={href}
-            className="shrink-0 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900"
-          >
-            View all
-          </Link>
-        ) : null}
       </div>
       {children}
     </section>
   );
 }
 
-function HorizontalRail({ items }: { items: RailItem[] }) {
+function HorizontalRail({
+  items,
+  variant = "default",
+}: {
+  items: RailItem[];
+  variant?: "default" | "category";
+}) {
   return (
     <div className="overflow-x-auto scrollbar-hide">
       <div className="flex gap-4 pb-2">
@@ -69,17 +69,29 @@ function HorizontalRail({ items }: { items: RailItem[] }) {
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                 sizes="260px"
               />
+              {variant === "category" ? (
+                <>
+                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/75 via-black/35 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-4">
+                    <div className="text-base font-extrabold tracking-tight text-white">
+                      {item.title}
+                    </div>
+                  </div>
+                </>
+              ) : null}
               {item.badge ? (
                 <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-900 ring-1 ring-black/5 backdrop-blur">
                   {item.badge}
                 </div>
               ) : null}
             </div>
-            <div className="p-4">
-              <div className="text-base font-bold text-gray-950 line-clamp-2">
-                {item.title}
+            {variant === "category" ? null : (
+              <div className="p-4">
+                <div className="text-base font-bold text-gray-950 line-clamp-2">
+                  {item.title}
+                </div>
               </div>
-            </div>
+            )}
           </Link>
         ))}
       </div>
@@ -87,7 +99,7 @@ function HorizontalRail({ items }: { items: RailItem[] }) {
   );
 }
 
-export default function Home() {
+export default async function Home() {
   const defaultStoreId = stores[0]?.id;
   const heroSlides = [
     { src: "/images/deal-slider-2.jpg", alt: "Featured deals" },
@@ -97,76 +109,42 @@ export default function Home() {
     { src: "/images/deal-slider-1.jpg", alt: "Featured savings" },
   ];
 
-  // Klook-inspired homepage rails (static/local content in this project)
-  const campaignBanners: RailItem[] = [
+  const offersForYou = toHomeStartHereItems(
+    getMarketingBannersForPlacement("homepage_offers", { limit: 8 })
+  );
+
+  const bestSellersRes = await productService.list(
     {
-      title: "Deals this week",
-      href: "/shop/flower",
-      image: "/images/deal-slider-1.jpg",
-      badge: "Hot",
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      limit: 12,
+      sort: "-totalSold",
+      quantityMin: 1,
     },
-    {
-      title: "New arrivals",
-      href: "/shop/flower",
-      image: "/images/deal-slider-2.jpg",
-      badge: "New",
-    },
-    {
-      title: "Best value bundles",
-      href: "/shop/flower",
-      image: "/images/deal-slider-3.jpg",
-      badge: "Value",
-    },
-  ];
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+  const popularProducts = bestSellersRes.data || [];
+
+  const categoryThumbs: Record<string, string> = {
+    flower: "/images/post-thumb-03.jpg",
+    vaporizers: "/images/post-thumb-04.jpg",
+    edibles: "/images/post-thumb-05.jpg",
+    "pre-rolls": "/images/post-thumb-06.jpg",
+    concentrates: "/images/post-thumb-07.jpg",
+    beverages: "/images/post-thumb-08.jpg",
+    tinctures: "/images/post-thumb-09.jpg",
+    topicals: "/images/post-thumb-10.jpg",
+  };
 
   const topDestinations: RailItem[] = [
+    ...CATEGORY_DEFS.map((c) => ({
+      title: c.slug === "pre-rolls" ? "Pre-rolls" : c.name,
+      href: `/shop/${c.slug}`,
+      image: categoryThumbs[c.slug] || "/images/default-cover.jpg",
+    })),
     {
-      title: "Flower",
-      href: "/shop/flower",
-      image: "/images/post-thumb-03.jpg",
-    },
-    {
-      title: "Vaporizers",
-      href: "/shop/vaporizers",
-      image: "/images/post-thumb-04.jpg",
-    },
-    {
-      title: "Edibles",
-      href: "/shop/edibles",
-      image: "/images/post-thumb-05.jpg",
-    },
-    {
-      title: "Pre-rolls",
-      href: "/shop/pre-rolls",
-      image: "/images/post-thumb-06.jpg",
-    },
-  ];
-
-  const popularActivities: RailItem[] = [
-    {
-      title: "Relax & unwind",
-      subtitle: "Indica + calming terpenes",
-      href: "/use-cases",
-      image: "/images/post-thumb-08.jpg",
-      badge: "Popular",
-    },
-    {
-      title: "Sleep support",
-      subtitle: "Evening picks and routines",
-      href: "/use-cases",
-      image: "/images/post-thumb-09.jpg",
-    },
-    {
-      title: "Social & uplifted",
-      subtitle: "Daytime-friendly energy",
-      href: "/use-cases",
-      image: "/images/post-thumb-10.jpg",
-    },
-    {
-      title: "Focus",
-      subtitle: "Get in the zone",
-      href: "/use-cases",
-      image: "/images/post-thumb-11.jpg",
+      title: "Topicals",
+      href: "/shop/topicals",
+      image: categoryThumbs.topicals,
     },
   ];
 
@@ -191,22 +169,20 @@ export default function Home() {
         {/* CentralBanner / Campaigns */}
         <Section
           title="Offers for you"
-          href="/shop/flower"
         >
-          <HomeStartHereContent items={campaignBanners} />
+          <HomeStartHereContent items={offersForYou} variant="banner" />
         </Section>
 
         {/* TopDestination */}
         <Section
           title="Browse by category"
-          href="/formats"
         >
-          <HorizontalRail items={topDestinations} />
+          <HorizontalRail items={topDestinations} variant="category" />
         </Section>
 
-        {/* Popular */}
-        <Section title="Popular right now" href="/use-cases">
-          <HorizontalRail items={popularActivities} />
+        {/* Popular (Best Sellers) */}
+        <Section title="Popular right now">
+          <ProductSlider products={popularProducts} />
         </Section>
 
         {/* Best (Billboard) */}
@@ -262,7 +238,7 @@ export default function Home() {
         </Section>
 
         {/* AmazingExperiences (Themes) */}
-        <Section title="Amazing experiences (without the guesswork)" href="/resources">
+        <Section title="Amazing experiences (without the guesswork)">
           <div className="grid gap-4 md:grid-cols-2">
             {[
               {

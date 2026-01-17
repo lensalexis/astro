@@ -44,7 +44,7 @@ export default function CategoryLandingPage({ category }: { category: string }) 
 
           <div className="pointer-events-none absolute inset-0 z-10">
             <div className="pointer-events-auto mx-auto h-full w-full max-w-6xl px-4 sm:px-6">
-              <div className="flex h-full w-full items-start pt-16 pb-10 sm:items-end sm:pt-0 sm:pb-12">
+              <div className="flex h-full w-full items-start pt-16 pb-4 sm:items-end sm:pt-0 sm:pb-6">
                 <AIProductSearch
                   forceAIMode={true}
                   heroOnly={true}
@@ -62,7 +62,7 @@ export default function CategoryLandingPage({ category }: { category: string }) 
       </section>
 
       <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-12 space-y-12">
-        <Section title={`Featured in ${cfg.name}`} href={`/shop/${cfg.slug}/all`}>
+        <Section title={`Featured in ${cfg.name}`}>
           <HomeStartHereContent items={cfg.banners} resultsPortalId={resultsPortalId} />
         </Section>
 

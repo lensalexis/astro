@@ -4,7 +4,6 @@
 import { useRef } from 'react'
 import ProductCard from '@/components/ui/ProductCard'
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import Link from 'next/link'
 
 export default function ProductSlider({
   products,
@@ -49,16 +48,6 @@ export default function ProductSlider({
             <ProductCard product={product} />
           </div>
         ))}
-
-        {/* ✅ Always show See All card */}
-        <div className="min-w-[250px] max-w-[250px] flex-shrink-0">
-          <Link
-            href={`/shop/${categorySlug}/all`}
-            className="flex items-center justify-center h-full bg-white rounded-2xl shadow-md hover:shadow-lg transition text-lg font-semibold text-black cursor-pointer"
-          >
-            See All →
-          </Link>
-        </div>
       </div>
 
       {/* Right arrow (desktop only) */}

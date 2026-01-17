@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   AcademicCapIcon,
   ChatBubbleLeftRightIcon,
+  ChevronDownIcon,
   HeartIcon,
   MapIcon,
   PhoneIcon,
@@ -65,11 +67,11 @@ function Tile({
         item.disabled ? "opacity-55 cursor-not-allowed" : "",
       ].join(" ")}
     >
-      <div className="flex items-center gap-3 px-0 py-2.5">
+      <div className="flex items-center gap-3 px-0 py-2">
         <div
           className={[
             // Airbnb-like icon badge: white tile with hairline border
-            "flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 bg-white",
+            "flex h-9 w-9 items-center justify-center rounded-xl border border-black/10 bg-white",
           ].join(" ")}
         >
           {item.iconImageSrc ? (
@@ -100,14 +102,6 @@ function Tile({
               </span>
             ) : null}
           </div>
-          <div
-            className={[
-              "mt-0.5 line-clamp-2 text-gray-600",
-              "text-[13px]",
-            ].join(" ")}
-          >
-            {item.description}
-          </div>
         </div>
       </div>
     </div>
@@ -127,6 +121,10 @@ export default function DiscoverMegaMenu({
 }: {
   onNavigate?: () => void;
 }) {
+  const [mobileOpen, setMobileOpen] = useState<
+    "shop" | "resources" | "contact" | null
+  >("shop");
+
   const shop: MenuItem[] = [
     {
       title: "Flower",
@@ -374,84 +372,116 @@ export default function DiscoverMegaMenu({
         </div>
       </div>
 
-      {/* Mobile: full-screen sheet */}
+      {/* Mobile: accordion sheet */}
       <div className="sm:hidden">
         <div className="rounded-3xl border border-black/10 bg-white shadow-[0_40px_120px_rgba(0,0,0,0.18)]">
           <div className="p-4">
-            <div className="text-sm font-semibold text-gray-900">Discover</div>
-            <div className="mt-1 text-sm text-gray-600">
-              Explore the site like a modern travel hub.
-            </div>
+            <div className="text-sm font-semibold text-gray-900">Menu</div>
           </div>
-          <div className="border-t border-black/5 p-4 space-y-6">
-            <div>
-              <div className="text-[12px] font-semibold tracking-wide text-gray-900 mb-3">
-                Shop
-              </div>
-              <div className="divide-y divide-black/5">
-                {shop.map((item) => (
-                  <Tile key={item.href} item={item} onNavigate={onNavigate} />
-                ))}
-              </div>
-            </div>
-            <div>
-              <div className="text-[12px] font-semibold tracking-wide text-gray-900 mb-3">
-                Resources
-              </div>
-              <div className="divide-y divide-black/5">
-                {resources.map((item) => (
-                  <Tile key={item.href} item={item} onNavigate={onNavigate} />
-                ))}
-              </div>
-            </div>
-            <div className="rounded-3xl border border-black/10 bg-gray-50 p-4">
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] font-semibold tracking-wide text-gray-900">
-                  Contact
-                </div>
-                <MapIcon className="h-5 w-5 text-gray-300" />
-              </div>
-              <div className="mt-3 text-[13px] text-gray-700">
-                <div className="font-semibold text-gray-950">Kine Buds</div>
-                <div className="mt-1">
-                  {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion}{" "}
-                  {site.address.postalCode}
+
+          <div className="border-t border-black/5 p-4 space-y-3">
+            {/* Shop accordion */}
+            <button
+              type="button"
+              onClick={() => setMobileOpen((v) => (v === "shop" ? null : "shop"))}
+              className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-gray-900"
+            >
+              <span>Shop</span>
+              <ChevronDownIcon
+                className={[
+                  "h-5 w-5 transition",
+                  mobileOpen === "shop" ? "rotate-180" : "",
+                ].join(" ")}
+              />
+            </button>
+            {mobileOpen === "shop" ? (
+              <div className="rounded-2xl border border-black/10 bg-white px-3 py-2">
+                <div className="divide-y divide-black/5">
+                  {shop.map((item) => (
+                    <Tile key={item.href} item={item} onNavigate={onNavigate} />
+                  ))}
                 </div>
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                {socials.map((s) => (
+            ) : null}
+
+            {/* Resources accordion */}
+            <button
+              type="button"
+              onClick={() =>
+                setMobileOpen((v) => (v === "resources" ? null : "resources"))
+              }
+              className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-gray-900"
+            >
+              <span>Resources</span>
+              <ChevronDownIcon
+                className={[
+                  "h-5 w-5 transition",
+                  mobileOpen === "resources" ? "rotate-180" : "",
+                ].join(" ")}
+              />
+            </button>
+            {mobileOpen === "resources" ? (
+              <div className="rounded-2xl border border-black/10 bg-white px-3 py-2">
+                <div className="divide-y divide-black/5">
+                  {resources.map((item) => (
+                    <Tile key={item.href} item={item} onNavigate={onNavigate} />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Contact accordion (compact) */}
+            <button
+              type="button"
+              onClick={() =>
+                setMobileOpen((v) => (v === "contact" ? null : "contact"))
+              }
+              className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-gray-900"
+            >
+              <span>Contact</span>
+              <ChevronDownIcon
+                className={[
+                  "h-5 w-5 transition",
+                  mobileOpen === "contact" ? "rotate-180" : "",
+                ].join(" ")}
+              />
+            </button>
+            {mobileOpen === "contact" ? (
+              <div className="rounded-2xl border border-black/10 bg-white p-3">
+                <div className="grid gap-2">
                   <a
-                    key={s.title}
-                    href={s.href}
+                    href={googleMapsHref}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-3 py-2 text-gray-700 hover:text-gray-900 hover:shadow-sm transition"
-                    aria-label={s.title}
+                    className="inline-flex items-center justify-center rounded-2xl bg-emerald-700 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-800 transition"
                     onClick={onNavigate}
                   >
-                    <s.icon className="h-5 w-5" />
+                    Directions
                   </a>
-                ))}
+                  <a
+                    href={`tel:${site.contact.phone}`}
+                    className="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-4 py-2 text-[13px] font-semibold text-gray-900"
+                    onClick={onNavigate}
+                  >
+                    Call
+                  </a>
+                  <a
+                    href={`mailto:${site.contact.email}`}
+                    className="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-4 py-2 text-[13px] font-semibold text-gray-900"
+                    onClick={onNavigate}
+                  >
+                    Email
+                  </a>
+                  <Link
+                    href="/store-info"
+                    className="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-4 py-2 text-[13px] font-semibold text-gray-900"
+                    onClick={onNavigate}
+                  >
+                    Store info
+                  </Link>
+                </div>
               </div>
-              <div className="mt-3 flex gap-2">
-                <a
-                  href={googleMapsHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-emerald-700 px-4 py-2 text-[13px] font-semibold text-white hover:bg-emerald-800 transition"
-                  onClick={onNavigate}
-                >
-                  Directions
-                </a>
-                <Link
-                  href="/contact"
-                  className="inline-flex flex-1 items-center justify-center rounded-2xl bg-black px-4 py-2 text-[13px] font-semibold text-white hover:bg-gray-900 transition"
-                  onClick={onNavigate}
-                >
-                  Contact
-                </Link>
-              </div>
-            </div>
+            ) : null}
           </div>
         </div>
       </div>

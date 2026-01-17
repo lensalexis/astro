@@ -1,0 +1,61 @@
+[
+  {
+    "id": "offers-deals-week",
+    "title": "Deals this week",
+    "href": "/shop/flower",
+    "image": "/images/deal-slider-1.jpg",
+    "alt": "Deals this week",
+    "badge": "Hot",
+    "placements": ["homepage_offers"],
+    "enabled": true,
+    "rotation": "daily",
+    "weight": 1
+  },
+  {
+    "id": "offers-new-arrivals",
+    "title": "New arrivals",
+    "href": "/shop/flower",
+    "image": "/images/deal-slider-2.jpg",
+    "alt": "New arrivals",
+    "badge": "New",
+    "placements": ["homepage_offers"],
+    "enabled": true,
+    "rotation": "daily",
+    "weight": 1
+  },
+  {
+    "id": "offers-value-bundles",
+    "title": "Best value bundles",
+    "href": "/shop/flower",
+    "image": "/images/deal-slider-3.jpg",
+    "alt": "Best value bundles",
+    "badge": "Value",
+    "placements": ["homepage_offers"],
+    "enabled": true,
+    "rotation": "daily",
+    "weight": 1
+  },
+  {
+    "id": "home-slider-featured-deals",
+    "title": "Featured deals",
+    "href": "/shop",
+    "image": "/images/deal-slider-2.jpg",
+    "alt": "Featured deals",
+    "placements": ["homepage_slider"],
+    "enabled": true,
+    "rotation": "daily",
+    "weight": 1
+  },
+  {
+    "id": "announcement-weekend-hours",
+    "title": "Weekend hours updated",
+    "href": "/hours",
+    "image": "/images/default-cover.jpg",
+    "alt": "Weekend hours updated",
+    "placements": ["announcement"],
+    "enabled": false,
+    "rotation": "fixed",
+    "weight": 1
+  }
+]
+

@@ -157,8 +157,9 @@ export default function SiteChrome() {
           className="fixed top-0 left-0 right-0 z-[80] bg-white px-4 border-b border-black/5"
           style={{ ['--site-nav-h' as any]: `${navHeight}px` }}
         >
-          <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
-            <div className="flex items-center gap-2">
+          <div className="mx-auto flex w-full max-w-6xl items-center gap-3 py-2">
+            {/* Left: logo + discover */}
+            <div className="flex items-center gap-3">
               <Link href="/" className="mr-1 inline-flex items-center">
                 <Image
                   src="/images/kine-buds-logo.png"
@@ -170,16 +171,16 @@ export default function SiteChrome() {
                 />
               </Link>
 
-              {/* Menu pill */}
+              {/* Discover (Viator-like: no dark pill) */}
               <div className="relative" ref={setMenuRef}>
                 <button
                   type="button"
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-semibold text-gray-900 hover:bg-black/5"
                 >
-                  <Bars3Icon className="h-5 w-5 sm:hidden" />
+                  <Bars3Icon className="h-5 w-5" />
                   <span>Discover</span>
-                  <ChevronDownIcon className="h-4 w-4 text-white/80" />
+                  <ChevronDownIcon className="h-4 w-4 text-gray-600" />
                 </button>
                 {menuOpen && (
                   <>
@@ -203,96 +204,81 @@ export default function SiteChrome() {
                   </>
                 )}
               </div>
+            </div>
 
-              {/* Search trigger */}
+            {/* Right: search icon | user/location */}
+            <div className="ml-auto flex items-center gap-2" ref={accountRef}>
+              {/* Search icon */}
               <button
                 type="button"
                 onClick={openSearch}
-                className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-gray-900 hover:bg-gray-50"
+                aria-label="Search"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                >
-                  <path
-                    fill="url(#navSparkGradient)"
-                    d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5L12 2Zm6 8 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Zm-12 0 1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3Z"
-                  />
-                  <defs>
-                    <linearGradient id="navSparkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f472b6" />
-                      <stop offset="50%" stopColor="#a855f7" />
-                      <stop offset="100%" stopColor="#34d399" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <span className="inline-flex items-center gap-1">
-                  <span className="sm:hidden">Search</span>
-                  <span className="hidden sm:inline animate-gradient-x bg-[linear-gradient(to_right,#ec4899,#a855f7,#ec4899)] bg-[length:200%_auto] bg-clip-text text-transparent">
-                    Find your next favorite
-                  </span>
-                </span>
+                <MagnifyingGlassIcon className="h-5 w-5 text-gray-700" />
               </button>
-            </div>
 
-            {/* User + store pill */}
-            <div
-              id="nav-location-pill"
-              className="relative inline-flex items-center gap-2 rounded-full bg-black px-2 py-1 text-white shadow-sm transition ml-auto"
-              ref={accountRef}
-            >
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-800"
-                onClick={() => {
-                  if (!user) {
-                    router.push('/login')
-                    return
-                  }
-                  setAccountOpen((v) => !v)
-                  setLocationOpen(false)
-                }}
+              <div className="hidden sm:block h-8 w-px bg-black/10" />
+
+              {/* User + location dropdown (Viator-like white pill) */}
+              <div
+                id="nav-location-pill"
+                className="relative inline-flex items-center rounded-full border border-black/10 bg-white px-1.5 py-1 shadow-sm"
               >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName || 'User avatar'} className="h-11 w-11 rounded-full object-cover" />
-                ) : (
-                  initials
-                )}
-              </button>
-              <div className="h-8 w-px bg-white/20" />
-              <button
-                type="button"
-                onClick={() => {
-                  // Keep location dropdown disabled (single store)
-                  setLocationOpen(false)
-                  setAccountOpen(false)
-                }}
-                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-left text-sm font-semibold text-white hover:bg-white/10"
-              >
-                <span className="hidden sm:flex flex-col items-start leading-tight">
-                  <span className="text-sm font-semibold text-white">
-                    Kine Buds
+                <button
+                  type="button"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-800"
+                  onClick={() => {
+                    if (!user) {
+                      router.push('/login')
+                      return
+                    }
+                    setAccountOpen((v) => !v)
+                    setLocationOpen(false)
+                  }}
+                  aria-label={user ? 'Account menu' : 'Sign in'}
+                >
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'User avatar'}
+                      className="h-8 w-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    initials
+                  )}
+                </button>
+
+                <div className="mx-1 h-8 w-px bg-black/10" />
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Keep location dropdown disabled (single store for now)
+                    setLocationOpen(false)
+                    setAccountOpen(false)
+                  }}
+                  className="inline-flex items-center gap-2 rounded-full pl-2 pr-3 py-1 text-left text-sm font-semibold text-gray-900 hover:bg-black/5"
+                  aria-label="Store location"
+                >
+                  <span className="hidden sm:flex flex-col items-start leading-tight">
+                    <span className="text-sm font-semibold text-gray-900">Kine Buds</span>
+                    <span className="text-[11px] font-medium text-gray-600">
+                      {site.address.addressLocality}, {site.address.addressRegion}
+                    </span>
                   </span>
-                  <span className="text-[11px] font-medium text-white/75">
-                    {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion}{' '}
-                    {site.address.postalCode}
-                  </span>
-                </span>
-                <span className="sm:hidden">
-                  Kine Buds
-                </span>
-                <ChevronDownIcon className="h-4 w-4" />
-              </button>
+                  <span className="sm:hidden">Kine Buds</span>
+                  <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
 
               {accountOpen && user && (
-                <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-2xl border border-gray-800 bg-black text-white shadow-xl">
+                <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-black/10 bg-white text-gray-900 shadow-xl">
                   <ul className="py-2 text-sm">
                     <li>
                       <Link
                         href="/menu/account"
-                        className="flex items-center px-4 py-2 hover:bg-white/10"
+                        className="flex items-center px-4 py-2 hover:bg-black/5"
                         onClick={() => setAccountOpen(false)}
                       >
                         Edit Account
@@ -301,7 +287,7 @@ export default function SiteChrome() {
                     <li>
                       <Link
                         href="/menu/account/orders"
-                        className="flex items-center px-4 py-2 hover:bg-white/10"
+                        className="flex items-center px-4 py-2 hover:bg-black/5"
                         onClick={() => setAccountOpen(false)}
                       >
                         Orders
@@ -310,7 +296,7 @@ export default function SiteChrome() {
                     <li>
                       <Link
                         href="/menu/account/loyalty"
-                        className="flex items-center px-4 py-2 hover:bg-white/10"
+                        className="flex items-center px-4 py-2 hover:bg-black/5"
                         onClick={() => setAccountOpen(false)}
                       >
                         Loyalty
@@ -319,19 +305,19 @@ export default function SiteChrome() {
                     <li>
                       <Link
                         href="/menu/account/payments"
-                        className="flex items-center px-4 py-2 hover:bg-white/10"
+                        className="flex items-center px-4 py-2 hover:bg-black/5"
                         onClick={() => setAccountOpen(false)}
                       >
                         Payments
                       </Link>
                     </li>
                     <li>
-                      <div className="my-1 border-t border-white/10" />
+                      <div className="my-1 border-t border-black/5" />
                     </li>
                     <li>
                       <button
                         type="button"
-                        className="flex w-full items-center px-4 py-2 text-left hover:bg-white/10"
+                        className="flex w-full items-center px-4 py-2 text-left hover:bg-black/5"
                         onClick={() => {
                           localStorage.removeItem('dispense_user')
                           localStorage.removeItem('dispense_token')
@@ -347,7 +333,6 @@ export default function SiteChrome() {
                 </div>
               )}
 
-              {locationOpen ? null : null}
             </div>
           </div>
           {/* Mobile breadcrumb bar (driven by PageShell) */}

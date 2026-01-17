@@ -14,7 +14,13 @@ export type HomeStartHereItem = {
 
 type Mode = 'campaigns' | 'results'
 
-function HorizontalRail({ items }: { items: HomeStartHereItem[] }) {
+function HorizontalRail({
+  items,
+  variant = 'card',
+}: {
+  items: HomeStartHereItem[]
+  variant?: 'card' | 'banner'
+}) {
   return (
     <div className="overflow-x-auto scrollbar-hide">
       <div className="flex gap-4 pb-2">
@@ -22,15 +28,18 @@ function HorizontalRail({ items }: { items: HomeStartHereItem[] }) {
           <Link
             key={item.href + item.title}
             href={item.href}
-            className="group relative w-[260px] shrink-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 hover:shadow-md"
+            className={[
+              'group relative shrink-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 hover:shadow-md',
+              variant === 'banner' ? 'w-[320px] sm:w-[380px]' : 'w-[260px]',
+            ].join(' ')}
           >
-            <div className="relative h-40 w-full">
+            <div className={['relative w-full', variant === 'banner' ? 'h-44' : 'h-40'].join(' ')}>
               <Image
                 src={item.image}
                 alt={item.title}
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                sizes="260px"
+                sizes={variant === 'banner' ? '380px' : '260px'}
               />
               {item.badge ? (
                 <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-900 ring-1 ring-black/5 backdrop-blur">
@@ -51,9 +60,11 @@ function HorizontalRail({ items }: { items: HomeStartHereItem[] }) {
 export default function HomeStartHereContent({
   items,
   resultsPortalId = 'home-start-here-results',
+  variant = 'card',
 }: {
   items: HomeStartHereItem[]
   resultsPortalId?: string
+  variant?: 'card' | 'banner'
 }) {
   const [mode, setMode] = useState<Mode>('campaigns')
 
@@ -76,7 +87,7 @@ export default function HomeStartHereContent({
 
       {/* Default campaigns */}
       <div className={mode === 'results' ? 'hidden' : ''}>
-        <HorizontalRail items={items} />
+        <HorizontalRail items={items} variant={variant} />
       </div>
     </div>
   )

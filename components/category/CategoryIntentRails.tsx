@@ -142,7 +142,7 @@ export default function CategoryIntentRails({
         const rail = railsByKey[key]
         if (!rail || rail.items.length === 0) return null
         return (
-          <Section key={key} title={rail.title} href={`/shop/${categorySlug}/all`}>
+          <Section key={key} title={rail.title}>
             <UniversalProductSlider products={rail.items} categorySlug={categorySlug} />
           </Section>
         )
