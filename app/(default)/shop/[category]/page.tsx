@@ -2,8 +2,13 @@ import type { Metadata } from 'next'
 import CategoryLandingPage, { canonicalizeCategorySlug } from '@/components/category/CategoryLandingPage'
 import { getCategoryLandingConfig } from '@/lib/categoryLanding'
 
-export function generateMetadata({ params }: { params: { category: string } }): Metadata {
-  const slug = canonicalizeCategorySlug(params.category)
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ category: string }>
+}): Promise<Metadata> {
+  const { category } = await params
+  const slug = canonicalizeCategorySlug(category)
   const cfg = getCategoryLandingConfig(slug)
   if (!cfg) return {}
   return {
@@ -12,6 +17,11 @@ export function generateMetadata({ params }: { params: { category: string } }): 
   }
 }
 
-export default function ShopCategoryLandingRoute({ params }: { params: { category: string } }) {
-  return <CategoryLandingPage category={params.category} />
+export default async function ShopCategoryLandingRoute({
+  params,
+}: {
+  params: Promise<{ category: string }>
+}) {
+  const { category } = await params
+  return <CategoryLandingPage category={category} />
 }

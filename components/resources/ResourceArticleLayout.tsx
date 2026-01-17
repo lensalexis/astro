@@ -44,10 +44,10 @@ export default function ResourceArticleLayout({
     if (tocHeading) {
       let node: Element | null = tocHeading
       while (node) {
-        const next = node.nextElementSibling
+        const nextEl: Element | null = node.nextElementSibling
         ;(node as HTMLElement).style.display = 'none'
-        if (next && next.tagName.toLowerCase() === 'h2') break
-        node = next
+        if (nextEl && nextEl.tagName.toLowerCase() === 'h2') break
+        node = nextEl
       }
     }
 
