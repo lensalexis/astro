@@ -10,6 +10,33 @@ import {
   MagnifyingGlassIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
+
+function formatStrainLabel(input: string) {
+  const raw = String(input || "").trim()
+  if (!raw) return raw
+  const upper = raw.toUpperCase()
+  if (upper === "ANY") return "Any"
+  if (upper === "NA" || upper === "N/A" || upper === "UNKNOWN" || upper === "NONE") return "N/A"
+
+  const parts = raw
+    .split("_")
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (parts.length > 1) {
+    return parts
+      .map((p) => p.toLowerCase())
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(" ")
+  }
+
+  // If it's all caps (e.g. SATIVA), title-case it.
+  if (raw === upper) {
+    const p = raw.toLowerCase()
+    return p.charAt(0).toUpperCase() + p.slice(1)
+  }
+
+  return raw
+}
 type FilterNavProps = {
   categories?: string[];
   brands: string[];
@@ -265,6 +292,7 @@ export default function FilterNav({
     return filteredOpts.map((opt) => {
       const filterValues = (filters[key as keyof typeof filters] as string[]) || []
       const selected = filterValues.some(val => val.toLowerCase() === opt.toLowerCase());
+      const displayOpt = key === 'strains' ? formatStrainLabel(opt) : opt
       return (
         <button
           key={opt}
@@ -285,7 +313,7 @@ export default function FilterNav({
             >
               {selected && <CheckIcon className="h-3 w-3" />}
             </span>
-            <span className="text-left">{opt}</span>
+            <span className="text-left">{displayOpt}</span>
           </div>
           <span className="text-xs text-gray-500">
             {counts?.[key as keyof typeof counts]?.[opt] ?? 0}
