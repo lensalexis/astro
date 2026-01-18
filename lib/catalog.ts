@@ -7,7 +7,6 @@ export const CATEGORY_DEFS = [
   { name: 'Concentrates', slug: 'concentrates', id: 'dd753723f6875d2e' },
   { name: 'Edibles', slug: 'edibles', id: '2f2c05a9bbb5fd43' },
   { name: 'Beverages', slug: 'beverages', id: '45d32b3453f51209' },
-  { name: 'Tinctures', slug: 'tinctures', id: '4b9c5820c59418fa' },
 ]
 
 export const CATEGORY_NAME_BY_SLUG = CATEGORY_DEFS.reduce<Record<string, string>>((acc, c) => {
@@ -27,8 +26,6 @@ export const DEFAULT_CATEGORY_LABELS = [
   'Concentrates',
   'Edibles',
   'Beverages',
-  'Tinctures',
-  'Topicals',
 ]
 
 export type FacetedFilters = {
@@ -64,10 +61,8 @@ const typeMap: Record<string, string> = {
   PRE_ROLLS: 'preRoll',
   VAPORIZERS: 'vape',
   EDIBLES: 'edible',
-  TINCTURES: 'tincture',
   BEVERAGES: 'beverage',
   CONCENTRATES: 'concentrate',
-  TOPICALS: 'topical',
 }
 
 export const getProductType = (p: Product): string | null => {
@@ -81,10 +76,8 @@ export const getProductType = (p: Product): string | null => {
     if (categoryLower.includes('pre') || categoryLower.includes('roll')) return 'preRoll'
     if (categoryLower.includes('vape') || categoryLower.includes('vapor')) return 'vape'
     if (categoryLower.includes('edible')) return 'edible'
-    if (categoryLower.includes('tincture')) return 'tincture'
     if (categoryLower.includes('beverage') || categoryLower.includes('drink')) return 'beverage'
     if (categoryLower.includes('concentrate')) return 'concentrate'
-    if (categoryLower.includes('topical')) return 'topical'
   }
 
   if (p.subType) {
@@ -93,10 +86,8 @@ export const getProductType = (p: Product): string | null => {
     if (subTypeLower.includes('pre') || subTypeLower.includes('roll')) return 'preRoll'
     if (subTypeLower.includes('vape')) return 'vape'
     if (subTypeLower.includes('edible')) return 'edible'
-    if (subTypeLower.includes('tincture')) return 'tincture'
     if (subTypeLower.includes('beverage') || subTypeLower.includes('drink')) return 'beverage'
     if (subTypeLower.includes('concentrate')) return 'concentrate'
-    if (subTypeLower.includes('topical')) return 'topical'
   }
 
   return null
@@ -115,8 +106,6 @@ export const getCategoryLabel = (p: Product): string | null => {
     concentrate: CATEGORY_NAME_BY_SLUG['concentrates'] || 'Concentrates',
     edible: CATEGORY_NAME_BY_SLUG['edibles'] || 'Edibles',
     beverage: CATEGORY_NAME_BY_SLUG['beverages'] || 'Beverages',
-    tincture: CATEGORY_NAME_BY_SLUG['tinctures'] || 'Tinctures',
-    topical: 'Topicals',
   }
   return map[t] || null
 }

@@ -162,25 +162,11 @@ export default function DiscoverMegaMenu({
       iconImageAlt: "Beverages",
     },
     {
-      title: "Tinctures",
-      description: "Flexible dosing, classic format.",
-      href: "/shop/tinctures",
-      iconImageSrc: "/images/icon-cannabis-tinctures.png",
-      iconImageAlt: "Tinctures",
-    },
-    {
       title: "Concentrates",
       description: "Wax, rosin, resin, and more.",
       href: "/shop/concentrates",
       iconImageSrc: "/images/icon-cannabis-concentrate.png",
       iconImageAlt: "Concentrates",
-    },
-    {
-      title: "Topicals",
-      description: "Balms, lotions, and wellness.",
-      href: "/shop/topicals",
-      iconImageSrc: "/images/icon-cannabis-topicals.png",
-      iconImageAlt: "Topicals",
     },
   ];
 

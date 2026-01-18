@@ -97,7 +97,7 @@ function RotatingWord({
       className={['relative inline-flex items-baseline overflow-hidden leading-none', className]
         .filter(Boolean)
         .join(' ')}
-      style={{ width: `${Math.max(1, maxChars + 1)}ch` }}
+      style={{ width: `${Math.max(1, maxChars + 1)}ch`, height: '64px' }}
       aria-label={word}
     >
       <span
@@ -198,7 +198,7 @@ const PRESETS: Preset[] = [
   {
     id: 'non-smokable',
     label: 'Non-smokable options',
-    description: 'Edibles, beverages, tinctures & more',
+    description: 'Edibles, beverages & more',
   },
   {
     id: 'best-deals',
@@ -232,10 +232,6 @@ const CATEGORY_KEYWORDS: { id: string; labels: string[] }[] = [
   { 
     id: '45d32b3453f51209', 
     labels: ['beverage', 'beverages', 'drink', 'drinks'] 
-  },
-  { 
-    id: '4b9c5820c59418fa', 
-    labels: ['tincture', 'tinctures', 'drops', 'drop'] 
   },
 ]
 
@@ -271,10 +267,6 @@ const CATEGORY_TILE_META: Record<
   beverages: {
     image: '/images/post-thumb-08.jpg',
     className: 'bg-orange-700 text-white',
-  },
-  tinctures: {
-    image: '/images/post-thumb-09.jpg',
-    className: 'bg-blue-700 text-white',
   },
 }
 
@@ -579,7 +571,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     { id: 'cat-concentrates', label: 'Concentrates', category: 'concentrates' },
     { id: 'cat-edibles', label: 'Edibles', category: 'edibles' },
     { id: 'cat-beverages', label: 'Beverages', category: 'beverages' },
-    { id: 'cat-tinctures', label: 'Tinctures', category: 'tinctures' },
   ]
   type FeedId =
     | 'best-sellers'
@@ -807,7 +798,6 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       [ProductType.CONCENTRATES]: 'concentrates',
       [ProductType.EDIBLES]: 'edibles',
       [ProductType.BEVERAGES]: 'beverages',
-      [ProductType.TINCTURES]: 'tinctures',
     }
 
     if (p.type && typeSlugMap[p.type]) return typeSlugMap[p.type] as string
@@ -3778,58 +3768,6 @@ For specific details about earning rates and redemption options, please contact 
 
                     </form>
 
-                    {/* Prompts (quick filters) */}
-                    {!hideHeroQuickPrompts ? (
-                      <div className="mt-4 w-full">
-                        <div className="w-full max-w-5xl">
-                          <div className="flex flex-wrap justify-start gap-2 sm:gap-3">
-                            {[
-                              { id: 'good-deals', label: 'Good deals', mode: 'filters' as const, apply: { saleOnly: true } },
-                              { id: 'trending', label: 'Trending right now', mode: 'feed' as const, promptId: 'feed-best-sellers' },
-                              {
-                                id: 'non-smokable',
-                                label: 'Non smokable options',
-                                mode: 'filters' as const,
-                                // "All but flower, pre-roll, and vape"
-                                apply: {
-                                  categories: ['Edibles', 'Beverages', 'Tinctures', 'Concentrates', 'Topicals'] as string[],
-                                },
-                              },
-                            ].map((p) => (
-                              <button
-                                key={p.id}
-                                type="button"
-                                onClick={async () => {
-                                  // These quick prompts should behave like "presets" (replace current filters)
-                                  setHeroCategory('')
-                                  setHeroStrain('')
-
-                                  if (p.mode === 'feed') {
-                                    const prompt = AI_MODE_PROMPTS.find((x) => x.id === p.promptId)
-                                    if (prompt) {
-                                      await handleAiModePrompt(prompt)
-                                    }
-                                  } else {
-                                    await handleFiltersChange(p.apply as FacetedFilters)
-                                  }
-
-                                  setHeroShowMoreFilters(true)
-                                  if (homeResultsPortalId && typeof window !== 'undefined') {
-                                    window.dispatchEvent(
-                                      new CustomEvent('home:startHereMode', { detail: { mode: 'results' } })
-                                    )
-                                  }
-                                }}
-                                className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-black/10 hover:bg-white"
-                              >
-                                <MagnifyingGlassIcon className="h-4 w-4 text-gray-600" />
-                                <span>{p.label}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
                 </div>
               ) : (

@@ -1,20 +1,13 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useParams, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import Image from "next/image"
 
 import ProductCard from "@/components/ui/ProductCard"
 import FilterNav from "@/components/ui/FilterNav"
 import { listDispenseProducts } from "@/utils/dispenseClient"
-import {
-  CATEGORY_DEFS,
-  applyProductFilters,
-  buildFacetCounts,
-  buildFacetOptions,
-  type FacetedFilters,
-} from "@/lib/catalog"
+import { applyProductFilters, buildFacetCounts, buildFacetOptions, type FacetedFilters } from "@/lib/catalog"
 
 function decodeMulti(input: string) {
   let out = input
@@ -39,46 +32,8 @@ function parseCommaList(raw: string | null) {
     .filter(Boolean)
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  flower: "/images/icon-cannabis-flower.png",
-  vaporizers: "/images/icon-cannabis-vape.png",
-  "pre-rolls": "/images/icon-cannabis-preroll.png",
-  concentrates: "/images/icon-cannabis-concentrate.png",
-  edibles: "/images/icon-cannabis-edibles.png",
-  beverages: "/images/icon-cannabis-beverage.png",
-  tinctures: "/images/icon-cannabis-tinctures.png",
-}
-
-const CATEGORY_SYNONYMS: Record<string, string[]> = {
-  vaporizers: ["vapes"],
-  "pre-rolls": ["prerolls", "pre rolls"],
-}
-
-const categories = CATEGORY_DEFS.map((cat) => ({
-  ...cat,
-  icon: CATEGORY_ICONS[cat.slug] || "/images/icon-cannabis-flower.png",
-  synonyms: CATEGORY_SYNONYMS[cat.slug] || [],
-}))
-
-function normalizeSlug(slug: string) {
-  return slug.toLowerCase().replace(/\s+/g, "-").replace(/_/g, "-").trim()
-}
-
-function findCategory(raw: string | undefined) {
-  if (!raw) return null
-  const norm = normalizeSlug(raw)
-  let found = categories.find((c) => c.slug === norm)
-  if (found) return found
-  return categories.find((c) => c.synonyms?.some((syn) => normalizeSlug(syn) === norm))
-}
-
-export default function CategoryAllPage() {
-  const params = useParams()
+export default function ShopAllClient() {
   const sp = useSearchParams()
-  const rawCategory = (params as any)?.category
-  const slug = Array.isArray(rawCategory) ? rawCategory[0] : rawCategory || ""
-  const selectedCategory = findCategory(slug)
-
   const [products, setProducts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -92,65 +47,55 @@ export default function CategoryAllPage() {
     saleOnly: false,
   })
 
-  // Initialize filters from query params (brand/sale from banner links)
+  // Fetch products (all)
+  useEffect(() => {
+    const ac = new AbortController()
+    async function fetchAll() {
+      setLoading(true)
+      try {
+        const res = await listDispenseProducts({ limit: 200, quantityMin: 1 }, { signal: ac.signal })
+        setProducts(res.data || [])
+      } catch {
+        setProducts([])
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAll()
+    return () => ac.abort()
+  }, [])
+
+  // Initialize filters from query params (brand/categories/sale/q from banner links)
   useEffect(() => {
     const brandsRaw = parseCommaList(sp.get("brand") || sp.get("brands"))
     // Normalize brand names to match FilterNav's lowercase comparison
     const brands = brandsRaw.map((b) => b.toLowerCase().trim()).filter(Boolean)
+    const categoriesRaw = parseCommaList(sp.get("categories") || sp.get("category"))
+    // Normalize category names (they should match CATEGORY_DEFS names)
+    const categories = categoriesRaw.map((c) => c.trim()).filter(Boolean)
     const sale = (sp.get("sale") || sp.get("discounted") || "").toLowerCase()
     const saleOnly = sale === "1" || sale === "true" || sale === "yes"
 
-    if (!brands.length && !saleOnly) return
     setFilters((prev) => {
       const next: FacetedFilters = { ...prev }
       if (brands.length) next.brands = brands
+      if (categories.length) next.categories = categories
       if (saleOnly) next.saleOnly = true
       return next
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sp])
 
-  useEffect(() => {
-    async function fetchProducts() {
-      if (!selectedCategory) return
-      setLoading(true)
-      try {
-        const res = await listDispenseProducts({
-          categoryId: selectedCategory.id,
-          limit: 200,
-          quantityMin: 1,
-        })
-        setProducts(res.data || [])
-      } catch (err) {
-        console.error("Error fetching products:", err)
-        setProducts([])
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchProducts()
-  }, [selectedCategory])
-
-  const normalizedFilters = useMemo<FacetedFilters>(() => {
-    const base: FacetedFilters = { ...filters }
-    if ((!base.categories || base.categories.length === 0) && selectedCategory) {
-      base.categories = [selectedCategory.name]
-    }
-    return base
-  }, [filters, selectedCategory])
-
+  const q = (sp.get("q") || "").trim().toLowerCase()
   const filteredProducts = useMemo(() => {
-    return applyProductFilters(products, normalizedFilters)
-  }, [products, normalizedFilters])
-
-  if (!selectedCategory) {
-    return (
-      <section className="min-h-screen px-6 py-12">
-        <h2 className="text-2xl font-bold mb-4">Category not found</h2>
-        <p className="text-gray-600">Try: {categories.map((c) => c.slug).join(", ")}.</p>
-      </section>
-    )
-  }
+    const base = q
+      ? products.filter((p: any) => {
+          const blob = `${p?.name || ""} ${p?.description || ""}`.toLowerCase()
+          return blob.includes(q)
+        })
+      : products
+    return applyProductFilters(base, filters)
+  }, [products, filters, q])
 
   const facets = useMemo(() => buildFacetOptions(products), [products])
   const facetCounts = useMemo(() => buildFacetCounts(products), [products])
@@ -158,23 +103,20 @@ export default function CategoryAllPage() {
   return (
     <section className="mx-auto max-w-6xl px-4 sm:px-6 py-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Image src={selectedCategory.icon} alt={selectedCategory.name} width={36} height={36} />
-          <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-gray-950">{selectedCategory.name}</h1>
-            <div className="text-sm text-gray-600">Browse all {selectedCategory.name.toLowerCase()} products.</div>
-          </div>
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-gray-950">All products</h1>
+          <div className="text-sm text-gray-600">Browse everything in stock.</div>
         </div>
         <Link
-          href={`/shop/${selectedCategory.slug}`}
+          href="/shop"
           className="inline-flex items-center justify-center rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900"
         >
-          Back to {selectedCategory.name} →
+          New search →
         </Link>
       </div>
 
       <FilterNav
-        categories={categories.map((c) => c.name)}
+        categories={facets.categories}
         brands={facets.brands}
         strains={facets.strains}
         terpenes={facets.terpenes}
@@ -212,4 +154,3 @@ export default function CategoryAllPage() {
     </section>
   )
 }
-

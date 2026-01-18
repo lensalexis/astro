@@ -17,6 +17,8 @@ export type MarketingBanner = {
   rotation?: BannerRotation
   weight?: number
   priority?: number
+  /** Optional: associate a hero banner with a product category */
+  categorySlug?: string
 }
 
 function hashStringToUint32(input: string) {
@@ -103,5 +105,44 @@ export function toHomeStartHereItems(banners: MarketingBanner[]): HomeStartHereI
     image: b.image,
     badge: b.badge,
   }))
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, n))
+}
+
+function weightedPick<T extends { weight?: number }>(items: T[], rand: () => number): T | null {
+  const weights = items.map((x) => clamp(Number(x.weight || 1), 1, 100))
+  const total = weights.reduce((a, b) => a + b, 0)
+  if (!total) return null
+  let r = rand() * total
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return items[i]
+  }
+  return items[items.length - 1] || null
+}
+
+function formatDayKey(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export function pickHeroBanner(opts?: { categorySlug?: string; seedKey?: string }): MarketingBanner | null {
+  const placement = 'category_hero'
+  const all = getMarketingBannersForPlacement(placement, { limit: 999, seedKey: opts?.seedKey })
+  const cat = (opts?.categorySlug || '').toLowerCase().trim()
+  const candidates =
+    cat && cat !== 'all'
+      ? all.filter((b) => !b.categorySlug || b.categorySlug.toLowerCase() === cat)
+      : all
+
+  if (!candidates.length) return all[0] || null
+
+  const dayKey = opts?.seedKey || formatDayKey(new Date())
+  const rand = mulberry32(hashStringToUint32(`hero:${cat}:${dayKey}`))
+  return weightedPick(candidates, rand)
 }
 

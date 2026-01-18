@@ -18,27 +18,20 @@ export default function DealsProductsClient({ products }: { products: any[] }) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative -mx-4 sm:-mx-6">
       {/* Left Arrow (desktop only) */}
       <button
         onClick={() => scroll(-300)}
-        className="hidden sm:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-md rounded-full p-2 hover:bg-gray-100"
+        className="hidden sm:flex absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 z-10 items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+        aria-label="Scroll left"
       >
-        <ChevronLeftIcon className="h-6 w-6 text-gray-800" />
-      </button>
-
-      {/* Right Arrow (desktop only) */}
-      <button
-        onClick={() => scroll(300)}
-        className="hidden sm:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-md rounded-full p-2 hover:bg-gray-100"
-      >
-        <ChevronRightIcon className="h-6 w-6 text-gray-800" />
+        <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
       </button>
 
       {/* Scrollable Product Row */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scroll-smooth px-2 sm:px-8 scrollbar-hide"
+        className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide px-4 sm:px-6 py-2"
       >
         {products.map((product) => (
           <div key={product.id} className="min-w-[250px] max-w-[250px] flex-shrink-0">
@@ -46,6 +39,15 @@ export default function DealsProductsClient({ products }: { products: any[] }) {
           </div>
         ))}
       </div>
+
+      {/* Right Arrow (desktop only) */}
+      <button
+        onClick={() => scroll(300)}
+        className="hidden sm:flex absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 z-10 items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+        aria-label="Scroll right"
+      >
+        <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+      </button>
     </div>
   )
 }

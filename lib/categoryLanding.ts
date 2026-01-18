@@ -1,6 +1,7 @@
 import type { HomeHeroSlide } from '@/components/home/HomeHeroCarousel'
 import type { HomeStartHereItem } from '@/components/home/HomeStartHereContent'
 import { CATEGORY_DEFS, CATEGORY_NAME_BY_SLUG } from '@/lib/catalog'
+import { pickHeroBanner } from '@/lib/banners'
 
 export type CategoryIntentKey =
   | 'bestSellers'
@@ -37,20 +38,13 @@ function heroTitleFor(slug: string, name: string) {
   if (lower === 'edibles') return 'Find your next edible'
   if (lower === 'concentrates') return 'Find your next concentrate'
   if (lower === 'beverages') return 'Find your next beverage'
-  if (lower === 'tinctures') return 'Find your next tincture'
   if (lower === 'flower') return 'Find your next flower'
   return `Find your next ${titleCaseCategory(name)}`
 }
 
 function defaultHeroImageFor(slug: string) {
-  const lower = slug.toLowerCase()
-  if (lower === 'flower') return '/images/deal-slider-2.jpg'
-  if (lower === 'pre-rolls') return '/images/deal-slider-3.jpg'
-  if (lower === 'vaporizers') return '/images/deal-slider-4.jpg'
-  if (lower === 'edibles') return '/images/deal-slider-5.jpg'
-  if (lower === 'concentrates') return '/images/deal-slider-1.jpg'
-  if (lower === 'beverages') return '/images/post-thumb-06.jpg'
-  if (lower === 'tinctures') return '/images/post-thumb-04.jpg'
+  const picked = pickHeroBanner({ categorySlug: slug })
+  if (picked?.image) return picked.image
   return '/images/deal-slider-1.jpg'
 }
 
@@ -105,14 +99,6 @@ function bannersFor(slug: string): HomeStartHereItem[] {
       { title: 'Sip & chill', href: seeAllHref, image: '/images/post-thumb-06.jpg', badge: 'Popular' },
       { title: 'Best value drinks', href: seeAllHref, image: '/images/deal-slider-2.jpg', badge: 'Value' },
       { title: 'New drinkables', href: seeAllHref, image: '/images/deal-slider-5.jpg', badge: 'New' },
-    ]
-  }
-
-  if (lower === 'tinctures') {
-    return [
-      { title: 'Balanced blends', href: seeAllHref, image: '/images/post-thumb-04.jpg', badge: 'Balanced' },
-      { title: 'Best value tinctures', href: seeAllHref, image: '/images/deal-slider-1.jpg', badge: 'Value' },
-      { title: 'Beginner friendly', href: seeAllHref, image: '/images/post-thumb-03.jpg', badge: 'Easy' },
     ]
   }
 

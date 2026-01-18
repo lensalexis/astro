@@ -22,27 +22,20 @@ export default function TopDiscountedProductsClient({ products }: { products: an
         🔥 Top Discounts
       </h2>
 
-      <div className="relative">
+      <div className="relative -mx-4 sm:-mx-6">
         {/* Left Arrow (hidden on mobile) */}
         <button
           onClick={() => scroll(-350)}
-          className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-md rounded-full p-2 hover:bg-gray-100"
+          className="hidden md:flex absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 z-10 items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+          aria-label="Scroll left"
         >
-          <ChevronLeftIcon className="h-6 w-6 text-gray-800" />
-        </button>
-
-        {/* Right Arrow (hidden on mobile) */}
-        <button
-          onClick={() => scroll(350)}
-          className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-md rounded-full p-2 hover:bg-gray-100"
-        >
-          <ChevronRightIcon className="h-6 w-6 text-gray-800" />
+          <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
         </button>
 
         {/* Slider */}
         <div
           ref={scrollRef}
-          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide px-8"
+          className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide px-4 sm:px-6 py-2"
         >
           {products.map((product) => (
             <div
@@ -53,6 +46,15 @@ export default function TopDiscountedProductsClient({ products }: { products: an
             </div>
           ))}
         </div>
+
+        {/* Right Arrow (hidden on mobile) */}
+        <button
+          onClick={() => scroll(350)}
+          className="hidden md:flex absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 z-10 items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+          aria-label="Scroll right"
+        >
+          <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+        </button>
       </div>
     </section>
   )

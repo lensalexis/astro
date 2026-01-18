@@ -26,11 +26,12 @@ export default function ProductSlider({
   }
 
   return (
-    <div className="relative">
+    <div className="relative -mx-4 sm:-mx-6">
       {/* Left arrow (desktop only) */}
       <button
         onClick={() => scroll('left')}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 hidden sm:flex items-center justify-center bg-white rounded-full shadow-md w-8 h-8 hover:bg-gray-100"
+        className="absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 z-10 hidden sm:flex items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+        aria-label="Scroll left"
       >
         <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
       </button>
@@ -38,7 +39,7 @@ export default function ProductSlider({
       {/* Scrollable row */}
       <div
         ref={scrollRef}
-        className="flex gap-4 overflow-x-auto scroll-smooth px-2 scrollbar-hide py-2"
+        className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide px-4 sm:px-6 py-2"
       >
         {products.map((product) => (
           <div
@@ -53,7 +54,8 @@ export default function ProductSlider({
       {/* Right arrow (desktop only) */}
       <button
         onClick={() => scroll('right')}
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 hidden sm:flex items-center justify-center bg-white rounded-full shadow-md w-8 h-8 hover:bg-gray-100"
+        className="absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 z-10 hidden sm:flex items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+        aria-label="Scroll right"
       >
         <ChevronRightIcon className="h-5 w-5 text-gray-600" />
       </button>

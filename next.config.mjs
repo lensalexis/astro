@@ -1,8 +1,17 @@
 // next.config.mjs
 import createMDX from "@next/mdx";
+import path from "node:path";
+
+// Only use custom distDir locally to avoid conflicts between worktrees
+// On Vercel, use the default .next directory
+const isVercel = process.env.VERCEL === "1" || process.env.CI === "1" || process.cwd().includes("vercel");
+const distDir = isVercel ? ".next" : `.next-${path.basename(process.cwd())}`;
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Avoid build output corruption (and weird ENOENT write races) when multiple
+  // checkouts/dev servers run on the same machine (local only).
+  distDir,
   pageExtensions: ["js", "jsx", "ts", "tsx", "md", "mdx"],
   images: {
     // ✅ Both domains + your existing ones

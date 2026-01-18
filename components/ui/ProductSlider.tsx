@@ -1,15 +1,54 @@
+'use client'
+
+import { useRef } from 'react'
 import ProductCard from '@/components/ui/ProductCard'
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
 export default function ProductSlider({ products }: { products: any[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+
   if (!products.length) return null
 
+  const scroll = (direction: 'left' | 'right') => {
+    if (!scrollRef.current) return
+    const amount = 300
+    scrollRef.current.scrollBy({
+      left: direction === 'left' ? -amount : amount,
+      behavior: 'smooth',
+    })
+  }
+
   return (
-    <div className="flex gap-4 overflow-x-auto scroll-smooth px-2 scrollbar-hide">
-      {products.map((product) => (
-        <div key={product.id} className="min-w-[250px] max-w-[250px] flex-shrink-0">
-          <ProductCard product={product} />
-        </div>
-      ))}
+    <div className="relative -mx-4 sm:-mx-6">
+      {/* Left arrow (desktop only) */}
+      <button
+        onClick={() => scroll('left')}
+        className="absolute -left-4 sm:-left-6 top-1/2 -translate-y-1/2 z-10 hidden sm:flex items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+        aria-label="Scroll left"
+      >
+        <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+      </button>
+
+      {/* Scrollable container */}
+      <div
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto scroll-smooth scrollbar-hide px-4 sm:px-6 py-2"
+      >
+        {products.map((product) => (
+          <div key={product.id} className="min-w-[250px] max-w-[250px] flex-shrink-0">
+            <ProductCard product={product} />
+          </div>
+        ))}
+      </div>
+
+      {/* Right arrow (desktop only) */}
+      <button
+        onClick={() => scroll('right')}
+        className="absolute -right-4 sm:-right-6 top-1/2 -translate-y-1/2 z-10 hidden sm:flex items-center justify-center bg-white rounded-full shadow-md w-10 h-10 hover:bg-gray-100 transition-colors"
+        aria-label="Scroll right"
+      >
+        <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+      </button>
     </div>
   )
 }

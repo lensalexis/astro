@@ -1,61 +1,175 @@
 [
   {
-    "id": "offers-deals-week",
-    "title": "Deals this week",
-    "href": "/shop/flower",
-    "image": "/images/deal-slider-1.jpg",
-    "alt": "Deals this week",
+    "id": "hero-all-products",
+    "title": "Show all products",
+    "href": "/shop/all",
+    "image": "/images/herobanner1.jpg",
+    "alt": "Show all products",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 10
+  },
+  {
+    "id": "hero-megaleaf-flower",
+    "title": "Shop Megaleaf flower",
+    "href": "/shop/flower/all?brand=MEGALEAF",
+    "image": "/images/herobanner2.jpg",
+    "alt": "Megaleaf flower",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 8,
+    "categorySlug": "flower"
+  },
+  {
+    "id": "hero-jetty-vapes",
+    "title": "Shop Jetty vapes",
+    "href": "/shop/vaporizers/all?brand=JETTY",
+    "image": "/images/herobanner3.jpg",
+    "alt": "Jetty vapes",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 8,
+    "categorySlug": "vaporizers"
+  },
+  {
+    "id": "hero-lily-extracts",
+    "title": "Shop Lily Extracts",
+    "href": "/shop/all?brand=LILY%20EXTRACTS",
+    "image": "/images/herobanner4.jpg",
+    "alt": "Lily Extracts",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 7
+  },
+  {
+    "id": "hero-sun-extractions-vapes",
+    "title": "Shop Sun Extractions vapes",
+    "href": "/shop/vaporizers/all?brand=SUN%20EXTRACTIONS",
+    "image": "/images/herobanner5.jpg",
+    "alt": "Sun Extractions vapes",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 8,
+    "categorySlug": "vaporizers"
+  },
+  {
+    "id": "hero-culture-craft-flower",
+    "title": "Shop Culture Craft flower",
+    "href": "/shop/flower/all?brand=CULTURE%20CRAFT",
+    "image": "/images/herobanner6.jpg",
+    "alt": "Culture Craft flower",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 8,
+    "categorySlug": "flower"
+  },
+  {
+    "id": "hero-7",
+    "title": "Shop all products",
+    "href": "/shop/all",
+    "image": "/images/herobanner7.jpg",
+    "alt": "Shop all products",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 7
+  },
+  {
+    "id": "hero-8",
+    "title": "Shop all products",
+    "href": "/shop/all",
+    "image": "/images/herobanner8.jpg",
+    "alt": "Shop all products",
+    "placements": ["homepage_slider", "category_hero"],
+    "enabled": true,
+    "weight": 6
+  },
+
+  {
+    "id": "offer-wyld",
+    "title": "Shop WYLD",
+    "href": "/shop/all?brand=WYLD",
+    "image": "/images/banner-10.avif",
+    "alt": "WYLD",
+    "placements": ["homepage_offers"],
+    "enabled": true,
     "badge": "Hot",
-    "placements": ["homepage_offers"],
-    "enabled": true,
-    "rotation": "daily",
-    "weight": 1
+    "weight": 10
   },
   {
-    "id": "offers-new-arrivals",
-    "title": "New arrivals",
-    "href": "/shop/flower",
-    "image": "/images/deal-slider-2.jpg",
-    "alt": "New arrivals",
-    "badge": "New",
+    "id": "offer-culture-craft-flower",
+    "title": "Shop Culture Craft flower",
+    "href": "/shop/flower/all?brand=CULTURE%20CRAFT",
+    "image": "/images/banner-9.avif",
+    "alt": "Culture Craft flower",
     "placements": ["homepage_offers"],
     "enabled": true,
-    "rotation": "daily",
-    "weight": 1
-  },
-  {
-    "id": "offers-value-bundles",
-    "title": "Best value bundles",
-    "href": "/shop/flower",
-    "image": "/images/deal-slider-3.jpg",
-    "alt": "Best value bundles",
     "badge": "Value",
+    "weight": 9
+  },
+  {
+    "id": "offer-culture-craft-all",
+    "title": "Shop Culture Craft",
+    "href": "/shop/all?brand=CULTURE%20CRAFT",
+    "image": "/images/banner-8.avif",
+    "alt": "Culture Craft",
     "placements": ["homepage_offers"],
     "enabled": true,
-    "rotation": "daily",
-    "weight": 1
+    "badge": "New",
+    "weight": 8
   },
   {
-    "id": "home-slider-featured-deals",
-    "title": "Featured deals",
-    "href": "/shop",
-    "image": "/images/deal-slider-2.jpg",
-    "alt": "Featured deals",
-    "placements": ["homepage_slider"],
+    "id": "offer-777-seed-strain",
+    "title": "Shop 777 / Seed & Strain",
+    "href": "/shop/all?brand=777,SEED%20%26%20STRAIN",
+    "image": "/images/banner-7.avif",
+    "alt": "777 and Seed & Strain",
+    "placements": ["homepage_offers"],
     "enabled": true,
-    "rotation": "daily",
-    "weight": 1
+    "badge": "Hot",
+    "weight": 7
   },
   {
-    "id": "announcement-weekend-hours",
-    "title": "Weekend hours updated",
-    "href": "/hours",
-    "image": "/images/default-cover.jpg",
-    "alt": "Weekend hours updated",
-    "placements": ["announcement"],
-    "enabled": false,
-    "rotation": "fixed",
-    "weight": 1
+    "id": "offer-featured-product-clearrush",
+    "title": "Featured product",
+    "href": "/shop/all?q=clearrush42a",
+    "image": "/images/banner-4.avif",
+    "alt": "Featured product",
+    "placements": ["homepage_offers"],
+    "enabled": true,
+    "badge": "New",
+    "weight": 6
+  },
+  {
+    "id": "offer-sun-extractions-multi-category",
+    "title": "Shop Sun Extractions",
+    "href": "/shop/all?categories=Concentrates,Vaporizers&brand=SUN%20EXTRACTIONS",
+    "image": "/images/banner-5.avif",
+    "alt": "Sun Extractions",
+    "placements": ["homepage_offers"],
+    "enabled": true,
+    "badge": "Value",
+    "weight": 6
+  },
+  {
+    "id": "offer-featured-product-vice-city",
+    "title": "Featured product",
+    "href": "/shop/all?q=vice%20city",
+    "image": "/images/banner-3.avif",
+    "alt": "Featured product",
+    "placements": ["homepage_offers"],
+    "enabled": true,
+    "badge": "Hot",
+    "weight": 6
+  },
+  {
+    "id": "offer-sayless-flower",
+    "title": "Shop SAYLESS",
+    "href": "/shop/flower/all?brand=SAYLESS,SAY%20LESS",
+    "image": "/images/banner-2.jpeg",
+    "alt": "SAYLESS flower",
+    "placements": ["homepage_offers"],
+    "enabled": true,
+    "badge": "Hot",
+    "weight": 8
   }
 ]
-

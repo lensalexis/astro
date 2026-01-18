@@ -4,6 +4,7 @@ import Link from "next/link";
 import AIProductSearch from "@/components/AIProductSearch";
 import HomeHeroCarousel from "@/components/home/HomeHeroCarousel";
 import HomeStartHereContent from "@/components/home/HomeStartHereContent";
+import HorizontalRailWithArrows, { type RailItem } from "@/components/home/HorizontalRailWithArrows";
 import { stores } from "@/lib/stores";
 import { getMarketingBannersForPlacement, toHomeStartHereItems } from "@/lib/banners";
 import { CATEGORY_DEFS } from "@/lib/catalog";
@@ -14,14 +15,6 @@ export const metadata: Metadata = {
   title: "Kine Buds Dispensary",
   description:
     "Shop live inventory in Maywood, NJ. Discover deals, explore categories, and search by mood, effects, brand, and price.",
-};
-
-type RailItem = {
-  title: string;
-  subtitle?: string;
-  href: string;
-  image: string;
-  badge?: string;
 };
 
 function Section({
@@ -45,74 +38,18 @@ function Section({
   );
 }
 
-function HorizontalRail({
-  items,
-  variant = "default",
-}: {
-  items: RailItem[];
-  variant?: "default" | "category";
-}) {
-  return (
-    <div className="overflow-x-auto scrollbar-hide">
-      <div className="flex gap-4 pb-2">
-        {items.map((item) => (
-          <Link
-            key={item.href + item.title}
-            href={item.href}
-            className="group relative w-[260px] shrink-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 hover:shadow-md"
-          >
-            <div className="relative h-40 w-full">
-              <Image
-                src={item.image}
-                alt={item.title}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                sizes="260px"
-              />
-              {variant === "category" ? (
-                <>
-                  <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/75 via-black/35 to-transparent" />
-                  <div className="absolute inset-x-0 bottom-0 p-4">
-                    <div className="text-base font-extrabold tracking-tight text-white">
-                      {item.title}
-                    </div>
-                  </div>
-                </>
-              ) : null}
-              {item.badge ? (
-                <div className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-gray-900 ring-1 ring-black/5 backdrop-blur">
-                  {item.badge}
-                </div>
-              ) : null}
-            </div>
-            {variant === "category" ? null : (
-              <div className="p-4">
-                <div className="text-base font-bold text-gray-950 line-clamp-2">
-                  {item.title}
-                </div>
-              </div>
-            )}
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default async function Home() {
   const defaultStoreId = stores[0]?.id;
-  const heroSlides = [
-    { src: "/images/deal-slider-2.jpg", alt: "Featured deals" },
-    { src: "/images/deal-slider-3.jpg", alt: "Featured bundles" },
-    { src: "/images/deal-slider-4.jpg", alt: "Featured picks" },
-    { src: "/images/deal-slider-5.jpg", alt: "Featured value" },
-    { src: "/images/deal-slider-1.jpg", alt: "Featured savings" },
-  ];
+  const heroSlides = getMarketingBannersForPlacement("homepage_slider", { limit: 8 }).map((b) => ({
+    src: b.image,
+    alt: b.alt || b.title,
+  }));
 
   const offersForYou = toHomeStartHereItems(
     getMarketingBannersForPlacement("homepage_offers", { limit: 8 })
   );
 
+  // Best sellers (for "Trending right now")
   const bestSellersRes = await productService.list(
     {
       venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
@@ -122,30 +59,48 @@ export default async function Home() {
     },
     { next: { revalidate: 30, tags: ["dispense:products"] } }
   );
-  const popularProducts = bestSellersRes.data || [];
+
+  const trendingProducts = (bestSellersRes.data || []).slice(0, 12);
+
+  // On-sale products (for "Best picks this week")
+  const onSaleRes = await productService.list(
+    {
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      limit: 60, // fetch more; we'll filter/sort client-side
+      quantityMin: 1,
+    },
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+
+  const bestPicksProducts = (onSaleRes.data || [])
+    .filter(
+      (p: any) =>
+        (p.discountValueFinal && p.discountValueFinal > 0) ||
+        (p.discountAmountFinal && p.discountAmountFinal > 0) ||
+        (p.discounts && p.discounts.length > 0)
+    )
+    .sort((a: any, b: any) => {
+      const aPct = a.discountValueFinal || a.discounts?.[0]?.value || 0;
+      const bPct = b.discountValueFinal || b.discounts?.[0]?.value || 0;
+      return bPct - aPct;
+    })
+    .slice(0, 12);
 
   const categoryThumbs: Record<string, string> = {
-    flower: "/images/post-thumb-03.jpg",
-    vaporizers: "/images/post-thumb-04.jpg",
-    edibles: "/images/post-thumb-05.jpg",
-    "pre-rolls": "/images/post-thumb-06.jpg",
-    concentrates: "/images/post-thumb-07.jpg",
-    beverages: "/images/post-thumb-08.jpg",
-    tinctures: "/images/post-thumb-09.jpg",
-    topicals: "/images/post-thumb-10.jpg",
+    flower: "/images/flower.jpg",
+    vaporizers: "/images/vape.jpg",
+    edibles: "/images/edible.jpg",
+    "pre-rolls": "/images/preroll.jpg",
+    concentrates: "/images/concentrates.jpg",
+    beverages: "/images/beverage.jpg",
   };
 
   const topDestinations: RailItem[] = [
     ...CATEGORY_DEFS.map((c) => ({
-      title: c.slug === "pre-rolls" ? "Pre-rolls" : c.name,
+      title: c.slug === "pre-rolls" ? "Pre Roll" : c.name,
       href: `/shop/${c.slug}`,
       image: categoryThumbs[c.slug] || "/images/default-cover.jpg",
     })),
-    {
-      title: "Topicals",
-      href: "/shop/topicals",
-      image: categoryThumbs.topicals,
-    },
   ];
 
   return (
@@ -177,16 +132,21 @@ export default async function Home() {
         <Section
           title="Browse by category"
         >
-          <HorizontalRail items={topDestinations} variant="category" />
+          <HorizontalRailWithArrows items={topDestinations} variant="category" />
         </Section>
 
-        {/* Popular (Best Sellers) */}
-        <Section title="Popular right now">
-          <ProductSlider products={popularProducts} />
+        {/* Trending (Best sellers) */}
+        <Section title="Trending right now">
+          <ProductSlider products={trendingProducts} />
         </Section>
 
-        {/* Best (Billboard) */}
+        {/* Best picks (On sale) */}
         <Section title="Best picks this week">
+          <ProductSlider products={bestPicksProducts} />
+        </Section>
+
+        {/* Explore (Billboard) */}
+        <Section title="Explore">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
