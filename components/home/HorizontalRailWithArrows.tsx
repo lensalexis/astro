@@ -46,12 +46,14 @@ export default function HorizontalRailWithArrows({
 
       {/* Scrollable container */}
       <div ref={scrollRef} className="overflow-x-auto scrollbar-hide scroll-smooth px-4 sm:px-6">
-        <div className="flex gap-4 pb-2">
+        <div className="flex gap-3 pb-2">
           {items.map((item) => (
             <Link
               key={item.href + item.title}
               href={item.href}
-              className={`group relative shrink-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 hover:shadow-md ${variant === 'category' ? 'w-[200px]' : 'w-[260px]'}`}
+              className={`group relative shrink-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 hover:shadow-md ${
+                variant === 'category' ? 'w-[170px] sm:w-[180px] lg:w-[160px]' : 'w-[260px]'
+              }`}
             >
               <div className={`relative w-full ${variant === 'category' ? 'h-64' : 'h-40'}`}>
                 <Image
