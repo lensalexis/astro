@@ -3487,10 +3487,10 @@ For specific details about earning rates and redemption options, please contact 
 
             {forceAIMode ? (
               heroVariant === 'viator' ? (
-                <div className="pb-2 sm:pb-4">
-                  <div className="flex flex-col items-start text-left gap-3 sm:gap-4">
+                <div className="pb-1.5 sm:pb-3">
+                  <div className="flex flex-col items-start text-left gap-2 sm:gap-3">
                     <GoogleReviewSummary />
-                    <div className="w-full flex flex-col items-start gap-1.5 sm:gap-2">
+                    <div className="w-full flex flex-col items-start gap-1 sm:gap-1.5">
                       <h1 className="text-[26px] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight text-white whitespace-nowrap leading-tight">
                         {heroTitle ? (
                           heroTitle
@@ -3535,7 +3535,7 @@ For specific details about earning rates and redemption options, please contact 
                           )
                         }
                       }}
-                      className="mt-4 sm:mt-5 w-full"
+                      className="mt-2 sm:mt-3 w-full"
                     >
                       {/* Keep the navbar anchor/input alive (used by SiteChrome to jump/focus). */}
                       <input
