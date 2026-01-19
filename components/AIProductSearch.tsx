@@ -3495,7 +3495,7 @@ For specific details about earning rates and redemption options, please contact 
                   <div className="flex flex-col items-start text-left gap-2 sm:gap-3">
                     <GoogleReviewSummary />
                     <div className="w-full flex flex-col items-start gap-1 sm:gap-1.5">
-                      <h1 className="text-[26px] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight text-white whitespace-nowrap leading-tight">
+                      <h1 className="text-[30px] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight text-white whitespace-nowrap leading-tight">
                         {heroTitle ? (
                           heroTitle
                         ) : (
