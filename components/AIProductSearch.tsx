@@ -32,6 +32,29 @@ import {
   type FacetedFilters,
 } from '@/lib/catalog'
 
+function formatStrainLabel(input: string) {
+  const raw = String(input || '').trim()
+  if (!raw) return raw
+  const upper = raw.toUpperCase()
+  if (upper === 'ANY') return 'Any'
+  if (['NA', 'N/A', 'UNKNOWN', 'NONE'].includes(upper)) return 'N/A'
+  const parts = raw
+    .split('_')
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (parts.length > 1) {
+    return parts
+      .map((p) => p.toLowerCase())
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(' ')
+  }
+  if (raw === upper) {
+    const p = raw.toLowerCase()
+    return p.charAt(0).toUpperCase() + p.slice(1)
+  }
+  return raw
+}
+
 const HERO_ROTATING_WORDS = ['favorite', 'go-to', 'flower', 'vape', 'edible', 'pre-roll'] as const
 
 function RotatingWord({
@@ -3628,7 +3651,7 @@ For specific details about earning rates and redemption options, please contact 
                                         : 'animate-gradient-x bg-[linear-gradient(to_right,#ec4899,#a855f7,#ec4899)] bg-[length:200%_auto] bg-clip-text font-light text-transparent',
                                     ].join(' ')}
                                   >
-                                    {heroStrain || 'Indica, Sativa or Hybrid'}
+                                    {heroStrain ? formatStrainLabel(heroStrain) : 'Indica, Sativa or Hybrid'}
                                   </div>
                                 </div>
                                 <ChevronDownIcon className="h-5 w-5 text-gray-500" />
@@ -3748,7 +3771,9 @@ For specific details about earning rates and redemption options, please contact 
                                       }}
                                     >
                                       <span className="flex items-center justify-between gap-3">
-                                        <span className="truncate">{val}</span>
+                                        <span className="truncate">
+                                          {heroDropdownPos.which === 'strains' ? formatStrainLabel(val) : val}
+                                        </span>
                                         {heroDropdownPos.which === 'categories' &&
                                         finalFacetCounts.categories?.[val] ? (
                                           <span className="shrink-0 text-xs font-semibold text-gray-500">
