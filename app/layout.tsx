@@ -81,7 +81,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${poppins.variable} ${nacelle.variable} bg-gray-950 font-inter text-base text-gray-200 antialiased`}
+        className={`${poppins.variable} ${nacelle.variable} bg-gray-50 font-inter text-base text-gray-900 antialiased`}
       >
         {/* ✅ Dispense script properly rendered */}
         <Script

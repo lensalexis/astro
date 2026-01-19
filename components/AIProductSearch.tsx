@@ -3487,10 +3487,11 @@ For specific details about earning rates and redemption options, please contact 
 
             {forceAIMode ? (
               heroVariant === 'viator' ? (
-                <div className="pb-0">
-                  <div className="flex flex-col items-start text-left gap-4">
-                    <div className="w-full flex flex-col items-start gap-2">
-                      <h1 className="text-[26px] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight text-white whitespace-nowrap">
+                <div className="pb-2 sm:pb-4">
+                  <div className="flex flex-col items-start text-left gap-3 sm:gap-4">
+                    <GoogleReviewSummary />
+                    <div className="w-full flex flex-col items-start gap-1.5 sm:gap-2">
+                      <h1 className="text-[26px] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight text-white whitespace-nowrap leading-tight">
                         {heroTitle ? (
                           heroTitle
                         ) : (
@@ -3499,7 +3500,7 @@ For specific details about earning rates and redemption options, please contact 
                           </>
                         )}
                       </h1>
-                      <p className="max-w-3xl mt-2 text-base sm:text-lg text-white/90">
+                      <p className="max-w-3xl text-base sm:text-lg text-white/90 leading-snug">
                         Search Maywood’s premier cannabis destination for curated selections.
                       </p>
                       {dispenseError ? (
@@ -3534,7 +3535,7 @@ For specific details about earning rates and redemption options, please contact 
                           )
                         }
                       }}
-                      className="mt-6 w-full"
+                      className="mt-4 sm:mt-5 w-full"
                     >
                       {/* Keep the navbar anchor/input alive (used by SiteChrome to jump/focus). */}
                       <input

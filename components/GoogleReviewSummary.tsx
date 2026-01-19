@@ -18,18 +18,28 @@ export default function GoogleReviewSummary() {
     fetchReviews()
   }, [])
 
+  const avatars = reviews.slice(0, 5)
+
   return (
-    <div className="flex items-center gap-3 bg-[#f4f4f46e] px-4 py-2 rounded-full shadow-sm">
+    <div className="inline-flex items-center gap-3 rounded-full bg-white/40 backdrop-blur-md px-4 py-2 shadow-sm ring-1 ring-white/40 w-fit">
       {/* ✅ Avatars from Google reviewers */}
       <div className="flex -space-x-2">
-        {reviews.slice(0, 4).map((r, i) => (
-          <img
-            key={i}
-            src={r.profile_photo_url}
-            alt={r.author_name}
-            className="w-8 h-8 rounded-full border-2 border-white"
-          />
-        ))}
+        {avatars.length === 0
+          ? Array.from({ length: 4 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-8 w-8 rounded-full bg-gray-100/70"
+              />
+            ))
+          : avatars.map((r, i) => (
+              <img
+                key={i}
+                src={r.profile_photo_url || '/images/google-g.svg'}
+                alt={r.author_name || 'Reviewer'}
+                className="w-8 h-8 rounded-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ))}
       </div>
 
       {/* ✅ Text + Stars */}
@@ -37,9 +47,9 @@ export default function GoogleReviewSummary() {
         {/* <span className="font-semibold text-gray-900">Excellent</span> */}
         <img src="/images/google-g.svg" alt="Google" className="w-5 h-5" />
         <span className="text-yellow-500">★</span>
-        {rating && totalReviews && (
-          <span className="text-gray-700">
-            {rating.toFixed(1)} · {totalReviews} reviews
+        {rating && (
+          <span className="text-[color:oklch(0.93_0_0)]">
+            {rating.toFixed(1)}
           </span>
         )}
       </div>

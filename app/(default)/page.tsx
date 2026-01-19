@@ -5,6 +5,8 @@ import AIProductSearch from "@/components/AIProductSearch";
 import HomeHeroCarousel from "@/components/home/HomeHeroCarousel";
 import HomeStartHereContent from "@/components/home/HomeStartHereContent";
 import HorizontalRailWithArrows, { type RailItem } from "@/components/home/HorizontalRailWithArrows";
+import AmazingExperiences from "@/components/home/AmazingExperiences";
+import GoogleReviews from "@/components/GoogleReviews";
 import { stores } from "@/lib/stores";
 import { getMarketingBannersForPlacement, toHomeStartHereItems } from "@/lib/banners";
 import { CATEGORY_DEFS } from "@/lib/catalog";
@@ -104,7 +106,7 @@ export default async function Home() {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {/* TopSearchBar / MainBanner */}
       <div className="mt-0">
         <HomeHeroCarousel slides={heroSlides}>
@@ -197,45 +199,13 @@ export default async function Home() {
           </div>
         </Section>
 
-        {/* AmazingExperiences (Themes) */}
-        <Section title="Amazing experiences (without the guesswork)">
-          <div className="grid gap-4 md:grid-cols-2">
-            {[
-              {
-                title: "Resources Center",
-                href: "/resources",
-                image: "/images/post-thumb-12.jpg",
-              },
-              {
-                title: "Directions & parking",
-                href: "/directions",
-                image: "/images/store-front.jpg",
-              },
-            ].map((tile) => (
-              <Link
-                key={tile.href}
-                href={tile.href}
-                className="group relative overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 hover:shadow-md"
-              >
-                <div className="relative h-44">
-                  <Image
-                    src={tile.image}
-                    alt={tile.title}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                    sizes="(min-width: 768px) 50vw, 100vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-black/0 to-black/0" />
-                </div>
-                <div className="p-5">
-                  <div className="text-lg font-extrabold text-gray-950">
-                    {tile.title}
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+        {/* Why people love Kine Buds (Google Reviews) */}
+        <Section title="Why people love Kine Buds">
+          <GoogleReviews />
         </Section>
+
+        {/* AmazingExperiences (Themes) */}
+        <AmazingExperiences />
 
         {/* MoreToExplore */}
         <Section title="More to explore">
