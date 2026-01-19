@@ -18,6 +18,7 @@ import { routeIntent, type Intent, type ExtractedFilters, EFFECT_KEYWORDS } from
 import { listDispenseProducts } from '@/utils/dispenseClient'
 import {
   CATEGORY_DEFS,
+  CATEGORY_NAME_BY_SLUG,
   DEFAULT_CATEGORY_LABELS,
   applyProductFilters,
   buildFacetCounts,
@@ -53,6 +54,25 @@ function formatStrainLabel(input: string) {
     return p.charAt(0).toUpperCase() + p.slice(1)
   }
   return raw
+}
+
+function getCategoryCount(caseInsensitiveName: string, counts: Record<string, number> = {}) {
+  if (!caseInsensitiveName) return 0
+  if (counts[caseInsensitiveName] !== undefined) return counts[caseInsensitiveName]
+  const lower = caseInsensitiveName.toLowerCase()
+  const found = Object.entries(counts).find(([k]) => k.toLowerCase() === lower)
+  if (found) return found[1]
+  // Also try matching by slug -> name
+  const slugMatch = Object.entries(CATEGORY_NAME_BY_SLUG).find(
+    ([slug, name]) => name.toLowerCase() === lower || slug.toLowerCase() === lower
+  )
+  if (slugMatch) {
+    const name = slugMatch[1]
+    if (counts[name] !== undefined) return counts[name]
+    const byLower = Object.entries(counts).find(([k]) => k.toLowerCase() === name.toLowerCase())
+    if (byLower) return byLower[1]
+  }
+  return 0
 }
 
 const HERO_ROTATING_WORDS = ['favorite', 'go-to', 'flower', 'vape', 'edible', 'pre-roll'] as const
@@ -3776,7 +3796,7 @@ For specific details about earning rates and redemption options, please contact 
                                         </span>
                                         {heroDropdownPos.which === 'categories' ? (
                                           <span className="shrink-0 text-xs font-semibold text-gray-500">
-                                            {finalFacetCounts.categories?.[val] ?? 0}
+                                            {getCategoryCount(val, finalFacetCounts.categories)}
                                           </span>
                                         ) : null}
                                         {heroDropdownPos.which === 'strains' &&
