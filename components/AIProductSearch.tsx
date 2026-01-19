@@ -94,10 +94,14 @@ function RotatingWord({
 
   return (
     <span
-      className={['relative inline-flex items-baseline overflow-hidden leading-none', className]
+      className={[
+        'relative inline-flex items-baseline overflow-hidden leading-none',
+        'h-[35px] sm:h-[64px]',
+        className,
+      ]
         .filter(Boolean)
         .join(' ')}
-      style={{ width: `${Math.max(1, maxChars + 1)}ch`, height: '64px' }}
+      style={{ width: `${Math.max(1, maxChars + 1)}ch` }}
       aria-label={word}
     >
       <span

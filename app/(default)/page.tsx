@@ -110,7 +110,7 @@ export default async function Home() {
       {/* TopSearchBar / MainBanner */}
       <div className="mt-0">
         <HomeHeroCarousel slides={heroSlides}>
-          <div className="flex h-full w-full items-start pt-16 pb-10 sm:items-end sm:pt-0 sm:pb-12">
+          <div className="flex h-full w-full items-end pt-10 pb-4 sm:items-end sm:pt-0 sm:pb-12">
             <AIProductSearch
               forceAIMode={true}
               heroOnly={true}
