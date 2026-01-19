@@ -21,7 +21,7 @@ export default function GoogleReviewSummary() {
   const avatars = reviews.slice(0, 5)
 
   return (
-    <div className="inline-flex items-center gap-3 rounded-full bg-white/40 backdrop-blur-md px-4 py-2 shadow-sm ring-1 ring-white/40 w-fit">
+    <div className="inline-flex items-center gap-3 rounded-full backdrop-blur-md px-4 py-2 shadow-sm ring-1 ring-white/40 w-fit">
       {/* ✅ Avatars from Google reviewers */}
       <div className="flex -space-x-2">
         {avatars.length === 0

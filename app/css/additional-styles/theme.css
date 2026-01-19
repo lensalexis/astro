@@ -80,3 +80,10 @@
     transform: translate3d(10px, 0, 0) scale(1.2);
   }
 }
+
+/* Soften ring-white/40 mix to 25% */
+.ring-white\/40 {
+  @supports (color: color-mix(in lab, red, red)) {
+    --tw-ring-color: color-mix(in oklab, var(--color-white) 25%, transparent);
+  }
+}
