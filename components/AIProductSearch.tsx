@@ -3795,9 +3795,17 @@ For specific details about earning rates and redemption options, please contact 
                                           {heroDropdownPos.which === 'strains' ? formatStrainLabel(val) : val}
                                         </span>
                                         {heroDropdownPos.which === 'categories' ? (
-                                          <span className="shrink-0 text-xs font-semibold text-gray-500">
-                                            {getCategoryCount(val, finalFacetCounts.categories)}
-                                          </span>
+                                          (() => {
+                                            const cnt = getCategoryCount(val, finalFacetCounts.categories)
+                                            if (cnt > 0) {
+                                              return (
+                                                <span className="shrink-0 text-xs font-semibold text-gray-500">
+                                                  {cnt}
+                                                </span>
+                                              )
+                                            }
+                                            return null
+                                          })()
                                         ) : null}
                                         {heroDropdownPos.which === 'strains' &&
                                         finalFacetCounts.strains?.[val] ? (
