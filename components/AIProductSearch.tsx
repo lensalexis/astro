@@ -3774,10 +3774,9 @@ For specific details about earning rates and redemption options, please contact 
                                         <span className="truncate">
                                           {heroDropdownPos.which === 'strains' ? formatStrainLabel(val) : val}
                                         </span>
-                                        {heroDropdownPos.which === 'categories' &&
-                                        finalFacetCounts.categories?.[val] ? (
+                                        {heroDropdownPos.which === 'categories' ? (
                                           <span className="shrink-0 text-xs font-semibold text-gray-500">
-                                            {finalFacetCounts.categories[val]}
+                                            {finalFacetCounts.categories?.[val] ?? 0}
                                           </span>
                                         ) : null}
                                         {heroDropdownPos.which === 'strains' &&
