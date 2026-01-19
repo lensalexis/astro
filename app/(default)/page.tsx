@@ -42,10 +42,15 @@ function Section({
 
 export default async function Home() {
   const defaultStoreId = stores[0]?.id;
-  const heroSlides = getMarketingBannersForPlacement("homepage_slider", { limit: 8 }).map((b) => ({
-    src: b.image,
-    alt: b.alt || b.title,
-  }));
+  const heroSlides = getMarketingBannersForPlacement("homepage_slider", { limit: 8 }).map((b) => {
+    const mobileMatch = b.image.match(/herobanner(\d+)/i);
+    const mobileSrc = mobileMatch ? `/images/herobanner${mobileMatch[1]}-mobile.jpg` : undefined;
+    return {
+      src: b.image,
+      mobileSrc,
+      alt: b.alt || b.title,
+    };
+  });
 
   const offersForYou = toHomeStartHereItems(
     getMarketingBannersForPlacement("homepage_offers", { limit: 8 })

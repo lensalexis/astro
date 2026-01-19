@@ -3505,7 +3505,7 @@ For specific details about earning rates and redemption options, please contact 
                         )}
                       </h1>
                       <p className="max-w-3xl text-base sm:text-lg text-white/90 leading-snug">
-                        Search Maywood’s premier cannabis destination for curated selections.
+                        Search our menu at Kine Buds &mdash; Your top destination for cannabis in Maywood, New Jersey.
                       </p>
                       {dispenseError ? (
                         <div className="mt-2 inline-flex max-w-3xl items-center rounded-2xl bg-black/40 px-4 py-2 text-left text-sm text-white ring-1 ring-white/15 backdrop-blur">
@@ -3539,7 +3539,7 @@ For specific details about earning rates and redemption options, please contact 
                           )
                         }
                       }}
-                      className="mt-2 sm:mt-3 w-full"
+                      className="mt-8 sm:mt-8 w-full"
                     >
                       {/* Keep the navbar anchor/input alive (used by SiteChrome to jump/focus). */}
                       <input

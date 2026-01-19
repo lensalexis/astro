@@ -15,6 +15,7 @@ import 'swiper/css/pagination'
 
 export type HomeHeroSlide = {
   src: string
+  mobileSrc?: string
   alt?: string
 }
 
@@ -26,6 +27,16 @@ export default function HomeHeroCarousel({
   children: ReactNode
 }) {
   const [swiper, setSwiper] = useState<SwiperClass | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(max-width: 639px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
 
   return (
     <section className="relative w-full overflow-hidden">
@@ -45,7 +56,7 @@ export default function HomeHeroCarousel({
             <SwiperSlide key={`${s.src}-${idx}`}>
               <div className="relative h-full w-full">
                 <Image
-                  src={s.src}
+                  src={isMobile && s.mobileSrc ? s.mobileSrc : s.src}
                   alt={s.alt || ''}
                   fill
                   priority={idx === 0}
