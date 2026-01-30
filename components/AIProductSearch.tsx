@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon, ChevronDownIcon, ChevronUpIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
 import GoogleReviewSummary from '@/components/GoogleReviewSummary'
 import ProductCard, { pickPrimaryImage } from '@/components/ui/ProductCard'
@@ -905,8 +905,11 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   // Homepage hero (Airbnb-style) dropdown state
   const [heroCategory, setHeroCategory] = useState<string>('')
   const [heroStrain, setHeroStrain] = useState<string>('')
+  const [heroType, setHeroType] = useState<string>('')
   const [heroCategoryOpen, setHeroCategoryOpen] = useState(false)
   const [heroStrainOpen, setHeroStrainOpen] = useState(false)
+  const [heroTypeOpen, setHeroTypeOpen] = useState(false)
+  const [heroTypesOpenSection, setHeroTypesOpenSection] = useState<'discounted' | 'brands' | 'weights' | 'terpenes' | null>(null)
   const [heroShowMoreFilters, setHeroShowMoreFilters] = useState(false)
 
   // Allow category pages to preselect a hero category.
@@ -916,8 +919,9 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   }, [initialHeroCategory])
   const heroCategoryBtnRef = useRef<HTMLButtonElement | null>(null)
   const heroStrainBtnRef = useRef<HTMLButtonElement | null>(null)
+  const heroTypeBtnRef = useRef<HTMLButtonElement | null>(null)
   const [heroDropdownPos, setHeroDropdownPos] = useState<{
-    which: 'categories' | 'strains'
+    which: 'categories' | 'strains' | 'types'
     top: number
     left: number
     width: number
@@ -987,7 +991,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       forceAIMode &&
       heroOnly &&
       heroVariant === 'viator' &&
-      (heroCategoryOpen || heroStrainOpen)
+      (heroCategoryOpen || heroStrainOpen || heroTypeOpen)
     if (!shouldLoad) return
     if (allProductsGlobal.length > 0) return
 
@@ -1017,6 +1021,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     heroCategoryOpen,
     heroOnly,
     heroStrainOpen,
+    heroTypeOpen,
     heroVariant,
   ])
 
@@ -1029,7 +1034,12 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     const update = () => {
       setHeroDropdownPos((prev) => {
         if (!prev) return prev
-        const btn = prev.which === 'categories' ? heroCategoryBtnRef.current : heroStrainBtnRef.current
+        const btn =
+          prev.which === 'categories'
+            ? heroCategoryBtnRef.current
+            : prev.which === 'strains'
+              ? heroStrainBtnRef.current
+              : heroTypeBtnRef.current
         if (!btn) return prev
         const rect = btn.getBoundingClientRect()
         const top = rect.bottom + 8
@@ -1054,13 +1064,16 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
       const isInBtn =
-        heroCategoryBtnRef.current?.contains(t) || heroStrainBtnRef.current?.contains(t)
+        heroCategoryBtnRef.current?.contains(t) ||
+        heroStrainBtnRef.current?.contains(t) ||
+        heroTypeBtnRef.current?.contains(t)
       const portalEl = document.querySelector('[data-home-hero-dropdown]')
       const isInPortal = portalEl ? portalEl.contains(t) : false
       if (!isInBtn && !isInPortal) {
         setHeroDropdownPos(null)
         setHeroCategoryOpen(false)
         setHeroStrainOpen(false)
+        setHeroTypeOpen(false)
       }
     }
     document.addEventListener('mousedown', onDown)
@@ -3119,6 +3132,37 @@ License: ${license}`
     handleFiltersChange(next)
   }
 
+  const toggleHeroTypeFilter = (type: 'saleOnly' | 'brands' | 'weights' | 'terpenes', value?: string) => {
+    if (type === 'saleOnly') {
+      const next: FacetedFilters = { ...activeFilters, saleOnly: !activeFilters.saleOnly }
+      handleFiltersChange(next)
+      return
+    }
+    const key = type
+    const current = (activeFilters[key] || []) as string[]
+    const updated = value
+      ? (current.some((v) => v.toLowerCase() === value.toLowerCase())
+          ? current.filter((v) => v.toLowerCase() !== value.toLowerCase())
+          : [...current, value])
+      : []
+    const next: FacetedFilters = { ...activeFilters, [key]: updated.length ? updated : undefined }
+    handleFiltersChange(next)
+  }
+
+  const clearHeroTypeFilters = () => {
+    const next: FacetedFilters = {
+      ...activeFilters,
+      saleOnly: false,
+      brands: undefined,
+      weights: undefined,
+      terpenes: undefined,
+    }
+    handleFiltersChange(next)
+    setHeroType('')
+    setHeroTypeOpen(false)
+    setHeroDropdownPos(null)
+  }
+
   const handleFiltersChange = async (f: FacetedFilters) => {
     const hasOtherFacetFilters = !!(
       f.brands?.length ||
@@ -3562,15 +3606,17 @@ For specific details about earning rates and redemption options, please contact 
                       ) : null}
                     </div>
 
-                    {/* Airbnb-style search bar (2 dropdowns only) */}
+                    {/* Airbnb-style search bar (Browse, Strain, Types + search) */}
                     <form
                       onSubmit={async (e) => {
                         e.preventDefault()
-                        // Note: this hero is `heroOnly`, so we just apply filters to the AI search state.
-                        // (If you want this to navigate to a results page later, we can wire that next.)
                         const next: FacetedFilters = {
                           categories: heroCategory ? [heroCategory] : undefined,
                           strains: heroStrain ? [heroStrain] : undefined,
+                          saleOnly: activeFilters.saleOnly ?? false,
+                          brands: activeFilters.brands?.length ? activeFilters.brands : undefined,
+                          weights: activeFilters.weights?.length ? activeFilters.weights : undefined,
+                          terpenes: activeFilters.terpenes?.length ? activeFilters.terpenes : undefined,
                         }
                         setShowFilterNavInAiMode(false)
                         setShowLocationDropdown(false)
@@ -3598,9 +3644,9 @@ For specific details about earning rates and redemption options, please contact 
 
                       <div className="w-full max-w-5xl overflow-visible rounded-3xl bg-white/95 shadow-[0_18px_50px_rgba(0,0,0,0.35)] ring-1 ring-black/10 backdrop-blur sm:rounded-full">
                         <div className="p-3 sm:p-0">
-                          <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-0">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-stretch sm:gap-0">
                             {/* Browse (mobile: full-width field) */}
-                            <div className="relative overflow-hidden rounded-2xl border border-black/10 bg-white sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+                            <div className="relative min-w-0 overflow-hidden rounded-2xl border border-black/10 bg-white sm:min-w-[140px] sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
                               <button
                                 type="button"
                                 ref={heroCategoryBtnRef}
@@ -3610,6 +3656,7 @@ For specific details about earning rates and redemption options, please contact 
                                   const nextOpen = !heroCategoryOpen
                                   setHeroCategoryOpen(nextOpen)
                                   setHeroStrainOpen(false)
+                                  setHeroTypeOpen(false)
                                   setHeroDropdownPos(
                                     nextOpen
                                       ? { which: 'categories', top: rect.bottom + 8, left: rect.left, width: rect.width }
@@ -3641,7 +3688,7 @@ For specific details about earning rates and redemption options, please contact 
                             <div className="hidden sm:block w-px my-3 bg-gray-200" />
 
                             {/* Strain (mobile: full-width field) */}
-                            <div className="relative overflow-hidden rounded-2xl border border-black/10 bg-white sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+                            <div className="relative min-w-0 overflow-hidden rounded-2xl border border-black/10 bg-white sm:min-w-[140px] sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
                               <button
                                 type="button"
                                 ref={heroStrainBtnRef}
@@ -3651,6 +3698,7 @@ For specific details about earning rates and redemption options, please contact 
                                   const nextOpen = !heroStrainOpen
                                   setHeroStrainOpen(nextOpen)
                                   setHeroCategoryOpen(false)
+                                  setHeroTypeOpen(false)
                                   setHeroDropdownPos(
                                     nextOpen
                                       ? { which: 'strains', top: rect.bottom + 8, left: rect.left, width: rect.width }
@@ -3662,7 +3710,7 @@ For specific details about earning rates and redemption options, please contact 
                                 aria-expanded={heroStrainOpen}
                               >
                                 <div className="min-w-0">
-                                  <div className="text-[12px] font-semibold text-gray-900">Strain</div>
+                                  <div className="text-[12px] font-semibold text-gray-900">Strains</div>
                                   <div
                                     className={[
                                       'mt-0.5 truncate text-[14px]',
@@ -3672,6 +3720,56 @@ For specific details about earning rates and redemption options, please contact 
                                     ].join(' ')}
                                   >
                                     {heroStrain ? formatStrainLabel(heroStrain) : 'Indica, Sativa or Hybrid'}
+                                  </div>
+                                </div>
+                                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                              </button>
+                            </div>
+
+                            {/* Desktop divider */}
+                            <div className="hidden sm:block w-px my-3 bg-gray-200" />
+
+                            {/* Types (Discounted, Brands, Weight, Terpenes) */}
+                            <div className="relative min-w-0 shrink-0 overflow-hidden rounded-2xl border border-black/10 bg-white sm:min-w-[140px] sm:flex-1 sm:rounded-none sm:border-0 sm:bg-transparent">
+                              <button
+                                type="button"
+                                ref={heroTypeBtnRef}
+                                onClick={() => {
+                                  const rect = heroTypeBtnRef.current?.getBoundingClientRect()
+                                  if (!rect) return
+                                  const nextOpen = !heroTypeOpen
+                                  setHeroTypeOpen(nextOpen)
+                                  setHeroCategoryOpen(false)
+                                  setHeroStrainOpen(false)
+                                  setHeroDropdownPos(
+                                    nextOpen
+                                      ? { which: 'types', top: rect.bottom + 8, left: rect.left, width: rect.width }
+                                      : null
+                                  )
+                                  if (nextOpen) setHeroTypesOpenSection(null)
+                                }}
+                                className="flex w-full items-center justify-between gap-4 px-5 py-3.5 text-left sm:px-5 sm:py-3.5"
+                                aria-haspopup="listbox"
+                                aria-expanded={heroTypeOpen}
+                              >
+                                <div className="min-w-0">
+                                  <div className="text-[12px] font-semibold text-gray-900">Types</div>
+                                  <div
+                                    className={[
+                                      'mt-0.5 truncate text-[14px]',
+                                      (activeFilters.saleOnly || (activeFilters.brands?.length ?? 0) > 0 || (activeFilters.weights?.length ?? 0) > 0 || (activeFilters.terpenes?.length ?? 0) > 0)
+                                        ? 'font-medium text-gray-800'
+                                        : 'animate-gradient-x bg-[linear-gradient(to_right,#ec4899,#a855f7,#ec4899)] bg-[length:200%_auto] bg-clip-text font-light text-transparent',
+                                    ].join(' ')}
+                                  >
+                                    {(() => {
+                                      const parts: string[] = []
+                                      if (activeFilters.saleOnly) parts.push('On sale')
+                                      if (activeFilters.brands?.length) parts.push(`${activeFilters.brands.length} brand${activeFilters.brands.length !== 1 ? 's' : ''}`)
+                                      if (activeFilters.weights?.length) parts.push(`${activeFilters.weights.length} weight${activeFilters.weights.length !== 1 ? 's' : ''}`)
+                                      if (activeFilters.terpenes?.length) parts.push(`${activeFilters.terpenes.length} terpene${activeFilters.terpenes.length !== 1 ? 's' : ''}`)
+                                      return parts.length > 0 ? parts.join(', ') : 'Discounted, Brands, Weight, Terpenes'
+                                    })()}
                                   </div>
                                 </div>
                                 <ChevronDownIcon className="h-5 w-5 text-gray-500" />
@@ -3748,74 +3846,302 @@ For specific details about earning rates and redemption options, please contact 
                                 position: 'fixed',
                                 top: heroDropdownPos.top,
                                 left: heroDropdownPos.left,
-                                width: heroDropdownPos.width,
+                                width: heroDropdownPos.which === 'types' ? 320 : heroDropdownPos.width,
+                                minWidth: heroDropdownPos.which === 'types' ? 320 : undefined,
                                 zIndex: 200,
                               }}
                             >
                               <div className="overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/10">
                                 <div className="max-h-80 overflow-auto p-2">
-                                  <button
-                                    type="button"
-                                    className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
-                                    onClick={() => {
-                                      if (heroDropdownPos.which === 'categories') {
-                                        setHeroCategory('')
-                                        setHeroCategoryOpen(false)
-                                      } else {
-                                        setHeroStrain('')
-                                        setHeroStrainOpen(false)
-                                      }
-                                      setHeroDropdownPos(null)
-                                    }}
-                                  >
-                                    Any
-                                  </button>
+                                  {heroDropdownPos.which === 'types' ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                        onClick={clearHeroTypeFilters}
+                                      >
+                                        Any
+                                      </button>
+                                      <div className="my-2 border-t border-gray-100" />
 
-                                  {(heroDropdownPos.which === 'categories'
-                                    ? categoryOptions
-                                    : strainOptions
-                                  ).map((val) => (
-                                    <button
-                                      key={`${heroDropdownPos.which}-${val}`}
-                                      type="button"
-                                      className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
-                                      onClick={() => {
-                                        if (heroDropdownPos.which === 'categories') {
-                                          setHeroCategory(val)
-                                          setHeroCategoryOpen(false)
-                                        } else {
-                                          setHeroStrain(val)
-                                          setHeroStrainOpen(false)
-                                        }
-                                        setHeroDropdownPos(null)
-                                      }}
-                                    >
-                                      <span className="flex items-center justify-between gap-3">
-                                        <span className="truncate">
-                                          {heroDropdownPos.which === 'strains' ? formatStrainLabel(val) : val}
-                                        </span>
-                                        {heroDropdownPos.which === 'categories' ? (
-                                          (() => {
-                                            const cnt = getCategoryCount(val, finalFacetCounts.categories)
-                                            if (cnt > 0) {
-                                              return (
-                                                <span className="shrink-0 text-xs font-semibold text-gray-500">
-                                                  {cnt}
-                                                </span>
-                                              )
-                                            }
-                                            return null
-                                          })()
-                                        ) : null}
-                                        {heroDropdownPos.which === 'strains' &&
-                                        finalFacetCounts.strains?.[val] ? (
-                                          <span className="shrink-0 text-xs font-semibold text-gray-500">
-                                            {finalFacetCounts.strains[val]}
+                                      {/* Discounted (collapsible) */}
+                                      <div className="rounded-2xl border border-gray-100 overflow-hidden">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setHeroTypesOpenSection((s) => (s === 'discounted' ? null : 'discounted'))
+                                          }}
+                                          className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                        >
+                                          <span>Discounted</span>
+                                          <span className="flex items-center gap-2">
+                                            {activeFilters.saleOnly && (
+                                              <span className="text-xs font-medium text-green-600">On</span>
+                                            )}
+                                            {heroTypesOpenSection === 'discounted' ? (
+                                              <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                                            ) : (
+                                              <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                                            )}
                                           </span>
-                                        ) : null}
-                                      </span>
-                                    </button>
-                                  ))}
+                                        </button>
+                                        {heroTypesOpenSection === 'discounted' && (
+                                          <div className="border-t border-gray-100 px-2 pb-2">
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                toggleHeroTypeFilter('saleOnly')
+                                              }}
+                                              className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-left text-sm font-medium hover:bg-gray-50 text-gray-800"
+                                            >
+                                              <span className="flex items-center gap-3">
+                                                <span
+                                                  className={`h-5 w-5 shrink-0 rounded border flex items-center justify-center ${
+                                                    activeFilters.saleOnly ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'
+                                                  }`}
+                                                >
+                                                  {activeFilters.saleOnly && <CheckIcon className="h-3 w-3" />}
+                                                </span>
+                                                <span>On sale</span>
+                                              </span>
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Brands (collapsible) */}
+                                      {facets.brands?.length ? (
+                                        <div className="mt-1 rounded-2xl border border-gray-100 overflow-hidden">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setHeroTypesOpenSection((s) => (s === 'brands' ? null : 'brands'))
+                                            }}
+                                            className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                          >
+                                            <span>Brands</span>
+                                            <span className="flex items-center gap-2">
+                                              {(activeFilters.brands?.length ?? 0) > 0 && (
+                                                <span className="text-xs font-medium text-green-600">{activeFilters.brands?.length}</span>
+                                              )}
+                                              {heroTypesOpenSection === 'brands' ? (
+                                                <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                                              ) : (
+                                                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                                              )}
+                                            </span>
+                                          </button>
+                                          {heroTypesOpenSection === 'brands' && (
+                                            <div className="max-h-48 overflow-auto border-t border-gray-100 px-2 pb-2">
+                                              {facets.brands.map((opt) => {
+                                                const selected = (activeFilters.brands || []).some((v) => v.toLowerCase() === opt.toLowerCase())
+                                                return (
+                                                  <button
+                                                    key={`brand-${opt}`}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation()
+                                                      toggleHeroTypeFilter('brands', opt)
+                                                    }}
+                                                    className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-left text-sm font-medium hover:bg-gray-50 text-gray-800"
+                                                  >
+                                                    <span className="flex items-center gap-3">
+                                                      <span
+                                                        className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center ${
+                                                          selected ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'
+                                                        }`}
+                                                      >
+                                                        {selected && <CheckIcon className="h-2.5 w-2.5" />}
+                                                      </span>
+                                                      <span className="truncate">{opt}</span>
+                                                    </span>
+                                                    {finalFacetCounts.brands?.[opt] != null && (
+                                                      <span className="shrink-0 text-xs text-gray-500">{finalFacetCounts.brands[opt]}</span>
+                                                    )}
+                                                  </button>
+                                                )
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : null}
+
+                                      {/* Weight (collapsible) */}
+                                      {facets.weights?.length ? (
+                                        <div className="mt-1 rounded-2xl border border-gray-100 overflow-hidden">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setHeroTypesOpenSection((s) => (s === 'weights' ? null : 'weights'))
+                                            }}
+                                            className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                          >
+                                            <span>Weight</span>
+                                            <span className="flex items-center gap-2">
+                                              {(activeFilters.weights?.length ?? 0) > 0 && (
+                                                <span className="text-xs font-medium text-green-600">{activeFilters.weights?.length}</span>
+                                              )}
+                                              {heroTypesOpenSection === 'weights' ? (
+                                                <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                                              ) : (
+                                                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                                              )}
+                                            </span>
+                                          </button>
+                                          {heroTypesOpenSection === 'weights' && (
+                                            <div className="max-h-48 overflow-auto border-t border-gray-100 px-2 pb-2">
+                                              {facets.weights.map((opt) => {
+                                                const selected = (activeFilters.weights || []).some((v) => v.toLowerCase() === opt.toLowerCase())
+                                                return (
+                                                  <button
+                                                    key={`weight-${opt}`}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation()
+                                                      toggleHeroTypeFilter('weights', opt)
+                                                    }}
+                                                    className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-left text-sm font-medium hover:bg-gray-50 text-gray-800"
+                                                  >
+                                                    <span className="flex items-center gap-3">
+                                                      <span
+                                                        className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center ${
+                                                          selected ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'
+                                                        }`}
+                                                      >
+                                                        {selected && <CheckIcon className="h-2.5 w-2.5" />}
+                                                      </span>
+                                                      <span className="truncate">{opt}</span>
+                                                    </span>
+                                                    {finalFacetCounts.weights?.[opt] != null && (
+                                                      <span className="shrink-0 text-xs text-gray-500">{finalFacetCounts.weights[opt]}</span>
+                                                    )}
+                                                  </button>
+                                                )
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : null}
+
+                                      {/* Terpenes (collapsible) */}
+                                      {facets.terpenes?.length ? (
+                                        <div className="mt-1 rounded-2xl border border-gray-100 overflow-hidden">
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              e.stopPropagation()
+                                              setHeroTypesOpenSection((s) => (s === 'terpenes' ? null : 'terpenes'))
+                                            }}
+                                            className="flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                          >
+                                            <span>Terpenes</span>
+                                            <span className="flex items-center gap-2">
+                                              {(activeFilters.terpenes?.length ?? 0) > 0 && (
+                                                <span className="text-xs font-medium text-green-600">{activeFilters.terpenes?.length}</span>
+                                              )}
+                                              {heroTypesOpenSection === 'terpenes' ? (
+                                                <ChevronUpIcon className="h-5 w-5 text-gray-500" />
+                                              ) : (
+                                                <ChevronDownIcon className="h-5 w-5 text-gray-500" />
+                                              )}
+                                            </span>
+                                          </button>
+                                          {heroTypesOpenSection === 'terpenes' && (
+                                            <div className="max-h-48 overflow-auto border-t border-gray-100 px-2 pb-2">
+                                              {facets.terpenes.map((opt) => {
+                                                const selected = (activeFilters.terpenes || []).some((v) => v.toLowerCase() === opt.toLowerCase())
+                                                return (
+                                                  <button
+                                                    key={`terp-${opt}`}
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation()
+                                                      toggleHeroTypeFilter('terpenes', opt)
+                                                    }}
+                                                    className="flex w-full items-center justify-between rounded-xl px-4 py-2 text-left text-sm font-medium hover:bg-gray-50 text-gray-800"
+                                                  >
+                                                    <span className="flex items-center gap-3">
+                                                      <span
+                                                        className={`h-4 w-4 shrink-0 rounded border flex items-center justify-center ${
+                                                          selected ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300'
+                                                        }`}
+                                                      >
+                                                        {selected && <CheckIcon className="h-2.5 w-2.5" />}
+                                                      </span>
+                                                      <span className="truncate">{opt}</span>
+                                                    </span>
+                                                    {finalFacetCounts.terpenes?.[opt] != null && (
+                                                      <span className="shrink-0 text-xs text-gray-500">{finalFacetCounts.terpenes[opt]}</span>
+                                                    )}
+                                                  </button>
+                                                )
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ) : null}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                        onClick={() => {
+                                          if (heroDropdownPos.which === 'categories') {
+                                            setHeroCategory('')
+                                            setHeroCategoryOpen(false)
+                                          } else if (heroDropdownPos.which === 'strains') {
+                                            setHeroStrain('')
+                                            setHeroStrainOpen(false)
+                                          }
+                                          setHeroDropdownPos(null)
+                                        }}
+                                      >
+                                        Any
+                                      </button>
+                                      {(heroDropdownPos.which === 'categories' ? categoryOptions : strainOptions).map((val) => (
+                                        <button
+                                          key={`${heroDropdownPos.which}-${val}`}
+                                          type="button"
+                                          className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                                          onClick={() => {
+                                            if (heroDropdownPos.which === 'categories') {
+                                              setHeroCategory(val)
+                                              setHeroCategoryOpen(false)
+                                            } else {
+                                              setHeroStrain(val)
+                                              setHeroStrainOpen(false)
+                                            }
+                                            setHeroDropdownPos(null)
+                                          }}
+                                        >
+                                          <span className="flex items-center justify-between gap-3">
+                                            <span className="truncate">
+                                              {heroDropdownPos.which === 'strains' ? formatStrainLabel(val) : val}
+                                            </span>
+                                            {heroDropdownPos.which === 'categories' ? (
+                                              (() => {
+                                                const cnt = getCategoryCount(val, finalFacetCounts.categories)
+                                                if (cnt > 0) {
+                                                  return (
+                                                    <span className="shrink-0 text-xs font-semibold text-gray-500">{cnt}</span>
+                                                  )
+                                                }
+                                                return null
+                                              })()
+                                            ) : null}
+                                            {heroDropdownPos.which === 'strains' && finalFacetCounts.strains?.[val] ? (
+                                              <span className="shrink-0 text-xs font-semibold text-gray-500">{finalFacetCounts.strains[val]}</span>
+                                            ) : null}
+                                          </span>
+                                        </button>
+                                      ))}
+                                    </>
+                                  )}
                                 </div>
                               </div>
                             </div>,
@@ -3824,6 +4150,25 @@ For specific details about earning rates and redemption options, please contact 
                         : null}
 
                     </form>
+
+                    {/* Filter pills below hero bar (selected filters with X to remove) */}
+                    {(filterPills.length > 0) && (
+                      <div className="mt-4 w-full max-w-5xl">
+                        <div className="flex flex-wrap gap-2">
+                          {filterPills.map((pill) => (
+                            <button
+                              key={`${pill.key}-${pill.value || 'sale'}`}
+                              type="button"
+                              onClick={() => handleRemovePill(pill)}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-white/40 bg-white/90 px-3 py-1.5 text-sm font-semibold text-gray-800 shadow-sm backdrop-blur hover:bg-white transition whitespace-nowrap"
+                            >
+                              <span>{pill.label}</span>
+                              <XMarkIcon className="h-4 w-4 text-gray-600" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                   </div>
                 </div>
@@ -4673,6 +5018,7 @@ For specific details about earning rates and redemption options, please contact 
                       setHeroShowMoreFilters(false)
                       setHeroCategory('')
                       setHeroStrain('')
+                      setHeroType('')
                       setActiveFilters({})
                       setProducts([])
                       setShowResults(false)

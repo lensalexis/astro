@@ -5,7 +5,6 @@ import AIProductSearch from "@/components/AIProductSearch";
 import HomeHeroCarousel from "@/components/home/HomeHeroCarousel";
 import HomeStartHereContent from "@/components/home/HomeStartHereContent";
 import HorizontalRailWithArrows, { type RailItem } from "@/components/home/HorizontalRailWithArrows";
-import AmazingExperiences from "@/components/home/AmazingExperiences";
 import GoogleReviews from "@/components/GoogleReviews";
 import { stores } from "@/lib/stores";
 import { getMarketingBannersForPlacement, toHomeStartHereItems } from "@/lib/banners";
@@ -110,6 +109,26 @@ export default async function Home() {
     })),
   ];
 
+  const homepageFaqs = [
+    {
+      question: "How do I order for pickup?",
+      answer:
+        "Add items to your cart, select pickup at checkout, and we’ll notify you when it’s ready.",
+    },
+    {
+      question: "Do I need an ID?",
+      answer: "Yes—please bring a valid government-issued ID showing you are 21+.",
+    },
+    {
+      question: "What payment methods are accepted?",
+      answer: "We accept cash and debit. Some banks may place small verification holds.",
+    },
+    {
+      question: "Is the menu live?",
+      answer: "Yes. Inventory and pricing update in real time so you can shop what’s in stock.",
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* TopSearchBar / MainBanner */}
@@ -209,40 +228,6 @@ export default async function Home() {
           <GoogleReviews />
         </Section>
 
-        {/* AmazingExperiences (Themes) */}
-        <AmazingExperiences />
-
-        {/* MoreToExplore */}
-        <Section title="More to explore">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                title: "Hours",
-                href: "/hours",
-              },
-              {
-                title: "Location",
-                href: "/location",
-              },
-              {
-                title: "Parking",
-                href: "/parking",
-              },
-            ].map((x) => (
-              <Link
-                key={x.href}
-                href={x.href}
-                className="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-black/5 hover:shadow-md"
-              >
-                <div className="text-base font-bold text-gray-950">{x.title}</div>
-                <div className="mt-4 text-sm font-semibold text-gray-900">
-                  Open →
-                </div>
-              </Link>
-            ))}
-          </div>
-        </Section>
-
         {/* WhyChooseKlook (USP) */}
         <Section title="Why choose us">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -313,6 +298,30 @@ export default async function Home() {
                   <span>{l.label}</span>
                   <span aria-hidden="true">→</span>
                 </Link>
+              ))}
+            </div>
+          </div>
+        </Section>
+
+        {/* FAQ Accordion */}
+        <Section title="FAQ">
+          <div className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-black/5">
+            <div className="divide-y divide-gray-100">
+              {homepageFaqs.map((faq, idx) => (
+                <details
+                  key={faq.question}
+                  className="group py-3"
+                  open={idx === 0}
+                >
+                  <summary className="flex cursor-pointer items-center justify-between gap-3 text-left text-base font-extrabold text-gray-950">
+                    <span>{faq.question}</span>
+                    <span className="text-gray-500 transition group-open:hidden">+</span>
+                    <span className="hidden text-gray-500 transition group-open:inline">−</span>
+                  </summary>
+                  <div className="mt-2 pr-6 text-sm leading-relaxed text-gray-700">
+                    {faq.answer}
+                  </div>
+                </details>
               ))}
             </div>
           </div>

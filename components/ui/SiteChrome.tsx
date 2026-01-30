@@ -235,19 +235,30 @@ export default function SiteChrome() {
                     {navDropdown === x.key ? (
                       <div className="absolute left-0 top-full mt-2 w-[360px] rounded-2xl border border-black/10 bg-white p-3 shadow-xl">
                         {x.key === 'shop' ? (
-                          <div className="grid grid-cols-2 gap-1">
-                            {shopItems.map((it) => (
+                          <>
+                            <div className="grid grid-cols-2 gap-1">
+                              {shopItems.map((it) => (
+                                <Link
+                                  key={it.href}
+                                  href={it.href}
+                                  onClick={() => setNavDropdown(null)}
+                                  className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-black/5"
+                                >
+                                  <Image src={it.icon} alt="" width={20} height={20} className="h-5 w-5" />
+                                  <span className="text-sm font-semibold text-gray-900">{it.title}</span>
+                                </Link>
+                              ))}
+                            </div>
+                            <div className="mt-2 border-t border-black/10 pt-2">
                               <Link
-                                key={it.href}
-                                href={it.href}
+                                href="/shop"
                                 onClick={() => setNavDropdown(null)}
-                                className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-black/5"
+                                className="flex w-full items-center justify-center rounded-xl bg-gray-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
                               >
-                                <Image src={it.icon} alt="" width={20} height={20} className="h-5 w-5" />
-                                <span className="text-sm font-semibold text-gray-900">{it.title}</span>
+                                Shop All
                               </Link>
-                            ))}
-                          </div>
+                            </div>
+                          </>
                         ) : null}
 
                         {x.key === 'resources' ? (
@@ -494,18 +505,27 @@ export default function SiteChrome() {
                     <span>Shop</span>
                     <ChevronDownIcon className="h-5 w-5 text-gray-500" />
                   </summary>
-                  <div className="mt-2 grid grid-cols-2 gap-1 rounded-2xl border border-black/10 bg-white p-2">
-                    {shopItems.map((it) => (
-                      <Link
-                        key={it.href}
-                        href={it.href}
-                        onClick={() => setMobileNavOpen(false)}
-                        className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-black/5"
-                      >
-                        <Image src={it.icon} alt="" width={20} height={20} className="h-5 w-5" />
-                        <span className="text-sm font-semibold text-gray-900">{it.title}</span>
-                      </Link>
-                    ))}
+                  <div className="mt-2 rounded-2xl border border-black/10 bg-white p-2">
+                    <div className="grid grid-cols-2 gap-1">
+                      {shopItems.map((it) => (
+                        <Link
+                          key={it.href}
+                          href={it.href}
+                          onClick={() => setMobileNavOpen(false)}
+                          className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-black/5"
+                        >
+                          <Image src={it.icon} alt="" width={20} height={20} className="h-5 w-5" />
+                          <span className="text-sm font-semibold text-gray-900">{it.title}</span>
+                        </Link>
+                      ))}
+                    </div>
+                    <Link
+                      href="/shop"
+                      onClick={() => setMobileNavOpen(false)}
+                      className="mt-2 flex w-full items-center justify-center rounded-xl bg-gray-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+                    >
+                      Shop All
+                    </Link>
                   </div>
                 </details>
 

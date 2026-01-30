@@ -24,8 +24,8 @@ export default function HorizontalRailWithArrows({
 
   const scroll = (direction: 'left' | 'right') => {
     if (!scrollRef.current) return
-    const cardWidth = variant === 'category' ? 200 : 260
-    const gap = 16 // gap-4 = 1rem = 16px
+    const cardWidth = variant === 'category' ? 260 : 260
+    const gap = 12 // gap-3 = 0.75rem = 12px
     const scrollAmount = cardWidth + gap
     scrollRef.current.scrollBy({
       left: direction === 'left' ? -scrollAmount : scrollAmount,
@@ -52,7 +52,9 @@ export default function HorizontalRailWithArrows({
               key={item.href + item.title}
               href={item.href}
               className={`group relative shrink-0 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 hover:shadow-md ${
-                variant === 'category' ? 'w-[170px] sm:w-[180px] lg:w-[160px]' : 'w-[260px]'
+                variant === 'category'
+                  ? 'basis-[calc(50%_-_6px)] sm:basis-[calc(33.333%_-_8px)] lg:basis-[calc(25%_-_9px)] min-w-[220px]'
+                  : 'w-[260px]'
               }`}
             >
               <div className={`relative w-full ${variant === 'category' ? 'h-64' : 'h-40'}`}>
@@ -61,7 +63,11 @@ export default function HorizontalRailWithArrows({
                   alt={item.title}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                  sizes={variant === 'category' ? '200px' : '260px'}
+                  sizes={
+                    variant === 'category'
+                      ? '(min-width:1024px) 25vw, (min-width:640px) 33vw, 50vw'
+                      : '260px'
+                  }
                 />
                 {variant === 'category' ? (
                   <>
