@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
@@ -12,8 +12,6 @@ export type HomeStartHereItem = {
   image: string
   badge?: string
 }
-
-type Mode = 'campaigns' | 'results'
 
 function HorizontalRail({
   items,
@@ -103,36 +101,14 @@ function HorizontalRail({
 
 export default function HomeStartHereContent({
   items,
-  resultsPortalId = 'home-start-here-results',
   variant = 'card',
 }: {
   items: HomeStartHereItem[]
-  resultsPortalId?: string
   variant?: 'card' | 'banner'
 }) {
-  const [mode, setMode] = useState<Mode>('campaigns')
-
-  const eventName = useMemo(() => 'home:startHereMode', [])
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const ce = e as CustomEvent<{ mode?: Mode }>
-      const next = ce?.detail?.mode
-      if (next === 'results' || next === 'campaigns') setMode(next)
-    }
-    window.addEventListener(eventName, handler as EventListener)
-    return () => window.removeEventListener(eventName, handler as EventListener)
-  }, [eventName])
-
   return (
     <div className="relative">
-      {/* Results slot (AIProductSearch portals into this) */}
-      <div id={resultsPortalId} className={mode === 'results' ? '' : 'hidden'} />
-
-      {/* Default campaigns */}
-      <div className={mode === 'results' ? 'hidden' : ''}>
-        <HorizontalRail items={items} variant={variant} />
-      </div>
+      <HorizontalRail items={items} variant={variant} />
     </div>
   )
 }

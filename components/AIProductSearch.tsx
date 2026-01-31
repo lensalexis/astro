@@ -4158,25 +4158,6 @@ For specific details about earning rates and redemption options, please contact 
                         : theForm
                     })()}
 
-                    {/* Filter pills below hero bar (selected filters with X to remove) */}
-                    {(filterPills.length > 0) && (
-                      <div className="mt-4 w-full max-w-5xl">
-                        <div className="flex flex-wrap gap-2">
-                          {filterPills.map((pill) => (
-                            <button
-                              key={`${pill.key}-${pill.value || 'sale'}`}
-                              type="button"
-                              onClick={() => handleRemovePill(pill)}
-                              className="inline-flex items-center gap-2 rounded-2xl border border-white/40 bg-white/90 px-3 py-1.5 text-sm font-semibold text-gray-800 shadow-sm backdrop-blur hover:bg-white transition whitespace-nowrap"
-                            >
-                              <span>{pill.label}</span>
-                              <XMarkIcon className="h-4 w-4 text-gray-600" />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
                   </div>
                 </div>
               ) : (
@@ -4345,22 +4326,10 @@ For specific details about earning rates and redemption options, please contact 
                       </div>
                     </form>
 
-                    {/* Category tiles and filter pills (AI Mode only) */}
+                    {/* Category tiles (AI Mode only); filter pills show next to Clear in results section */}
                     <div className="mt-5">
                       <div className="overflow-x-auto scrollbar-hide">
                         <div className="flex gap-3 px-1">
-                          {/* Active filter pills - shown first */}
-                          {filterPills.map((pill) => (
-                            <button
-                              key={`${pill.key}-${pill.value || 'sale'}`}
-                              onClick={() => handleRemovePill(pill)}
-                              className="flex-none inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 text-sm text-gray-700 px-3 py-1.5 hover:bg-gray-200 transition whitespace-nowrap"
-                            >
-                              <span>{pill.label}</span>
-                              <XMarkIcon className="h-4 w-4" />
-                            </button>
-                          ))}
-
                           {/* Category tiles */}
                           {CATEGORY_DEFS.map((cat) => {
                             const selected = (activeFilters.categories || []).some(
@@ -5008,41 +4977,54 @@ For specific details about earning rates and redemption options, please contact 
             activeFilters.saleOnly
           )
 
+          const clearHandler = () => {
+            setHeroShowMoreFilters(false)
+            setHeroCategory('')
+            setHeroStrain('')
+            setHeroType('')
+            setActiveFilters({})
+            setProducts([])
+            setShowResults(false)
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(
+                new CustomEvent('home:startHereMode', { detail: { mode: 'campaigns' } })
+              )
+            }
+          }
+
+          if (!hasAnyFilters) return createPortal(null, el)
+
           return createPortal(
             <section className="pt-1">
-              {hasAnyFilters ? (
-                <div className="mb-5 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-700">Showing results</div>
-                    <div className="text-xs text-gray-500">
-                      {products.length ? `${products.length} items` : loading ? 'Loading…' : 'No matches'}
-                    </div>
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                <div>
+                  <div className="text-sm font-semibold text-gray-700">Showing results</div>
+                  <div className="text-xs text-gray-500">
+                    {products.length ? `${products.length} items` : loading ? 'Loading…' : 'No matches'}
                   </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {filterPills.map((pill) => (
+                    <button
+                      key={`${pill.key}-${pill.value || 'sale'}`}
+                      onClick={() => handleRemovePill(pill)}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 bg-gray-100/70 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-200 whitespace-nowrap"
+                    >
+                      <span>{pill.label}</span>
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                  ))}
                   <button
                     type="button"
-                    onClick={() => {
-                      // Reset homepage back to campaigns
-                      setHeroShowMoreFilters(false)
-                      setHeroCategory('')
-                      setHeroStrain('')
-                      setHeroType('')
-                      setActiveFilters({})
-                      setProducts([])
-                      setShowResults(false)
-                      if (typeof window !== 'undefined') {
-                        window.dispatchEvent(
-                          new CustomEvent('home:startHereMode', { detail: { mode: 'campaigns' } })
-                        )
-                      }
-                    }}
+                    onClick={clearHandler}
                     className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-black/10 hover:bg-gray-50"
                   >
                     Clear
                   </button>
                 </div>
-              ) : null}
+              </div>
 
-              {hasAnyFilters ? (
+              {(
                 loading ? (
                   <div className="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-2 lg:grid-cols-4 lg:gap-3">
                     {Array.from({ length: 8 }).map((_, i) => (
@@ -5068,7 +5050,7 @@ For specific details about earning rates and redemption options, please contact 
                     ))}
                   </div>
                 )
-              ) : null}
+              )}
             </section>,
             el
           )

@@ -127,6 +127,11 @@ export default async function Home() {
         </HomeHeroCarousel>
       </div>
 
+      {/* Results portal target: Showing results + pills + Clear + grid render here, right under hero */}
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-4">
+        <div id="home-start-here-results" />
+      </div>
+
       <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-12 space-y-12">
         {/* CentralBanner / Campaigns */}
         <Section

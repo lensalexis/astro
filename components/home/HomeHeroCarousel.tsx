@@ -40,8 +40,8 @@ export default function HomeHeroCarousel({
 
   return (
     <section className="relative w-full overflow-hidden">
-      {/* Taller on mobile so headline + stacked search fit */}
-      <div className="relative h-[640px] w-full md:h-[520px]">
+      {/* Shorter on mobile for sleeker UX; taller on desktop */}
+      <div className="relative h-[380px] w-full sm:h-[440px] md:h-[520px]">
         <Swiper
           modules={[Autoplay, EffectFade, Pagination]}
           loop
