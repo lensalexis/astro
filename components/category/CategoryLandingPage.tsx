@@ -63,7 +63,7 @@ export default function CategoryLandingPage({ category }: { category: string }) 
 
       <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-12 space-y-12">
         <Section title={`Featured in ${cfg.name}`}>
-          <HomeStartHereContent items={cfg.banners} resultsPortalId={resultsPortalId} />
+          <HomeStartHereContent items={cfg.banners} />
         </Section>
 
         <CategoryIntentRails
