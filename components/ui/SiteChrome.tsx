@@ -6,8 +6,13 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Bars3Icon,
+  BookOpenIcon,
+  BuildingOffice2Icon,
   ChevronDownIcon,
   MagnifyingGlassIcon,
+  MapPinIcon,
+  PhoneIcon,
+  ShoppingBagIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
@@ -15,6 +20,36 @@ import { site } from '@/lib/site'
 import FloatingCartButton from '@/components/ui/FloatingCartButton'
 import MobileBreadcrumbsBar from '@/components/seo/MobileBreadcrumbsBar'
 import { CATEGORY_DEFS } from '@/lib/catalog'
+import { useNavbarSearchSlot } from '@/components/NavbarSearchSlotContext'
+
+function NavbarSearchSlotDiv({ onSearchClick }: { onSearchClick: () => void }) {
+  const slot = useNavbarSearchSlot()
+  return (
+    <div
+      id="navbar-search-slot"
+      ref={(el) => {
+        if (slot?.slotRef && el != null) {
+          ;(slot.slotRef as React.MutableRefObject<HTMLDivElement | null>).current = el
+          slot.setSlotReady(true)
+        }
+      }}
+      className="flex flex-1 min-w-0 max-w-2xl mx-auto justify-center items-center"
+    >
+      {!slot?.barInSlot && (
+        <button
+          type="button"
+          onClick={onSearchClick}
+          className="w-full max-w-full sm:max-w-xl rounded-full border border-gray-200 bg-gray-50 px-2.5 py-2 sm:px-4 sm:py-2.5 text-left text-xs sm:text-sm font-medium text-gray-600 hover:bg-gray-100 hover:border-gray-300 transition"
+        >
+          <span className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <MagnifyingGlassIcon className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-gray-500" />
+            <span className="truncate">Search flower, vapes, edibles…</span>
+          </span>
+        </button>
+      )}
+    </div>
+  )
+}
 
 export default function SiteChrome() {
   const [mounted, setMounted] = useState(false)
@@ -23,7 +58,7 @@ export default function SiteChrome() {
   const router = useRouter()
   const { user, setUser } = useUser()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const [navDropdown, setNavDropdown] = useState<'shop' | 'resources' | 'company' | null>(null)
+  const [navDropdown, setNavDropdown] = useState<'discover' | null>(null)
   const [searchModalOpen, setSearchModalOpen] = useState(false)
   const [navMenuRef, setNavMenuRef] = useState<HTMLDivElement | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -31,8 +66,7 @@ export default function SiteChrome() {
   const accountRef = useRef<HTMLDivElement>(null)
   const mobileNavRef = useRef<HTMLDivElement | null>(null)
   const showChrome = true
-  const [blogPosts, setBlogPosts] = useState<Array<{ href: string; title: string }>>([])
-  const [blogLoading, setBlogLoading] = useState(false)
+  const [discoverPane, setDiscoverPane] = useState<'shop' | 'resources' | 'company'>('shop')
 
   const AGE_SESSION_KEY = 'kinebuds_age_verified_session'
   const [modalQuery, setModalQuery] = useState('')
@@ -145,26 +179,6 @@ export default function SiteChrome() {
     return () => document.removeEventListener('mousedown', handler)
   }, [navMenuRef, locationOpen])
 
-  // Load blog posts for navbar dropdown (once)
-  useEffect(() => {
-    if (blogPosts.length) return
-    if (!navDropdown || navDropdown !== 'resources') return
-    if (blogLoading) return
-    setBlogLoading(true)
-    fetch('/api/blog/posts')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const posts = Array.isArray(data?.posts) ? data.posts : []
-        setBlogPosts(
-          posts
-            .map((p: any) => ({ href: String(p.href || ''), title: String(p.title || '') }))
-            .filter((p: any) => p.href && p.title)
-        )
-      })
-      .catch(() => {})
-      .finally(() => setBlogLoading(false))
-  }, [navDropdown, blogPosts.length, blogLoading])
-
   const categoryIcon: Record<string, string> = {
     flower: '/images/icon-cannabis-flower.png',
     'pre-rolls': '/images/icon-cannabis-preroll.png',
@@ -188,217 +202,180 @@ export default function SiteChrome() {
         <div
           id="site-navbar"
           ref={navRef}
-          className="fixed top-0 left-0 right-0 z-[80] bg-white px-4 border-b border-black/5"
+          className="fixed top-0 left-0 right-0 z-[80] bg-white/70 backdrop-blur-md px-4"
           style={{ ['--site-nav-h' as any]: `${navHeight}px` }}
         >
-          <div className="mx-auto flex w-full max-w-6xl items-center gap-3">
-            {/* Left: mobile hamburger + logo + desktop nav */}
-            <div className="flex items-center gap-3">
+          <div className="mx-auto flex w-full max-w-7xl items-center gap-3">
+            {/* Left: hamburger + logo + Discover (desktop); order: hamburger → logo → search */}
+            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
               <button
                 type="button"
-                className="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-gray-900 hover:bg-gray-50"
+                className="sm:hidden inline-flex h-9 w-9 items-center justify-center text-gray-900 hover:bg-white/60 rounded-full focus:outline-none"
                 aria-label="Open menu"
                 onClick={() => setMobileNavOpen(true)}
               >
                 <Bars3Icon className="h-5 w-5" />
               </button>
 
-              <Link href="/" className="mr-1 inline-flex items-center">
+              <Link href="/" className="shrink-0 inline-flex items-center">
                 <Image
                   src="/images/kine-buds-logo.png"
                   alt="Kine Buds"
                   width={142}
                   height={40}
-                  className="w-[142px] h-auto"
+                  className="w-20 h-auto sm:w-28 md:w-32"
                   priority
                 />
               </Link>
 
-              {/* Desktop nav items */}
-              <div className="hidden sm:flex items-center gap-1" ref={setNavMenuRef}>
-                {([
-                  { key: 'shop', label: 'Shop' as const },
-                  { key: 'resources', label: 'Resources' as const },
-                  { key: 'company', label: 'Company' as const },
-                ] as const).map((x) => (
-                  <div key={x.key} className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setNavDropdown((v) => (v === x.key ? null : x.key))}
-                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-base font-semibold text-gray-900 hover:bg-black/5"
-                      aria-expanded={navDropdown === x.key}
-                    >
-                      <span>{x.label}</span>
-                      <ChevronDownIcon className="h-4 w-4 text-gray-500" />
-                    </button>
+              {/* Desktop: single Discover dropdown (Shop, Resources, Company) */}
+              <div className="hidden sm:block relative" ref={setNavMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setNavDropdown((v) => (v ? null : 'discover'))}
+                  className="inline-flex items-center gap-1.5 rounded-[5px] px-3 py-2 text-base font-semibold text-gray-900"
+                  aria-expanded={!!navDropdown}
+                >
+                  <span>Discover</span>
+                  <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                </button>
 
-                    {navDropdown === x.key ? (
-                      <div className="absolute left-0 top-full mt-2 w-[360px] rounded-2xl border border-black/10 bg-white p-3 shadow-xl">
-                        {x.key === 'shop' ? (
-                          <div className="grid grid-cols-2 gap-1">
+                {navDropdown ? (
+                  <div className="absolute left-0 top-full mt-2 w-[560px] min-h-[280px] rounded-b-2xl border border-t-0 border-gray-200 bg-gray-50 shadow-xl overflow-hidden flex">
+                    {/* Left: category nav (awwwards-style) */}
+                    <nav className="w-[180px] shrink-0 border-r border-gray-200 bg-gray-100/80 py-2">
+                      {[
+                        { key: 'shop' as const, label: 'Shop', Icon: ShoppingBagIcon },
+                        { key: 'resources' as const, label: 'Resources', Icon: BookOpenIcon },
+                        { key: 'company' as const, label: 'Company', Icon: BuildingOffice2Icon },
+                      ].map(({ key, label, Icon }) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => setDiscoverPane(key)}
+                          className={`flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm font-medium transition-colors ${
+                            discoverPane === key
+                              ? 'border-l-2 border-gray-900 bg-white text-gray-900'
+                              : 'border-l-2 border-transparent text-gray-600 hover:bg-white/60 hover:text-gray-900'
+                          }`}
+                        >
+                          <Icon className="h-5 w-5 shrink-0 text-gray-500" />
+                          <span>{label}</span>
+                        </button>
+                      ))}
+                    </nav>
+                    {/* Right: content pane */}
+                    <div className="flex-1 min-w-0 p-4 bg-white">
+                      {discoverPane === 'shop' && (
+                        <>
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                             {shopItems.map((it) => (
                               <Link
                                 key={it.href}
                                 href={it.href}
                                 onClick={() => setNavDropdown(null)}
-                                className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-black/5"
+                                className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                               >
-                                <Image src={it.icon} alt="" width={20} height={20} className="h-5 w-5" />
-                                <span className="text-sm font-semibold text-gray-900">{it.title}</span>
+                                <Image src={it.icon} alt="" width={24} height={24} className="h-6 w-6 shrink-0" />
+                                <span>{it.title}</span>
                               </Link>
                             ))}
                           </div>
-                        ) : null}
-
-                        {x.key === 'resources' ? (
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-1 gap-1">
-                              <Link
-                                href="/blog"
-                                onClick={() => setNavDropdown(null)}
-                                className="flex items-center justify-between rounded-xl px-2 py-2 hover:bg-black/5"
-                              >
-                                <span className="text-sm font-semibold text-gray-900">Blog</span>
-                              </Link>
-                              <Link
-                                href="/brands"
-                                onClick={() => setNavDropdown(null)}
-                                className="flex items-center justify-between rounded-xl px-2 py-2 hover:bg-black/5"
-                              >
-                                <span className="text-sm font-semibold text-gray-900">Brands</span>
-                              </Link>
-                              <Link
-                                href="/faq"
-                                onClick={() => setNavDropdown(null)}
-                                className="flex items-center justify-between rounded-xl px-2 py-2 hover:bg-black/5"
-                              >
-                                <span className="text-sm font-semibold text-gray-900">FAQ</span>
-                              </Link>
-                            </div>
-
-                            <div>
-                              <div className="px-2 text-xs font-semibold tracking-wide text-gray-500">ARTICLES</div>
-                              <div className="mt-2 max-h-[46vh] overflow-auto rounded-xl border border-black/5">
-                                {blogLoading ? (
-                                  <div className="px-3 py-3 text-sm text-gray-500">Loading…</div>
-                                ) : blogPosts.length ? (
-                                  <div className="divide-y divide-black/5">
-                                    {blogPosts.map((p) => (
-                                      <Link
-                                        key={p.href}
-                                        href={p.href}
-                                        onClick={() => setNavDropdown(null)}
-                                        className="block px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-black/5"
-                                      >
-                                        {p.title}
-                                      </Link>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="px-3 py-3 text-sm text-gray-500">No posts yet.</div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ) : null}
-
-                        {x.key === 'company' ? (
-                          <div className="grid grid-cols-1 gap-1">
-                            <Link
-                              href="/about"
-                              onClick={() => setNavDropdown(null)}
-                              className="flex items-center justify-between rounded-xl px-2 py-2 hover:bg-black/5"
-                            >
-                              <span className="text-sm font-semibold text-gray-900">About us</span>
-                            </Link>
-                            <Link
-                              href="/reviews"
-                              onClick={() => setNavDropdown(null)}
-                              className="flex items-center justify-between rounded-xl px-2 py-2 hover:bg-black/5"
-                            >
-                              <span className="text-sm font-semibold text-gray-900">Reviews</span>
-                            </Link>
-                            <Link
-                              href="/contact"
-                              onClick={() => setNavDropdown(null)}
-                              className="flex items-center justify-between rounded-xl px-2 py-2 hover:bg-black/5"
-                            >
-                              <span className="text-sm font-semibold text-gray-900">Contact</span>
-                            </Link>
-                          </div>
-                        ) : null}
-                      </div>
-                    ) : null}
+                          <Link
+                            href="/shop"
+                            onClick={() => setNavDropdown(null)}
+                            className="mt-4 flex w-full items-center justify-center rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white hover:bg-gray-800"
+                          >
+                            Shop All
+                          </Link>
+                        </>
+                      )}
+                      {discoverPane === 'resources' && (
+                        <div className="space-y-1">
+                          <Link href="/blog" onClick={() => setNavDropdown(null)} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">Blog</Link>
+                          <Link href="/brands" onClick={() => setNavDropdown(null)} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">Brands</Link>
+                          <Link href="/faq" onClick={() => setNavDropdown(null)} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">FAQ</Link>
+                        </div>
+                      )}
+                      {discoverPane === 'company' && (
+                        <div className="space-y-1">
+                          <Link href="/about" onClick={() => setNavDropdown(null)} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">About us</Link>
+                          <Link href="/reviews" onClick={() => setNavDropdown(null)} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">Reviews</Link>
+                          <Link href="/contact" onClick={() => setNavDropdown(null)} className="block rounded-lg px-3 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50">Contact</Link>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                ))}
+                ) : null}
               </div>
             </div>
 
-            {/* Right: search icon | user/location */}
-            <div className="ml-auto flex items-center gap-2" ref={accountRef}>
-              {/* Search icon */}
+            {/* Center: navbar search slot (AIProductSearch bar portaled here when on hero pages) */}
+            <NavbarSearchSlotDiv onSearchClick={scrollToSearch} />
+
+            {/* Right: profile, location, phone (desktop only; on mobile these live in Discover sheet) */}
+            <div className="relative ml-auto hidden sm:flex items-center gap-1" ref={accountRef} id="nav-location-pill">
+              {/* Profile */}
               <button
                 type="button"
-                onClick={openSearch}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-gray-900 hover:bg-gray-50"
-                aria-label="Search"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-gray-800 hover:bg-white/60 focus:outline-none"
+                onClick={() => {
+                  if (!user) {
+                    router.push('/login')
+                    return
+                  }
+                  setAccountOpen((v) => !v)
+                  setLocationOpen(false)
+                }}
+                aria-label={user ? 'Account menu' : 'Sign in'}
               >
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-700" />
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName || 'User avatar'}
+                    className="h-9 w-9 rounded-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
               </button>
 
-              <div className="hidden sm:block h-8 w-px bg-black/10" />
-
-              {/* User + location dropdown (Viator-like white pill) */}
-              <div
-                id="nav-location-pill"
-                className="relative inline-flex items-center rounded-full border border-black/10 bg-white px-1.5 py-1 shadow-sm"
-              >
-                <button
-                  type="button"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-800"
-                  onClick={() => {
-                    if (!user) {
-                      router.push('/login')
-                      return
-                    }
-                    setAccountOpen((v) => !v)
-                    setLocationOpen(false)
-                  }}
-                  aria-label={user ? 'Account menu' : 'Sign in'}
-                >
-                  {avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt={displayName || 'User avatar'}
-                      className="h-8 w-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    initials
-                  )}
-                </button>
-
-                <div className="mx-1 h-8 w-px bg-black/10" />
-
+              {/* Location (dropdown) */}
+              <div className="relative">
                 <button
                   type="button"
                   onClick={() => {
-                    // Keep location dropdown disabled (single store for now)
-                    setLocationOpen(false)
+                    setLocationOpen((v) => !v)
                     setAccountOpen(false)
                   }}
-                  className="inline-flex items-center gap-2 rounded-full pl-2 pr-3 py-1 text-left text-sm font-semibold text-gray-900 hover:bg-black/5"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
                   aria-label="Store location"
+                  aria-expanded={locationOpen}
                 >
-                  <span className="hidden sm:flex flex-col items-start leading-tight">
-                    <span className="text-sm font-semibold text-gray-900">Kine Buds</span>
-                    <span className="text-[11px] font-medium text-gray-600">
-                      {site.address.addressLocality}, {site.address.addressRegion}
-                    </span>
-                  </span>
-                  <span className="sm:hidden">Kine Buds</span>
-                  <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                  <MapPinIcon className="h-5 w-5" />
                 </button>
+                {locationOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white py-2 shadow-xl">
+                    <div className="px-3 py-2">
+                      <div className="text-sm font-semibold text-gray-900">Kine Buds</div>
+                      <div className="mt-0.5 text-xs text-gray-600">
+                        {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion} {site.address.postalCode}
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-100" />
+                    <div className="px-3 py-2 text-sm text-gray-600">Gloucester City (coming soon)</div>
+                  </div>
+                )}
               </div>
+
+              {/* Phone */}
+              <a
+                href={`tel:${site.contact.phone}`}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
+                aria-label="Call store"
+              >
+                <PhoneIcon className="h-5 w-5" />
+              </a>
 
               {accountOpen && user && (
                 <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-black/10 bg-white text-gray-900 shadow-xl">
@@ -494,18 +471,27 @@ export default function SiteChrome() {
                     <span>Shop</span>
                     <ChevronDownIcon className="h-5 w-5 text-gray-500" />
                   </summary>
-                  <div className="mt-2 grid grid-cols-2 gap-1 rounded-2xl border border-black/10 bg-white p-2">
-                    {shopItems.map((it) => (
-                      <Link
-                        key={it.href}
-                        href={it.href}
-                        onClick={() => setMobileNavOpen(false)}
-                        className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-black/5"
-                      >
-                        <Image src={it.icon} alt="" width={20} height={20} className="h-5 w-5" />
-                        <span className="text-sm font-semibold text-gray-900">{it.title}</span>
-                      </Link>
-                    ))}
+                  <div className="mt-2 rounded-2xl border border-black/10 bg-white p-2">
+                    <div className="grid grid-cols-2 gap-1">
+                      {shopItems.map((it) => (
+                        <Link
+                          key={it.href}
+                          href={it.href}
+                          onClick={() => setMobileNavOpen(false)}
+                          className="flex items-center gap-2 rounded-xl px-2 py-2 hover:bg-black/5"
+                        >
+                          <Image src={it.icon} alt="" width={20} height={20} className="h-5 w-5" />
+                          <span className="text-sm font-semibold text-gray-900">{it.title}</span>
+                        </Link>
+                      ))}
+                    </div>
+                    <Link
+                      href="/shop"
+                      onClick={() => setMobileNavOpen(false)}
+                      className="mt-2 flex w-full items-center justify-center rounded-xl bg-gray-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+                    >
+                      Shop All
+                    </Link>
                   </div>
                 </details>
 

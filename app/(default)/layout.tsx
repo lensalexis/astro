@@ -29,7 +29,7 @@ export default function DefaultLayout({
 
   return (
     <>
-      <main className="relative flex grow flex-col pt-12">{children}</main>
+      <main className="relative flex grow flex-col">{children}</main>
 
       {showFooter && <Footer />}
     </>

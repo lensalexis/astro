@@ -7,6 +7,7 @@ import { UserProvider } from "@/components/UserContext"; // ✅ import your User
 import SiteChrome from "@/components/ui/SiteChrome";
 import { site } from "@/lib/site";
 import { BreadcrumbsProvider } from "@/components/seo/BreadcrumbsContext";
+import { NavbarSearchSlotProvider } from "@/components/NavbarSearchSlotContext";
 
 const poppins = localFont({
   src: [
@@ -93,8 +94,10 @@ export default function RootLayout({
           {/* ✅ Wrap everything that needs user context */}
           <UserProvider>
             <BreadcrumbsProvider>
-              <SiteChrome />
-              {children}
+              <NavbarSearchSlotProvider>
+                <SiteChrome />
+                {children}
+              </NavbarSearchSlotProvider>
             </BreadcrumbsProvider>
           </UserProvider>
         </div>
