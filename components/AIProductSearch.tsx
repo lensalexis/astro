@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo, ReactNode, type ReactElement } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, ReactNode, type ReactElement } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -937,6 +937,25 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     left: number
     width: number
   } | null>(null)
+
+  // Clamp dropdown position/width so it stays on-screen and is full-width on mobile
+  const clampDropdownPos = useCallback(
+    (which: 'categories' | 'strains' | 'types', top: number, left: number, width: number) => {
+      if (typeof window === 'undefined')
+        return { which, top, left, width }
+      const vw = window.innerWidth
+      const pad = 16
+      const isMobile = vw < 640
+      if (which === 'types') {
+        const w = Math.min(320, vw - pad * 2)
+        return { which, top, left: Math.max(pad, Math.min(left, vw - w - pad)), width: w }
+      }
+      const w = isMobile ? vw - pad * 2 : Math.min(Math.max(width, 280), vw - pad * 2)
+      return { which, top, left: Math.max(pad, Math.min(left, vw - w - pad)), width: w }
+    },
+    []
+  )
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const aiModeScrollRef = useRef<HTMLDivElement>(null)
@@ -1037,6 +1056,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   ])
 
   // Homepage hero: compute dropdown position + keep it in sync on scroll/resize.
+  // Clamp width/left so dropdowns stay on-screen and are full-width on mobile (sleek UX).
   useEffect(() => {
     const open = !!heroDropdownPos
     const which = heroDropdownPos?.which
@@ -1054,10 +1074,9 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
         if (!btn) return prev
         const rect = btn.getBoundingClientRect()
         const top = rect.bottom + 8
-        const left = rect.left
-        const width = rect.width
-        if (prev.top === top && prev.left === left && prev.width === width) return prev
-        return { ...prev, top, left, width }
+        const clamped = clampDropdownPos(prev.which, top, rect.left, rect.width)
+        if (prev.top === clamped.top && prev.left === clamped.left && prev.width === clamped.width) return prev
+        return { ...prev, ...clamped }
       })
     }
     update()
@@ -1067,7 +1086,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
       window.removeEventListener('scroll', update, true)
       window.removeEventListener('resize', update)
     }
-  })
+  }, [heroDropdownPos, clampDropdownPos])
 
   // Close hero dropdown on outside click
   useEffect(() => {
@@ -3690,7 +3709,7 @@ For specific details about earning rates and redemption options, please contact 
                                   setHeroTypeOpen(false)
                                   setHeroDropdownPos(
                                     nextOpen
-                                      ? { which: 'categories', top: rect.bottom + 8, left: rect.left, width: rect.width }
+                                      ? clampDropdownPos('categories', rect.bottom + 8, rect.left, rect.width)
                                       : null
                                   )
                                 }}
@@ -3732,7 +3751,7 @@ For specific details about earning rates and redemption options, please contact 
                                   setHeroTypeOpen(false)
                                   setHeroDropdownPos(
                                     nextOpen
-                                      ? { which: 'strains', top: rect.bottom + 8, left: rect.left, width: rect.width }
+                                      ? clampDropdownPos('strains', rect.bottom + 8, rect.left, rect.width)
                                       : null
                                   )
                                 }}
@@ -3774,7 +3793,7 @@ For specific details about earning rates and redemption options, please contact 
                                   setHeroStrainOpen(false)
                                   setHeroDropdownPos(
                                     nextOpen
-                                      ? { which: 'types', top: rect.bottom + 8, left: rect.left, width: rect.width }
+                                      ? clampDropdownPos('types', rect.bottom + 8, rect.left, rect.width)
                                       : null
                                   )
                                   if (nextOpen) setHeroTypesOpenSection(null)
@@ -3819,13 +3838,14 @@ For specific details about earning rates and redemption options, please contact 
                                 position: 'fixed',
                                 top: heroDropdownPos.top,
                                 left: heroDropdownPos.left,
-                                width: heroDropdownPos.which === 'types' ? 320 : heroDropdownPos.width,
-                                minWidth: heroDropdownPos.which === 'types' ? 320 : undefined,
+                                width: heroDropdownPos.width,
+                                minWidth: heroDropdownPos.which === 'types' ? 280 : undefined,
+                                maxWidth: 'calc(100vw - 2rem)',
                                 zIndex: 200,
                               }}
                             >
-                              <div className="overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/10">
-                                <div className="max-h-80 overflow-auto p-2">
+                              <div className="overflow-hidden rounded-2xl sm:rounded-3xl bg-white shadow-2xl ring-1 ring-black/10">
+                                <div className="max-h-[70vh] sm:max-h-80 overflow-auto p-2 sm:p-2">
                                   {heroDropdownPos.which === 'types' ? (
                                     <>
                                       <button
