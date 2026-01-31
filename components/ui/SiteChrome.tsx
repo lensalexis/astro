@@ -202,47 +202,95 @@ export default function SiteChrome() {
         <div
           id="site-navbar"
           ref={navRef}
-          className="fixed top-0 left-0 right-0 z-[80] bg-white/70 backdrop-blur-md px-4"
+          className="fixed top-0 left-0 right-0 z-[80] bg-white/70 backdrop-blur-md px-4 py-3"
           style={{ ['--site-nav-h' as any]: `${navHeight}px` }}
         >
-          <div className="mx-auto flex w-full max-w-7xl items-center gap-3">
-            {/* Left: hamburger + logo + Discover (desktop); order: hamburger → logo → search */}
-            <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
+          <div className="mx-auto flex w-full max-w-7xl items-center gap-2">
+            {/* Google-style: search box first (flex-1), then location, call, profile, hamburger */}
+            <NavbarSearchSlotDiv onSearchClick={scrollToSearch} />
+
+            <div className="relative flex items-center gap-1 shrink-0" ref={accountRef} id="nav-location-pill">
+              {/* Profile (desktop only; on mobile see hamburger menu) */}
               <button
                 type="button"
-                className="sm:hidden inline-flex h-9 w-9 items-center justify-center text-gray-900 hover:bg-white/60 rounded-full focus:outline-none"
-                aria-label="Open menu"
-                onClick={() => setMobileNavOpen(true)}
+                className="hidden sm:inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-gray-800 hover:bg-white/60 focus:outline-none"
+                onClick={() => {
+                  if (!user) {
+                    router.push('/login')
+                    return
+                  }
+                  setAccountOpen((v) => !v)
+                  setLocationOpen(false)
+                }}
+                aria-label={user ? 'Account menu' : 'Sign in'}
               >
-                <Bars3Icon className="h-5 w-5" />
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={displayName || 'User avatar'}
+                    className="h-9 w-9 rounded-full object-cover"
+                  />
+                ) : (
+                  initials
+                )}
               </button>
 
-              <Link href="/" className="shrink-0 inline-flex items-center">
-                <Image
-                  src="/images/kine-buds-logo.png"
-                  alt="Kine Buds"
-                  width={142}
-                  height={40}
-                  className="w-20 h-auto sm:w-28 md:w-32"
-                  priority
-                />
-              </Link>
-
-              {/* Desktop: single Discover dropdown (Shop, Resources, Company) */}
-              <div className="hidden sm:block relative" ref={setNavMenuRef}>
+              {/* Location (dropdown; desktop only on navbar) */}
+              <div className="relative hidden sm:block">
                 <button
                   type="button"
-                  onClick={() => setNavDropdown((v) => (v ? null : 'discover'))}
-                  className="inline-flex items-center gap-1.5 rounded-[5px] px-3 py-2 text-base font-semibold text-gray-900"
-                  aria-expanded={!!navDropdown}
+                  onClick={() => {
+                    setLocationOpen((v) => !v)
+                    setAccountOpen(false)
+                  }}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
+                  aria-label="Store location"
+                  aria-expanded={locationOpen}
                 >
-                  <span>Discover</span>
-                  <ChevronDownIcon className="h-4 w-4 text-gray-600" />
+                  <MapPinIcon className="h-5 w-5" />
                 </button>
+                {locationOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white py-2 shadow-xl">
+                    <div className="px-3 py-2">
+                      <div className="text-sm font-semibold text-gray-900">Kine Buds</div>
+                      <div className="mt-0.5 text-xs text-gray-600">
+                        {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion} {site.address.postalCode}
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-100" />
+                    <div className="px-3 py-2 text-sm text-gray-600">Gloucester City (coming soon)</div>
+                  </div>
+                )}
+              </div>
 
+              {/* Phone (desktop only on navbar) */}
+              <a
+                href={`tel:${site.contact.phone}`}
+                className="hidden sm:inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
+                aria-label="Call store"
+              >
+                <PhoneIcon className="h-5 w-5" />
+              </a>
+
+              {/* Hamburger: opens Discover (desktop) or mobile menu (mobile) */}
+              <div className="relative" ref={setNavMenuRef}>
+                <button
+                  type="button"
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
+                  aria-label="Menu"
+                  aria-expanded={!!navDropdown || mobileNavOpen}
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && window.innerWidth < 640) {
+                      setMobileNavOpen(true)
+                    } else {
+                      setNavDropdown((v) => (v ? null : 'discover'))
+                    }
+                  }}
+                >
+                  <Bars3Icon className="h-5 w-5" />
+                </button>
                 {navDropdown ? (
-                  <div className="absolute left-0 top-full mt-2 w-[560px] min-h-[280px] rounded-b-2xl border border-t-0 border-gray-200 bg-gray-50 shadow-xl overflow-hidden flex">
-                    {/* Left: category nav (awwwards-style) */}
+                  <div className="absolute right-0 top-full mt-2 w-[560px] min-h-[280px] rounded-b-2xl border border-t-0 border-gray-200 bg-gray-50 shadow-xl overflow-hidden flex max-w-[calc(100vw-2rem)]">
                     <nav className="w-[180px] shrink-0 border-r border-gray-200 bg-gray-100/80 py-2">
                       {[
                         { key: 'shop' as const, label: 'Shop', Icon: ShoppingBagIcon },
@@ -264,7 +312,6 @@ export default function SiteChrome() {
                         </button>
                       ))}
                     </nav>
-                    {/* Right: content pane */}
                     <div className="flex-1 min-w-0 p-4 bg-white">
                       {discoverPane === 'shop' && (
                         <>
@@ -308,74 +355,6 @@ export default function SiteChrome() {
                   </div>
                 ) : null}
               </div>
-            </div>
-
-            {/* Center: navbar search slot (AIProductSearch bar portaled here when on hero pages) */}
-            <NavbarSearchSlotDiv onSearchClick={scrollToSearch} />
-
-            {/* Right: profile, location, phone (desktop only; on mobile these live in Discover sheet) */}
-            <div className="relative ml-auto hidden sm:flex items-center gap-1" ref={accountRef} id="nav-location-pill">
-              {/* Profile */}
-              <button
-                type="button"
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-gray-800 hover:bg-white/60 focus:outline-none"
-                onClick={() => {
-                  if (!user) {
-                    router.push('/login')
-                    return
-                  }
-                  setAccountOpen((v) => !v)
-                  setLocationOpen(false)
-                }}
-                aria-label={user ? 'Account menu' : 'Sign in'}
-              >
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName || 'User avatar'}
-                    className="h-9 w-9 rounded-full object-cover"
-                  />
-                ) : (
-                  initials
-                )}
-              </button>
-
-              {/* Location (dropdown) */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocationOpen((v) => !v)
-                    setAccountOpen(false)
-                  }}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
-                  aria-label="Store location"
-                  aria-expanded={locationOpen}
-                >
-                  <MapPinIcon className="h-5 w-5" />
-                </button>
-                {locationOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white py-2 shadow-xl">
-                    <div className="px-3 py-2">
-                      <div className="text-sm font-semibold text-gray-900">Kine Buds</div>
-                      <div className="mt-0.5 text-xs text-gray-600">
-                        {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion} {site.address.postalCode}
-                      </div>
-                    </div>
-                    <div className="border-t border-gray-100" />
-                    <div className="px-3 py-2 text-sm text-gray-600">Gloucester City (coming soon)</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Phone */}
-              <a
-                href={`tel:${site.contact.phone}`}
-                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
-                aria-label="Call store"
-              >
-                <PhoneIcon className="h-5 w-5" />
-              </a>
 
               {accountOpen && user && (
                 <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-black/10 bg-white text-gray-900 shadow-xl">
@@ -457,11 +436,62 @@ export default function SiteChrome() {
                 <button
                   type="button"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white"
-                  onClick={() => setMobileNavOpen(false)}
+                  onClick={() => {
+                    setMobileNavOpen(false)
+                    setLocationOpen(false)
+                  }}
                   aria-label="Close menu"
                 >
                   <XMarkIcon className="h-5 w-5 text-gray-700" />
                 </button>
+              </div>
+
+              {/* Mobile: user, location, phone (saved from navbar for space) */}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Link
+                  href={user ? '/menu/account' : '/login'}
+                  onClick={() => setMobileNavOpen(false)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-black/5"
+                >
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-semibold">{initials}</span>
+                    )}
+                  </span>
+                  <span>{user ? 'Account' : 'Sign in'}</span>
+                </Link>
+                <div className="relative inline-block">
+                  <button
+                    type="button"
+                    onClick={() => setLocationOpen((v) => !v)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-black/5"
+                  >
+                    <MapPinIcon className="h-5 w-5 text-gray-600" />
+                    <span>Location</span>
+                  </button>
+                  {locationOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-72 rounded-xl border border-gray-200 bg-white py-2 shadow-xl">
+                      <div className="px-3 py-2">
+                        <div className="text-sm font-semibold text-gray-900">Kine Buds</div>
+                        <div className="mt-0.5 text-xs text-gray-600">
+                          {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion} {site.address.postalCode}
+                        </div>
+                      </div>
+                      <div className="border-t border-gray-100" />
+                      <div className="px-3 py-2 text-sm text-gray-600">Gloucester City (coming soon)</div>
+                    </div>
+                  )}
+                </div>
+                <a
+                  href={`tel:${site.contact.phone}`}
+                  onClick={() => setMobileNavOpen(false)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-gray-900 hover:bg-black/5"
+                >
+                  <PhoneIcon className="h-5 w-5 text-gray-600" />
+                  <span>Call</span>
+                </a>
               </div>
 
               <div className="mt-3 space-y-3">
