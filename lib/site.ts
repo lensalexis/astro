@@ -2,6 +2,8 @@ export const site = {
   name: "Kine Buds Dispensary",
   legalName: "Kine Buds Dispensary",
   url: "https://kinebudsdispensary.com",
+  /** Live menu base URL for product links (Dispense menu). */
+  menuUrl: "https://kinebudsdispensary.com/menu",
   defaultTitle: "#1 Cannabis Store | Maywood, NJ | Kine Buds Dispensary",
   defaultDescription:
     "Maywood & Bergen County’s destination for great prices and quality cannabis—Flower, Pre-Rolls, Gummies, Vapes, and more.",

@@ -476,9 +476,9 @@ export default function SiteChrome() {
         </div>
       )}
 
-      {/* Inner pages: mount AI search so its bar portales into navbar (same as category pages). Hidden wrapper so only the portaled bar is visible. */}
+      {/* Inner pages: mount AI search so its bar portales into navbar (same as category pages). Hidden wrapper; no pointer-events-none so dropdown (portaled to body) receives clicks. */}
       {showInnerPageNavBar ? (
-        <div className="absolute left-0 top-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none" aria-hidden="true">
+        <div className="absolute left-0 top-0 w-0 h-0 overflow-hidden opacity-0" aria-hidden="true">
           <AIProductSearch
             forceAIMode
             heroOnly

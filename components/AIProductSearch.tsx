@@ -1112,6 +1112,21 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
     return () => document.removeEventListener('mousedown', onDown)
   }, [heroDropdownPos])
 
+  // Inner pages: scroll results into view after applying filters so the user sees the selection took effect.
+  const hasAnyFiltersForPortal =
+    !!(activeFilters.categories?.length || activeFilters.strains?.length || activeFilters.brands?.length ||
+      activeFilters.terpenes?.length || activeFilters.weights?.length || activeFilters.effects?.length || activeFilters.saleOnly)
+  useEffect(() => {
+    if (homeResultsPortalId !== 'inner-page-search-results' || !hasAnyFiltersForPortal) return
+    const el = document.getElementById('inner-page-search-results')
+    if (!el) return
+    const toScroll = el.firstElementChild || el
+    const t = requestAnimationFrame(() => {
+      toScroll.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    return () => cancelAnimationFrame(t)
+  }, [homeResultsPortalId, hasAnyFiltersForPortal, loading, products.length])
+
   // Lock body scroll while the location modal is open (prevents scrolling the sticky header/page behind it).
   useEffect(() => {
     if (!showLocationDropdown) return
@@ -3834,7 +3849,7 @@ For specific details about earning rates and redemption options, please contact 
                         </div>
                       </div>
 
-                      {/* Dropdown menus (ported to body so they never get clipped) */}
+                      {/* Dropdown menus: portal into app root so React event delegation receives clicks (inner pages); fallback to body. */}
                       {heroDropdownPos && mounted && typeof document !== 'undefined'
                         ? createPortal(
                             <div
@@ -4109,10 +4124,8 @@ For specific details about earning rates and redemption options, please contact 
                                           onClick={async () => {
                                             if (heroDropdownPos.which === 'categories') {
                                               const selectedSlug = CATEGORY_DEFS.find((c) => c.name === val)?.slug
-                                              const shopMatch = pathname?.match(/^\/shop\/([^/]+)/)
-                                              const currentCategorySlug = shopMatch?.[1]
-                                              // On a category page, selecting a different category: navigate so URL and content match.
-                                              if (selectedSlug && currentCategorySlug && currentCategorySlug !== selectedSlug) {
+                                              // Always navigate to the category page (inner pages + category pages) so Browse behaves like nav.
+                                              if (selectedSlug) {
                                                 setHeroCategory(val)
                                                 setHeroCategoryOpen(false)
                                                 setHeroDropdownPos(null)
@@ -4165,7 +4178,7 @@ For specific details about earning rates and redemption options, please contact 
                                 </div>
                               </div>
                             </div>,
-                            document.body
+                            (document.getElementById('hero-dropdown-portal') || document.body)
                           )
                         : null}
 

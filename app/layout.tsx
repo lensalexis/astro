@@ -90,7 +90,9 @@ export default function RootLayout({
           strategy="beforeInteractive"
         />
 
-        <div className="flex min-h-[100svh] supports-[min-height:100dvh]:min-h-[100dvh] flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
+        <div className="flex min-h-[100svh] supports-[min-height:100dvh]:min-h-[100dvh] flex-col overflow-hidden supports-[overflow:clip]:overflow-clip" id="app-root">
+          {/* Portal target for navbar search dropdown so it stays inside React root and receives clicks (inner pages + hero). */}
+          <div id="hero-dropdown-portal" className="contents" />
           {/* ✅ Wrap everything that needs user context */}
           <UserProvider>
             <BreadcrumbsProvider>

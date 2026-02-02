@@ -3,6 +3,7 @@
 import Link from "next/link"
 import Image from "next/image"
 import type { Product } from "@/types/product"
+import { site } from "@/lib/site"
 import {
   ProductType,
   ProductWeightUnit,
@@ -225,9 +226,13 @@ export default function ProductCard({
   const metaLabel = product.brand?.name || (product.category as any) || null
   const imgH = imageHeight ?? 192
 
+  const liveMenuHref = `${site.menuUrl}/${getCategorySlug(product)}/${product.id}`
+
   return (
     <Link
-      href={`/shop/${getCategorySlug(product)}/${product.id}`}
+      href={liveMenuHref}
+      target="_blank"
+      rel="noopener noreferrer"
       className="block rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition border border-gray-200 text-black"
     >
       <div
