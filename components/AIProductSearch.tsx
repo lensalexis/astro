@@ -4,11 +4,12 @@ import { useState, useRef, useEffect, useMemo, useCallback, ReactNode, type Reac
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { MapPinIcon, FunnelIcon, MagnifyingGlassIcon, ArrowUturnLeftIcon, XMarkIcon, ChevronDownIcon, ChevronUpIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
 import { useNavbarSearchSlot } from '@/components/NavbarSearchSlotContext'
 import GoogleReviewSummary from '@/components/GoogleReviewSummary'
+import StoreOpenBadge from '@/components/StoreOpenBadge'
 import ProductCard, { pickPrimaryImage } from '@/components/ui/ProductCard'
 import type { Product } from '@/types/product'
 import { ProductType } from '@/types/product'
@@ -598,6 +599,7 @@ export default function AIProductSearch(props: AIProductSearchProps = {}): React
   } = props
   const { user } = useUser()
   const router = useRouter()
+  const pathname = usePathname()
   const params = useParams<{ storeId?: string }>()
   const navbarSlot = useNavbarSearchSlot()
   const inNavbarSlot = Boolean(
@@ -3624,7 +3626,10 @@ For specific details about earning rates and redemption options, please contact 
               heroVariant === 'viator' ? (
                 <div className="pb-1.5 sm:pb-3">
                   <div className="flex flex-col items-start text-left gap-2 sm:gap-3">
-                    <GoogleReviewSummary />
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <GoogleReviewSummary />
+                      <StoreOpenBadge />
+                    </div>
                     <div className="w-full flex flex-col items-start gap-1 sm:gap-1.5">
                       <h1 className="text-[30px] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight text-white whitespace-nowrap leading-tight">
                         {heroTitle ? (
@@ -3636,7 +3641,7 @@ For specific details about earning rates and redemption options, please contact 
                         )}
                       </h1>
                       <p className="max-w-3xl text-base sm:text-lg text-white/90 leading-snug">
-                        Search our menu at Kine Buds &mdash; Your top destination for cannabis in Maywood, New Jersey.
+                      Browse the Kine Buds dispensary menu at 113 E Passaic St. Your top cannabis destination in Maywood, New Jersey.
                       </p>
                       {dispenseError ? (
                         <div className="mt-2 inline-flex max-w-3xl items-center rounded-2xl bg-black/40 px-4 py-2 text-left text-sm text-white ring-1 ring-white/15 backdrop-blur">
@@ -3692,7 +3697,7 @@ For specific details about earning rates and redemption options, please contact 
                         <div className="pl-2 pr-2 py-1.5 sm:pl-2 sm:pr-2 sm:py-1">
                           <div className="flex flex-row flex-nowrap items-center gap-0">
                             {/* Kine Buds icon inside search box (Google-style) */}
-                            <Link href="/" className="flex shrink-0 items-center justify-center py-1.5 pr-2 sm:pr-2" aria-label="Kine Buds home">
+                            <Link href="/" className="flex shrink-0 items-center justify-center py-1.5 pr-2 sm:pr-2 sm:hidden" aria-label="Kine Buds home">
                               <Image src="/images/kinebuds-icon.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" />
                             </Link>
                             {/* Browse */}
@@ -4102,6 +4107,19 @@ For specific details about earning rates and redemption options, please contact 
                                           type="button"
                                           className="w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold text-gray-800 hover:bg-gray-50"
                                           onClick={async () => {
+                                            if (heroDropdownPos.which === 'categories') {
+                                              const selectedSlug = CATEGORY_DEFS.find((c) => c.name === val)?.slug
+                                              const shopMatch = pathname?.match(/^\/shop\/([^/]+)/)
+                                              const currentCategorySlug = shopMatch?.[1]
+                                              // On a category page, selecting a different category: navigate so URL and content match.
+                                              if (selectedSlug && currentCategorySlug && currentCategorySlug !== selectedSlug) {
+                                                setHeroCategory(val)
+                                                setHeroCategoryOpen(false)
+                                                setHeroDropdownPos(null)
+                                                router.push(`/shop/${selectedSlug}`)
+                                                return
+                                              }
+                                            }
                                             const next: FacetedFilters = {
                                               categories: heroDropdownPos.which === 'categories' ? [val] : (heroCategory ? [heroCategory] : undefined),
                                               strains: heroDropdownPos.which === 'strains' ? [val] : (heroStrain ? [heroStrain] : undefined),
@@ -4153,9 +4171,22 @@ For specific details about earning rates and redemption options, please contact 
 
                     </form>
                       )
+                      const useNavbarSlot = forceAIMode && heroOnly && heroVariant === 'viator'
                       return inNavbarSlot && navbarSlot?.slotRef?.current
                         ? createPortal(theForm, navbarSlot.slotRef.current)
-                        : theForm
+                        : useNavbarSlot
+                          ? (
+                              /* Viator hero: search bar lives in navbar only — avoid flash by not rendering in hero until slot ready */
+                              <div className="mt-8 sm:mt-8 w-full min-h-[56px]" aria-hidden="true" />
+                            )
+                          : (
+                              <div
+                                className="sticky z-40 w-full bg-white/95 backdrop-blur-md py-2 -mx-2 px-2 sm:py-2 sm:-mx-0 sm:px-0"
+                                style={{ top: 'var(--site-nav-h, 0px)' }}
+                              >
+                                {theForm}
+                              </div>
+                            )
                     })()}
 
                   </div>

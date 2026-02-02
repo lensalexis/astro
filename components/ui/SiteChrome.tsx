@@ -8,11 +8,13 @@ import {
   Bars3Icon,
   BookOpenIcon,
   BuildingOffice2Icon,
+  CheckCircleIcon,
   ChevronDownIcon,
   MagnifyingGlassIcon,
   MapPinIcon,
   PhoneIcon,
   ShoppingBagIcon,
+  UserCircleIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 import { useUser } from '@/components/UserContext'
@@ -202,95 +204,39 @@ export default function SiteChrome() {
         <div
           id="site-navbar"
           ref={navRef}
-          className="fixed top-0 left-0 right-0 z-[80] bg-white/70 backdrop-blur-md px-4 py-3"
+          className="fixed top-0 left-0 right-0 z-[80] bg-white backdrop-blur-md px-6 py-3 sm:py-0"
           style={{ ['--site-nav-h' as any]: `${navHeight}px` }}
         >
-          <div className="mx-auto flex w-full max-w-7xl items-center gap-2">
-            {/* Google-style: search box first (flex-1), then location, call, profile, hamburger */}
-            <NavbarSearchSlotDiv onSearchClick={scrollToSearch} />
+          <div className="mx-auto flex w-full max-w-8xl items-center gap-2 sm:gap-3">
+            {/* Desktop: Logo left of search */}
+            <Link
+              href="/"
+              className="hidden sm:flex shrink-0 items-center pr-1"
+              aria-label="Kine Buds home"
+            >
+              <Image
+                src="/images/kine-buds-logo.png"
+                alt="Kine Buds Dispensary"
+                width={160}
+                height={80}
+                className="h-20 w-auto object-contain"
+              />
+            </Link>
 
-            <div className="relative flex items-center gap-1 shrink-0" ref={accountRef} id="nav-location-pill">
-              {/* Profile (desktop only; on mobile see hamburger menu) */}
+            {/* Desktop: Discover dropdown (replaces hamburger) */}
+            <div className="relative hidden sm:block shrink-0" ref={setNavMenuRef}>
               <button
                 type="button"
-                className="hidden sm:inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-gray-800 hover:bg-white/60 focus:outline-none"
-                onClick={() => {
-                  if (!user) {
-                    router.push('/login')
-                    return
-                  }
-                  setAccountOpen((v) => !v)
-                  setLocationOpen(false)
-                }}
-                aria-label={user ? 'Account menu' : 'Sign in'}
+                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition focus:outline-none"
+                aria-label="Discover"
+                aria-expanded={!!navDropdown}
+                onClick={() => setNavDropdown((v) => (v ? null : 'discover'))}
               >
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={displayName || 'User avatar'}
-                    className="h-9 w-9 rounded-full object-cover"
-                  />
-                ) : (
-                  initials
-                )}
+                <span>Discover</span>
+                <ChevronDownIcon className="h-4 w-4 shrink-0" />
               </button>
-
-              {/* Location (dropdown; desktop only on navbar) */}
-              <div className="relative hidden sm:block">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocationOpen((v) => !v)
-                    setAccountOpen(false)
-                  }}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
-                  aria-label="Store location"
-                  aria-expanded={locationOpen}
-                >
-                  <MapPinIcon className="h-5 w-5" />
-                </button>
-                {locationOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white py-2 shadow-xl">
-                    <div className="px-3 py-2">
-                      <div className="text-sm font-semibold text-gray-900">Kine Buds</div>
-                      <div className="mt-0.5 text-xs text-gray-600">
-                        {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion} {site.address.postalCode}
-                      </div>
-                    </div>
-                    <div className="border-t border-gray-100" />
-                    <div className="px-3 py-2 text-sm text-gray-600">Gloucester City (coming soon)</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Phone (desktop only on navbar) */}
-              <a
-                href={`tel:${site.contact.phone}`}
-                className="hidden sm:inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
-                aria-label="Call store"
-              >
-                <PhoneIcon className="h-5 w-5" />
-              </a>
-
-              {/* Hamburger: opens Discover (desktop) or mobile menu (mobile) */}
-              <div className="relative" ref={setNavMenuRef}>
-                <button
-                  type="button"
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 hover:bg-white/60 focus:outline-none"
-                  aria-label="Menu"
-                  aria-expanded={!!navDropdown || mobileNavOpen}
-                  onClick={() => {
-                    if (typeof window !== 'undefined' && window.innerWidth < 640) {
-                      setMobileNavOpen(true)
-                    } else {
-                      setNavDropdown((v) => (v ? null : 'discover'))
-                    }
-                  }}
-                >
-                  <Bars3Icon className="h-5 w-5" />
-                </button>
-                {navDropdown ? (
-                  <div className="absolute right-0 top-full mt-2 w-[560px] min-h-[280px] rounded-b-2xl border border-t-0 border-gray-200 bg-gray-50 shadow-xl overflow-hidden flex max-w-[calc(100vw-2rem)]">
+              {navDropdown ? (
+                  <div className="absolute left-0 top-full z-50 mt-2 w-[560px] min-h-[280px] rounded-b-2xl border border-t-0 border-gray-200 bg-gray-50 shadow-xl overflow-hidden flex max-w-[min(560px,calc(100vw-2rem))]">
                     <nav className="w-[180px] shrink-0 border-r border-gray-200 bg-gray-100/80 py-2">
                       {[
                         { key: 'shop' as const, label: 'Shop', Icon: ShoppingBagIcon },
@@ -356,7 +302,107 @@ export default function SiteChrome() {
                 ) : null}
               </div>
 
-              {accountOpen && user && (
+            {/* Middle: Search box (flex-1) */}
+            <div className="flex flex-1 min-w-0 max-w-2xl mx-auto">
+              <NavbarSearchSlotDiv onSearchClick={scrollToSearch} />
+            </div>
+
+            {/* User/Location/Phone (desktop) + Hamburger (mobile); wrapper for dropdown positioning */}
+            <div className="relative shrink-0" id="nav-location-pill">
+            <div className="hidden sm:flex items-center gap-3" ref={accountRef}>
+              {/* User with subtitle: Sign In or name */}
+              <button
+                type="button"
+                className="flex flex-col items-center gap-0.5 shrink-0 focus:outline-none group"
+                onClick={() => {
+                  if (!user) {
+                    router.push('/login')
+                    return
+                  }
+                  setAccountOpen((v) => !v)
+                  setLocationOpen(false)
+                }}
+                aria-label={user ? 'Account menu' : 'Sign in'}
+              >
+                <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-gray-700 transition">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={displayName || 'User avatar'}
+                      className="h-9 w-9 rounded-full object-cover"
+                    />
+                  ) : user ? (
+                    <span className="text-xs font-semibold text-gray-800">{initials}</span>
+                  ) : (
+                    <UserCircleIcon className="h-6 w-6 text-gray-600" />
+                  )}
+                  {user && (
+                    <span className="absolute -bottom-0.5 -right-0.5 rounded-full bg-emerald-500 p-0.5" aria-hidden>
+                      <CheckCircleIcon className="h-3.5 w-3.5 text-white" />
+                    </span>
+                  )}
+                </span>
+                <span className="text-[10px] font-medium text-gray-700 truncate max-w-[72px]">
+                  {user ? displayName || 'Account' : 'Sign In'}
+                </span>
+              </button>
+
+              {/* Location with subtitle */}
+              <div className="relative flex flex-col items-center gap-0.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocationOpen((v) => !v)
+                    setAccountOpen(false)
+                  }}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-700 transition focus:outline-none"
+                  aria-label="Store location"
+                  aria-expanded={locationOpen}
+                >
+                  <MapPinIcon className="h-5 w-5" />
+                </button>
+                <span className="text-[10px] font-medium text-gray-700">Location</span>
+                {locationOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1.5 w-72 rounded-xl border border-gray-200 bg-white py-2 shadow-xl">
+                    <div className="px-3 py-2">
+                      <div className="text-sm font-semibold text-gray-900">Kine Buds</div>
+                      <div className="mt-0.5 text-xs text-gray-600">
+                        {site.address.streetAddress}, {site.address.addressLocality}, {site.address.addressRegion} {site.address.postalCode}
+                      </div>
+                    </div>
+                    <div className="border-t border-gray-100" />
+                    <div className="px-3 py-2 text-sm text-gray-600">Gloucester City (coming soon)</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Phone with subtitle */}
+              <a
+                href={`tel:${site.contact.phone}`}
+                className="flex flex-col items-center gap-0.5 shrink-0 rounded-full text-gray-700 focus:outline-none"
+                aria-label="Call store"
+              >
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full transition">
+                  <PhoneIcon className="h-5 w-5" />
+                </span>
+                <span className="text-[10px] font-medium text-gray-700">Call Us</span>
+              </a>
+            </div>
+
+            {/* Mobile only: Hamburger (opens mobile menu) */}
+            <div className="relative sm:hidden shrink-0">
+              <button
+                type="button"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition focus:outline-none"
+                aria-label="Menu"
+                aria-expanded={mobileNavOpen}
+                onClick={() => setMobileNavOpen(true)}
+              >
+                <Bars3Icon className="h-5 w-5" />
+              </button>
+            </div>
+
+            {accountOpen && user && (
                 <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-2xl border border-black/10 bg-white text-gray-900 shadow-xl">
                   <ul className="py-2 text-sm">
                     <li>

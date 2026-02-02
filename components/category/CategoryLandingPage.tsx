@@ -61,6 +61,11 @@ export default function CategoryLandingPage({ category }: { category: string }) 
         </div>
       </section>
 
+      {/* Results portal: navbar search/filter results render here when user changes Browse, strain, or type */}
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 pt-4">
+        <div id={resultsPortalId} />
+      </div>
+
       <main className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-12 space-y-12">
         <Section title={`Featured in ${cfg.name}`}>
           <HomeStartHereContent items={cfg.banners} />

@@ -5,6 +5,7 @@ import AIProductSearch from "@/components/AIProductSearch";
 import HomeHeroCarousel from "@/components/home/HomeHeroCarousel";
 import HomeStartHereContent from "@/components/home/HomeStartHereContent";
 import HorizontalRailWithArrows, { type RailItem } from "@/components/home/HorizontalRailWithArrows";
+import BrowseByCategoryClient, { type CategoryItem } from "@/components/home/BrowseByCategoryClient";
 import AmazingExperiences from "@/components/home/AmazingExperiences";
 import GoogleReviews from "@/components/GoogleReviews";
 import { stores } from "@/lib/stores";
@@ -93,6 +94,101 @@ export default async function Home() {
     })
     .slice(0, 12);
 
+  // Get category IDs
+  const preRollsCategoryId = CATEGORY_DEFS.find(c => c.slug === 'pre-rolls')?.id;
+  const ediblesCategoryId = CATEGORY_DEFS.find(c => c.slug === 'edibles')?.id;
+  const concentratesCategoryId = CATEGORY_DEFS.find(c => c.slug === 'concentrates')?.id;
+  const beveragesCategoryId = CATEGORY_DEFS.find(c => c.slug === 'beverages')?.id;
+  const vaporizersCategoryId = CATEGORY_DEFS.find(c => c.slug === 'vaporizers')?.id;
+  const flowerCategoryId = CATEGORY_DEFS.find(c => c.slug === 'flower')?.id;
+
+  // Fetch Pre Rolls
+  const preRollsRes = await productService.list(
+    {
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      categoryId: preRollsCategoryId,
+      limit: 20,
+      quantityMin: 1,
+    },
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+  const preRollsProducts = preRollsRes.data || [];
+
+  // Fetch Edibles
+  const ediblesRes = await productService.list(
+    {
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      categoryId: ediblesCategoryId,
+      limit: 20,
+      quantityMin: 1,
+    },
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+  const ediblesProducts = ediblesRes.data || [];
+
+  // Fetch Concentrates
+  const concentratesRes = await productService.list(
+    {
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      categoryId: concentratesCategoryId,
+      limit: 20,
+      quantityMin: 1,
+    },
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+  const concentratesProducts = concentratesRes.data || [];
+
+  // Fetch Beverages
+  const beveragesRes = await productService.list(
+    {
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      categoryId: beveragesCategoryId,
+      limit: 20,
+      quantityMin: 1,
+    },
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+  const beveragesProducts = beveragesRes.data || [];
+
+  // Fetch Vaporizers
+  const vaporizersRes = await productService.list(
+    {
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      categoryId: vaporizersCategoryId,
+      limit: 20,
+      quantityMin: 1,
+    },
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+  const vaporizersProducts = vaporizersRes.data || [];
+
+  // Fetch Flowers
+  const flowersRes = await productService.list(
+    {
+      venueId: process.env.DISPENSE_VENUE_ID ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID!,
+      categoryId: flowerCategoryId,
+      limit: 20,
+      quantityMin: 1,
+    },
+    { next: { revalidate: 30, tags: ["dispense:products"] } }
+  );
+  const flowersProducts = flowersRes.data || [];
+
+  // Create "The Essentials Checklist" - 4 random products from all categories
+  const allCategoryProducts = [
+    ...preRollsProducts,
+    ...ediblesProducts,
+    ...concentratesProducts,
+    ...beveragesProducts,
+    ...vaporizersProducts,
+    ...flowersProducts,
+  ];
+  const shuffled = [...allCategoryProducts].sort(() => Math.random() - 0.5);
+  const essentialsProducts = shuffled.slice(0, 4);
+
+  // Shuffle vaporizers for "Top 10 Best Vapes"
+  const shuffledVapes = [...vaporizersProducts].sort(() => Math.random() - 0.5).slice(0, 10);
+
   const categoryThumbs: Record<string, string> = {
     flower: "/images/flower.jpg",
     vaporizers: "/images/vape.jpg",
@@ -109,6 +205,13 @@ export default async function Home() {
       image: categoryThumbs[c.slug] || "/images/default-cover.jpg",
     })),
   ];
+
+  const categoryItems: CategoryItem[] = CATEGORY_DEFS.map((c) => ({
+    title: c.slug === "pre-rolls" ? "Pre Roll" : c.name,
+    slug: c.slug,
+    href: `/shop/${c.slug}`,
+    image: categoryThumbs[c.slug] || "/images/default-cover.jpg",
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -144,16 +247,16 @@ export default async function Home() {
         <Section
           title="Browse by category"
         >
-          <HorizontalRailWithArrows items={topDestinations} variant="category" />
+          <BrowseByCategoryClient items={categoryItems} />
         </Section>
 
         {/* Trending (Best sellers) */}
-        <Section title="Trending right now">
+        <Section title="What's Trending right now">
           <ProductSlider products={trendingProducts} />
         </Section>
 
         {/* Best picks (On sale) */}
-        <Section title="Best picks this week">
+        <Section title="Bestsellers in Maywood NJ">
           <ProductSlider products={bestPicksProducts} />
         </Section>
 
@@ -212,6 +315,41 @@ export default async function Home() {
         {/* Why people love Kine Buds (Google Reviews) */}
         <Section title="Why people love Kine Buds">
           <GoogleReviews />
+        </Section>
+
+        {/* Go-To for Pre Rolls */}
+        <Section title="Go-To for Pre Rolls">
+          <ProductSlider products={preRollsProducts} />
+        </Section>
+
+        {/* Top Sellers in Edibles */}
+        <Section title="Top Sellers in Edibles">
+          <ProductSlider products={ediblesProducts} />
+        </Section>
+
+        {/* The Essentials Checklist */}
+        <Section title="The Essentials Checklist">
+          <ProductSlider products={essentialsProducts} />
+        </Section>
+
+        {/* Fastest Selling in Concentrates */}
+        <Section title="Fastest Selling in Concentrates">
+          <ProductSlider products={concentratesProducts} />
+        </Section>
+
+        {/* All-Time Favorite Beverages */}
+        <Section title="All-Time Favorite Beverages">
+          <ProductSlider products={beveragesProducts} />
+        </Section>
+
+        {/* Top 10 Best Vapes */}
+        <Section title="Top 10 Best Vapes">
+          <ProductSlider products={shuffledVapes} />
+        </Section>
+
+        {/* Customer Favorites - Flowers */}
+        <Section title="Customer Favorites">
+          <ProductSlider products={flowersProducts} />
         </Section>
 
         {/* AmazingExperiences (Themes) */}
