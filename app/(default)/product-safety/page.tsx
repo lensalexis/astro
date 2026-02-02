@@ -40,7 +40,7 @@ export default function ProductSafetyPage() {
         <p className="mt-2 text-indigo-200/70">
           If you’re new, start with{" "}
           <Link className="text-white underline hover:no-underline" href="/resources">
-            Resources Center
+            Resource Library
           </Link>{" "}
           or check the{" "}
           <Link className="text-white underline hover:no-underline" href="/faq">

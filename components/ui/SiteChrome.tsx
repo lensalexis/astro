@@ -20,9 +20,10 @@ import {
 import { useUser } from '@/components/UserContext'
 import { site } from '@/lib/site'
 import FloatingCartButton from '@/components/ui/FloatingCartButton'
-import MobileBreadcrumbsBar from '@/components/seo/MobileBreadcrumbsBar'
 import { CATEGORY_DEFS } from '@/lib/catalog'
 import { useNavbarSearchSlot } from '@/components/NavbarSearchSlotContext'
+import AIProductSearch from '@/components/AIProductSearch'
+import { stores } from '@/lib/stores'
 
 function NavbarSearchSlotDiv({ onSearchClick }: { onSearchClick: () => void }) {
   const slot = useNavbarSearchSlot()
@@ -198,6 +199,13 @@ export default function SiteChrome() {
     })),
   ]
 
+  // Inner pages (every page except homepage and shop category landings) should show the same navbar as category pages: the AI search bar (Browse / By strain / By type). Mount a hidden AIProductSearch that portales its bar into the navbar slot.
+  const isHome = pathname === '/'
+  const pathParts = pathname ? pathname.split('/').filter(Boolean) : []
+  const isShopCategoryLanding = pathname?.startsWith('/shop/') && pathParts.length === 2
+  const showInnerPageNavBar = mounted && pathname && !isHome && !isShopCategoryLanding
+  const defaultStoreId = stores[0]?.id ?? process.env.NEXT_PUBLIC_DISPENSE_VENUE_ID ?? ''
+
   return (
     <>
       {!mounted || !showChrome ? null : (
@@ -227,12 +235,12 @@ export default function SiteChrome() {
             <div className="relative hidden sm:block shrink-0" ref={setNavMenuRef}>
               <button
                 type="button"
-                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition focus:outline-none"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:border-gray-300 transition focus:outline-none"
                 aria-label="Discover"
                 aria-expanded={!!navDropdown}
                 onClick={() => setNavDropdown((v) => (v ? null : 'discover'))}
               >
-                <span>Discover</span>
+                <span>Explore</span>
                 <ChevronDownIcon className="h-4 w-4 shrink-0" />
               </button>
               {navDropdown ? (
@@ -465,12 +473,21 @@ export default function SiteChrome() {
 
             </div>
           </div>
-          {/* Mobile breadcrumb bar (driven by PageShell) */}
-          <div className="mx-auto w-full max-w-6xl">
-            <MobileBreadcrumbsBar />
-          </div>
         </div>
       )}
+
+      {/* Inner pages: mount AI search so its bar portales into navbar (same as category pages). Hidden wrapper so only the portaled bar is visible. */}
+      {showInnerPageNavBar ? (
+        <div className="absolute left-0 top-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none" aria-hidden="true">
+          <AIProductSearch
+            forceAIMode
+            heroOnly
+            heroVariant="viator"
+            homeResultsPortalId="inner-page-search-results"
+            currentStoreId={defaultStoreId}
+          />
+        </div>
+      ) : null}
 
       {/* Mobile nav sheet */}
       {mobileNavOpen ? (
@@ -589,7 +606,7 @@ export default function SiteChrome() {
                         FAQ
                       </Link>
                       <Link href="/resources" onClick={() => setMobileNavOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-black/5">
-                        Resources Center
+                        Resource Library
                       </Link>
                     </div>
                   </div>

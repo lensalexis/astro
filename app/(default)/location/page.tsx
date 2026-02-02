@@ -41,7 +41,7 @@ export default function LocationPage() {
             { href: "/shop/pre-rolls", title: "Shop Pre-Rolls in Maywood, NJ", kicker: "Shop" },
             { href: "/shop/vapes", title: "Shop Vapes in Maywood, NJ", kicker: "Shop" },
             { href: "/use-cases/relaxation", title: "Relaxation guide", kicker: "Use-cases" },
-            { href: "/resources", title: "Resources Center", kicker: "Resources" },
+            { href: "/resources", title: "Resource Library", kicker: "Resources" },
             { href: "/terpenes", title: "Terpene knowledge base", kicker: "Terpenes" },
           ]}
         />

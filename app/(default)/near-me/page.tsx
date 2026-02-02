@@ -39,7 +39,7 @@ export default function NearMeHubPage() {
             { href: "/near-me/maywood-nj", title: "Maywood, NJ", kicker: "Near me" },
             { href: "/near-me/hackensack-nj", title: "Hackensack, NJ", kicker: "Near me" },
             { href: "/shop", title: "Shop hub", kicker: "Shop" },
-            { href: "/resources", title: "Resources Center", kicker: "Resources" },
+            { href: "/resources", title: "Resource Library", kicker: "Resources" },
             { href: "/brands", title: "Brands", kicker: "Brands" },
             { href: "/strains", title: "Strains", kicker: "Strains" },
           ]}

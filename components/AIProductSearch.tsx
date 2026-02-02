@@ -3693,8 +3693,8 @@ For specific details about earning rates and redemption options, please contact 
                         tabIndex={-1}
                       />
 
-                      <div className="w-full max-w-5xl overflow-visible rounded-full ring-black/10 bg-white/10 backdrop-blur-md ring-1">
-                        <div className="pl-2 pr-2 py-1.5 sm:pl-2 sm:pr-2 sm:py-1">
+                      <div className="w-full max-w-5xl overflow-visible rounded-full p-[1px] bg-[linear-gradient(to_right,#ec4899,#a855f7,#ec4899)] bg-[length:200%_auto] animate-gradient-x">
+                        <div className="rounded-full bg-white backdrop-blur-md pl-2 pr-2 py-1.5 sm:pl-2 sm:pr-2 sm:py-1">
                           <div className="flex flex-row flex-nowrap items-center gap-0">
                             {/* Kine Buds icon inside search box (Google-style) */}
                             <Link href="/" className="flex shrink-0 items-center justify-center py-1.5 pr-2 sm:pr-2 sm:hidden" aria-label="Kine Buds home">

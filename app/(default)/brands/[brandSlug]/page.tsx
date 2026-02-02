@@ -97,7 +97,7 @@ export default async function BrandPage({
               { href: "/strains", title: "Strains hub" },
               { href: "/terpenes", title: "Terpenes hub" },
               { href: "/formats", title: "Formats hub" },
-              { href: "/resources", title: "Resources Center" },
+              { href: "/resources", title: "Resource Library" },
               { href: "/brands/a-z", title: "Brands A–Z" },
             ]}
           />

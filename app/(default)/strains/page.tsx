@@ -31,7 +31,7 @@ export default function StrainsHubPage() {
             { href: "/formats", title: "Formats hub" },
             { href: "/brands", title: "Brands hub" },
             { href: "/use-cases", title: "Use-cases hub" },
-            { href: "/resources", title: "Resources Center" },
+            { href: "/resources", title: "Resource Library" },
           ]}
         />
       }
@@ -42,7 +42,7 @@ export default function StrainsHubPage() {
             { href: "/terpenes/limonene", title: "Limonene guide", kicker: "Terpenes" },
             { href: "/formats/flower", title: "Flower guide", kicker: "Formats" },
             { href: "/shop/flower", title: "Shop Flower", kicker: "Shop" },
-            { href: "/resources", title: "Resources Center", kicker: "Resources" },
+            { href: "/resources", title: "Resource Library", kicker: "Resources" },
             { href: "/use-cases/focus", title: "Focus guide", kicker: "Use-cases" },
           ]}
         />

@@ -57,7 +57,7 @@ export default function AmazingExperiences() {
           <div className="relative h-[320px] w-full">
             <Image
               src="/images/post-thumb-12.jpg"
-              alt="Resources Center"
+              alt="Resource Library"
               fill
               className="object-cover"
               sizes="(min-width: 768px) 66vw, 100vw"

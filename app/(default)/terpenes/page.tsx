@@ -29,7 +29,7 @@ export default function TerpenesHubPage() {
             { href: "/strains", title: "Strains hub" },
             { href: "/brands", title: "Brands hub" },
             { href: "/formats", title: "Formats hub" },
-            { href: "/resources", title: "Resources Center" },
+            { href: "/resources", title: "Resource Library" },
             { href: "/use-cases", title: "Use-cases hub" },
             { href: "/shop", title: "Shop hub" },
           ]}
@@ -42,7 +42,7 @@ export default function TerpenesHubPage() {
             { href: "/terpenes/limonene", title: "Limonene", kicker: "Terpene" },
             { href: "/strains", title: "Strain guides", kicker: "Strains" },
             { href: "/formats", title: "Formats deep dives", kicker: "Formats" },
-            { href: "/resources", title: "Resources Center", kicker: "Resources" },
+            { href: "/resources", title: "Resource Library", kicker: "Resources" },
             { href: "/shop/flower", title: "Shop Flower", kicker: "Shop" },
           ]}
         />

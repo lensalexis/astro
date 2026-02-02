@@ -45,7 +45,7 @@ export default function LoyaltyPage() {
           <li>
             New to shopping? Start with{" "}
             <Link className="text-white underline hover:no-underline" href="/resources">
-              Resources Center
+              Resource Library
             </Link>
             .
           </li>

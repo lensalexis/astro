@@ -119,16 +119,46 @@ function splitItems(xml) {
   return items
 }
 
+// Map WordPress category nicename → our canonical slug (for Resource Center sections)
+const WP_CATEGORY_SLUG_MAP = {
+  'culture-industry': 'culture-and-industry',
+  'science-effects': 'science-effects',
+  'product-brand-insights': 'product-brand-insights',
+  'wellness-medical': 'wellness-medical',
+  'cannabis-101': 'cannabis-101',
+  'local-news-events': 'local-news-events',
+  'kine-buds': 'kine-buds',
+  'about-kine-buds': 'kine-buds',
+  'uncategorized': 'uncategorized',
+}
+
 function findAllCategories(itemXml) {
   const out = []
-  const re = /<category[^>]*domain=["']([^"']+)["'][^>]*>([\s\S]*?)<\/category>/gi
+  const re = /<category[^>]*domain=["']([^"']+)["'][^>]*nicename=["']([^"']+)["'][^>]*>([\s\S]*?)<\/category>/gi
   let m
   while ((m = re.exec(itemXml))) {
     const domain = m[1]
-    const label = textOnly(m[2].replace(/<!\[CDATA\[|\]\]>/g, ''))
-    out.push({ domain, label })
+    const nicename = (m[2] || '').trim()
+    const label = textOnly((m[3] || '').replace(/<!\[CDATA\[|\]\]>/g, ''))
+    out.push({ domain, nicename, label })
+  }
+  // Fallback for category tags without nicename
+  if (out.length === 0) {
+    const fallbackRe = /<category[^>]*domain=["']([^"']+)["'][^>]*>([\s\S]*?)<\/category>/gi
+    let fm
+    while ((fm = fallbackRe.exec(itemXml))) {
+      const domain = fm[1]
+      const label = textOnly((fm[2] || '').replace(/<!\[CDATA\[|\]\]>/g, ''))
+      out.push({ domain, nicename: '', label })
+    }
   }
   return out
+}
+
+function categorySlugForResource(cat) {
+  if (cat.domain !== 'category') return null
+  const nicename = (cat.nicename || slugify(cat.label)).toLowerCase()
+  return WP_CATEGORY_SLUG_MAP[nicename] ?? nicename
 }
 
 function inferTopicKey(title) {
@@ -535,11 +565,11 @@ const posts = items
     const categories = findAllCategories(item)
     const wpCategories = categories
       .filter((c) => c.domain === 'category')
-      .map((c) => ({
-        name: textOnly(c.label),
-        slug: slugify(textOnly(c.label)),
-      }))
-      .filter((c) => c.slug)
+      .map((c) => {
+        const slug = categorySlugForResource(c)
+        return slug ? { name: textOnly(c.label) || c.label, slug } : null
+      })
+      .filter(Boolean)
 
     const slug = slugify(wpSlug || title)
     const topicKey = inferTopicKey(title)
@@ -656,11 +686,17 @@ const posts = items
 console.log(`Found ${posts.length} published WP posts.`)
 
 let written = 0
+let skipped = 0
 for (const p of posts) {
   const outPath = path.join(outDir, `${p.slug}.mdx`)
+  if (fs.existsSync(outPath)) {
+    skipped++
+    console.log(`Skip (exists): ${p.slug}`)
+    continue
+  }
   fs.writeFileSync(outPath, p.mdx, 'utf8')
   written++
 }
 
-console.log(`Wrote ${written} resource articles to ${outDir}`)
+console.log(`Wrote ${written} resource articles to ${outDir}${skipped ? `, skipped ${skipped} (already exist).` : '.'}`)
 

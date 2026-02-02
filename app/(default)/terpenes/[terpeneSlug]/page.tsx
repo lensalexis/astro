@@ -80,7 +80,7 @@ export default async function TerpenePage({
               { href: "/strains", title: "Strain guides" },
               { href: "/formats", title: "Formats deep dives" },
               { href: "/brands", title: "Brands" },
-              { href: "/resources", title: "Resources Center" },
+              { href: "/resources", title: "Resource Library" },
               { href: "/shop", title: "Shop hub" },
             ]}
           />

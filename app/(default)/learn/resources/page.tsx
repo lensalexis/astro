@@ -7,7 +7,7 @@ import { listResourceCategories, listResources } from '@/lib/resources'
 
 export const metadata: Metadata = buildMetadata({
   pathname: '/learn/resources',
-  title: 'Resources Center',
+  title: 'Resource Library',
   description:
     'In-depth cannabis resources: laws, safety, dosing basics, product education, and practical guidance (educational, non-medical).',
 })
@@ -67,7 +67,7 @@ export default async function LearnResourcesIndexPage() {
         </nav>
 
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-950 sm:text-5xl">
-          Resources Center
+          Resource Library
         </h1>
         <p className="mt-3 max-w-3xl text-base leading-relaxed text-gray-600">
           Long-form, source-heavy cannabis articles built for clarity and confidence.

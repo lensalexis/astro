@@ -24,7 +24,7 @@ export default function ResourcePostCard({ href, title, date, categoryLabel, ima
       href={href}
       className="group overflow-hidden rounded-2xl bg-white"
     >
-      <div className="relative h-56">
+      <div className="relative h-56 overflow-hidden rounded-t-2xl">
         <Image
           src={imageSrc}
           alt={title}

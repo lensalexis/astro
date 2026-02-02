@@ -120,7 +120,7 @@ export default async function StrainPage({
               { href: "/terpenes", title: "Terpenes hub" },
               { href: "/brands", title: "Brands hub" },
               { href: "/use-cases", title: "Use-cases hub" },
-              { href: "/resources", title: "Resources Center" },
+              { href: "/resources", title: "Resource Library" },
             ]}
           />
         </>

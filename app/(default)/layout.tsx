@@ -31,6 +31,9 @@ export default function DefaultLayout({
     <>
       <main className="relative flex grow flex-col">{children}</main>
 
+      {/* Portal target for AI search results when using navbar search on inner pages (e.g. /resources, /about) */}
+      <div id="inner-page-search-results" className="contents" />
+
       {showFooter && <Footer />}
     </>
   );

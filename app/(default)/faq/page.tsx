@@ -51,14 +51,14 @@ export default function FAQPage() {
             { href: "/directions", title: "Directions" },
             { href: "/parking", title: "Parking" },
             { href: "/shop", title: "Shop hub" },
-            { href: "/resources", title: "Resources Center" },
+            { href: "/resources", title: "Resource Library" },
           ]}
         />
       }
       browseNext={
         <BrowseNext
           cards={[
-            { href: "/resources", title: "Resources Center", kicker: "Resources" },
+            { href: "/resources", title: "Resource Library", kicker: "Resources" },
             { href: "/formats", title: "Formats deep dives", kicker: "Formats" },
             { href: "/terpenes", title: "Terpenes", kicker: "Terpenes" },
             { href: "/brands", title: "Brands", kicker: "Brands" },
@@ -70,13 +70,13 @@ export default function FAQPage() {
     >
       <JsonLd data={faqPageJsonLd(faqItems)} />
 
-      <section className="rounded-3xl border border-white/10 bg-white/5 p-6">
-        <h2 className="text-xl font-semibold text-white">FAQs</h2>
+      <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm ring-1 ring-black/5">
+        <h2 className="text-xl font-semibold text-gray-950">FAQs</h2>
         <div className="mt-4 space-y-4">
           {faqItems.map((item) => (
-            <div key={item.question} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <h3 className="text-base font-semibold text-white">{item.question}</h3>
-              <p className="mt-2 text-sm text-indigo-200/70">{item.answer}</p>
+            <div key={item.question} className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+              <h3 className="text-base font-semibold text-gray-950">{item.question}</h3>
+              <p className="mt-2 text-sm text-gray-600">{item.answer}</p>
             </div>
           ))}
         </div>

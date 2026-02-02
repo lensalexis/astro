@@ -37,7 +37,7 @@ export default function FormatsHubPage() {
             { href: "/terpenes", title: "Terpenes hub" },
             { href: "/strains", title: "Strain guides" },
             { href: "/brands", title: "Brands hub" },
-            { href: "/resources", title: "Resources Center" },
+            { href: "/resources", title: "Resource Library" },
             { href: "/use-cases", title: "Use-cases hub" },
           ]}
         />

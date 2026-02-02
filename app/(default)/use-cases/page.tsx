@@ -34,9 +34,9 @@ export default function UseCasesHubPage() {
             { href: "/terpenes", title: "Terpenes hub" },
             { href: "/formats", title: "Formats hub" },
             { href: "/strains", title: "Strain guides" },
-            { href: "/resources", title: "Resources Center" },
+            { href: "/resources", title: "Resource Library" },
             { href: "/shop", title: "Shop hub" },
-            { href: "/resources", title: "Resources Center" },
+            { href: "/resources", title: "Resource Library" },
           ]}
         />
       }

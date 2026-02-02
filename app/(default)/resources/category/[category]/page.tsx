@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline'
 import ResourcePostCard from '@/components/resources/ResourcePostCard'
 import { buildMetadata } from '@/lib/seo'
-import { listResourceCategories, listResources } from '@/lib/resources'
+import { listResourceCategories, listResources, KNOWN_CATEGORY_SLUGS } from '@/lib/resources'
 import { withHome } from '@/lib/breadcrumbs'
 import BreadcrumbsRegister from '@/components/seo/BreadcrumbsRegister'
 import JsonLd from '@/components/seo/JsonLd'
@@ -34,7 +34,9 @@ function pickThumb(slug: string) {
 
 export async function generateStaticParams() {
   const cats = await listResourceCategories()
-  return cats.map((c) => ({ category: c.slug }))
+  const fromPosts = new Set(cats.map((c) => c.slug))
+  const known = KNOWN_CATEGORY_SLUGS.filter((k) => !fromPosts.has(k.slug)).map((k) => ({ category: k.slug }))
+  return [...cats.map((c) => ({ category: c.slug })), ...known]
 }
 
 export async function generateMetadata({
@@ -58,7 +60,9 @@ export default async function ResourcesCategoryPage({
   const { category } = await params
   const all = await listResources()
   const cats = await listResourceCategories()
-  const active = cats.find((c) => c.slug === category)
+  const knownByName = new Map(KNOWN_CATEGORY_SLUGS.map((k) => [k.slug, k.name]))
+  const fromPosts = cats.find((c) => c.slug === category)
+  const active = fromPosts ?? (knownByName.has(category) ? { slug: category, name: knownByName.get(category)!, count: 0 } : null)
   const crumbs = withHome([
     { name: 'Resources', href: '/resources' },
     { name: active?.name || category, href: `/resources/category/${category}` },
@@ -66,6 +70,13 @@ export default async function ResourcesCategoryPage({
 
   const posts = all.filter((p) => (p.metadata.wpCategories || []).some((c) => c.slug === category))
   const grid = posts.slice(0, 9)
+
+  // Merge categories from posts with known slugs so "About Kine Buds" and "Local News & Events" always show in filters
+  const catMap = new Map(cats.map((c) => [c.slug, c]))
+  for (const k of KNOWN_CATEGORY_SLUGS) {
+    if (!catMap.has(k.slug)) catMap.set(k.slug, { slug: k.slug, name: k.name, count: 0 })
+  }
+  const allCats = Array.from(catMap.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -109,7 +120,7 @@ export default async function ResourcesCategoryPage({
             >
               Latest Article
             </Link>
-            {cats.map((c) => (
+            {allCats.map((c) => (
               <Link
                 key={c.slug}
                 href={`/resources/category/${c.slug}`}

@@ -39,7 +39,7 @@ export default function DirectionsPage() {
           cards={[
             { href: "/shop/flower", title: "Shop Flower", kicker: "Shop" },
             { href: "/shop/edibles", title: "Shop Edibles", kicker: "Shop" },
-            { href: "/resources", title: "Resources Center", kicker: "Resources" },
+            { href: "/resources", title: "Resource Library", kicker: "Resources" },
             { href: "/brands", title: "Brands", kicker: "Brands" },
             { href: "/strains", title: "Strains", kicker: "Strains" },
             { href: "/terpenes", title: "Terpenes", kicker: "Terpenes" },

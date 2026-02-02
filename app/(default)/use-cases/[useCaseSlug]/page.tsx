@@ -103,7 +103,7 @@ export default async function UseCasePage({
               { href: "/formats", title: "Formats hub" },
               { href: "/terpenes", title: "Terpenes hub" },
               { href: "/strains", title: "Strain guides" },
-              { href: "/resources", title: "Resources Center" },
+              { href: "/resources", title: "Resource Library" },
               { href: "/use-cases", title: "All use-cases" },
             ]}
           />
@@ -127,7 +127,7 @@ export default async function UseCasePage({
           <li>
             If you’re new, start with the{" "}
             <Link className="underline hover:no-underline text-white" href="/resources">
-              Resources Center
+              Resource Library
             </Link>
             .
           </li>

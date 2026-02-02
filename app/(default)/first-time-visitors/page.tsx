@@ -25,7 +25,7 @@ export default function FirstTimeVisitorsPage() {
         <RelatedLinks
           title="Start here"
           links={[
-            { href: "/resources", title: "Resources Center" },
+            { href: "/resources", title: "Resource Library" },
             { href: "/formats", title: "Formats (flower, vapes, edibles…)" },
             { href: "/terpenes", title: "Terpenes explained" },
             { href: "/shop", title: "Shop hub (content-first)" },
@@ -37,7 +37,7 @@ export default function FirstTimeVisitorsPage() {
       browseNext={
         <BrowseNext
           cards={[
-            { href: "/resources", title: "Resources Center", kicker: "Resources" },
+            { href: "/resources", title: "Resource Library", kicker: "Resources" },
             { href: "/formats/edibles", title: "Edibles guide", kicker: "Formats" },
             { href: "/formats/vapes", title: "Vapes guide", kicker: "Formats" },
             { href: "/shop/flower", title: "Shop Flower", kicker: "Shop" },
